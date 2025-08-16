@@ -1,0 +1,362 @@
+/* Ant Design System */
+:root {
+  --primary-color: #1890ff;
+  --primary-hover: #40a9ff;
+  --primary-active: #096dd9;
+  --success-color: #52c41a;
+  --warning-color: #faad14;
+  --error-color: #f5222d;
+  --info-color: #13c2c2;
+  
+  --text-primary: rgba(0, 0, 0, 0.85);
+  --text-secondary: rgba(0, 0, 0, 0.65);
+  --text-disabled: rgba(0, 0, 0, 0.25);
+  
+  --border-color: #d9d9d9;
+  --border-color-split: #f0f0f0;
+  --background-color: #fafafa;
+  --component-background: #ffffff;
+  
+  --box-shadow-base: 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  --box-shadow-card: 0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09);
+  
+  --border-radius-base: 6px;
+  --border-radius-sm: 4px;
+  --border-radius-lg: 8px;
+  
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-size-base: 14px;
+  --font-size-lg: 16px;
+  --font-size-sm: 12px;
+  
+  --height-base: 32px;
+  --height-lg: 40px;
+  --height-sm: 24px;
+  
+  --padding-md: 16px;
+  --padding-sm: 12px;
+  --padding-xs: 8px;
+  --padding-lg: 24px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-size-base);
+  line-height: 1.5715;
+  color: var(--text-primary);
+  background-color: var(--background-color);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.container {
+  width: 100%;
+  max-width: none; /* Убираем ограничение */
+  margin: 0;
+  padding: 0 var(--padding-md);
+}
+
+/* Header - Ant Design */
+.header {
+  background: var(--component-background);
+  border-bottom: 1px solid var(--border-color-split);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  width: 100%;
+}
+
+.header .container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 64px;
+  padding: 0 var(--padding-lg);
+}
+
+.logo {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.nav {
+  display: flex;
+  align-items: center;
+  gap: var(--padding-md);
+}
+
+#user-info {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  padding: 4px var(--padding-xs);
+  background: var(--background-color);
+  border-radius: var(--border-radius-sm);
+}
+
+/* User Profile */
+.user-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 12px;
+  background: var(--background-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color-split);
+  transition: all 0.3s;
+}
+
+.user-profile:hover {
+  background: var(--component-background);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, #1564d6 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 2px 4px rgba(24, 144, 255, 0.2);
+}
+
+.user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.2;
+}
+
+.user-role {
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .user-details {
+    display: none;
+  }
+}
+
+/* Buttons - Ant Design */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  min-height: var(--height-base);
+  background: var(--component-background);
+  color: var(--text-primary);
+  user-select: none;
+  touch-action: manipulation;
+}
+
+.btn:hover {
+  color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.btn:active {
+  color: var(--primary-active);
+  border-color: var(--primary-active);
+}
+
+.btn-primary {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: var(--component-background);
+}
+
+.btn-primary:hover {
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
+  color: var(--component-background);
+}
+
+.btn-primary:active {
+  background: var(--primary-active);
+  border-color: var(--primary-active);
+}
+
+.btn-secondary {
+  background: var(--component-background);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.btn-secondary:hover {
+  color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+/* Main Layout - Ant Design */
+.main {
+  padding: 0;
+  min-height: calc(100vh - 64px);
+  background: var(--background-color);
+}
+
+.main .container {
+  display: grid;
+  grid-template-columns: 256px 1fr;
+  gap: 0;
+  align-items: start;
+  width: 100%;
+  height: calc(100vh - 64px);
+  padding: 0;
+}
+/* Sidebar - Ant Design */
+.sidebar {
+  background: var(--component-background);
+  border-right: 1px solid var(--border-color-split);
+  height: 100%;
+  overflow-y: auto;
+  position: sticky;
+  top: 0;
+}
+
+.menu {
+  list-style: none;
+  padding: var(--padding-md) 0;
+}
+
+.menu li {
+  margin: 0;
+}
+
+.menu a {
+  display: flex;
+  align-items: center;
+  padding: 12px var(--padding-md);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: var(--font-size-base);
+  font-weight: 400;
+  transition: all 0.3s;
+  border-radius: 0;
+  margin: 0 var(--padding-xs);
+  gap: 12px; /* Увеличили расстояние между иконкой и текстом */
+  min-height: 40px; /* Фиксированная высота для выравнивания */
+}
+
+.menu a:hover {
+  background: #e6f7ff;
+  color: var(--primary-color);
+}
+
+.menu a.active {
+  background: var(--primary-color);
+  color: var(--component-background);
+  font-weight: 500;
+}
+
+.menu-icon {
+  min-width: 18px; /* Фиксированная ширина для выравнивания */
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0; /* Не сжимается */
+}
+
+.menu-icon svg {
+  width: 18px; /* Увеличили размер иконок */
+  height: 18px;
+  transition: all 0.3s;
+}
+
+.menu-text {
+  flex: 1;
+  line-height: 1.5;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Hover эффекты для иконок */
+.menu a:hover .menu-icon svg {
+  transform: scale(1.1);
+}
+
+.menu a.active .menu-icon svg {
+  transform: scale(1.05);
+}
+
+/* Content Area - Ant Design */
+.content {
+  background: var(--component-background);
+  border-radius: 0;
+  padding: var(--padding-lg);
+  border: none;
+  box-shadow: none;
+  height: 100%;
+  overflow-y: auto;
+  margin: var(--padding-md);
+  margin-left: 0;
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color-split);
+}
+
+/* Form Elements - Ant Design */
+.form-input,
+.form-select {
+  width: 100%;
+  padding: 4px 11px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-base);
+  font-size: var(--font-size-base);
+  background: var(--component-background);
+  transition: all 0.3s;
+  min-height: var(--height-base);
+  color: var(--text-primary);
+}
+
+.form-input:focus,
+.form-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.form-input::placeholder {
+  color: var(--text-disabled);
+}
+
+.form-label {
+  display: block;
+  font-size: var(--font-size-base);
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: var(--padding-xs);
+  line-height: 1.5715;
+}
+
+.form-group {
+  margin-bottom: var(--padding-md);
+}

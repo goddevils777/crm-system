@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вход в CRM систему</title>
+
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+    <link rel="apple-touch-icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔐</text></svg>">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="login.css">
+</head>
+
+<body>
+    <div class="login-layout">
+        <div class="login-container">
+            <!-- Левая панель с брендингом -->
+            <div class="login-brand">
+                <div class="brand-content">
+                    <div class="brand-logo">
+                        <div class="logo-icon">📊</div>
+                        <h1>CRM System</h1>
+                    </div>
+                    <p class="brand-description">
+                        Профессиональная система управления<br>
+                        для команд арбитража трафика
+                    </p>
+                    <div class="brand-features">
+                        <div class="feature-item">
+                            <span class="feature-icon">💳</span>
+                            <span>Управление картами</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">📈</span>
+                            <span>Финансовая аналитика</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">👥</span>
+                            <span>Командная работа</span>
+                        </div>
+                        <div class="feature-item">
+                            <span class="feature-icon">🔒</span>
+                            <span>Безопасность данных</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая панель с формой -->
+            <div class="login-form-panel">
+                <div class="login-form-container">
+                    <div class="login-header">
+                        <h2>Добро пожаловать</h2>
+                        <p>Войдите в свой аккаунт для продолжения</p>
+                    </div>
+
+                    <div id="error-alert" class="alert alert-error" style="display: none;">
+                        <span class="alert-icon">⚠️</span>
+                        <span id="error-message"></span>
+                    </div>
+
+                    <form id="login-form" class="login-form">
+                        <div class="form-item">
+                            <label for="username" class="form-label">Логин или Email</label>
+                            <div class="input-wrapper">
+                                <span class="input-prefix">👤</span>
+                                <input type="text" id="username" name="username" class="form-input"
+                                    placeholder="Введите логин или email" required>
+                            </div>
+                        </div>
+
+                        <div class="form-item">
+                            <label for="password" class="form-label">Пароль</label>
+                            <div class="input-wrapper">
+                                <span class="input-prefix">🔒</span>
+                                <input type="password" id="password" name="password" class="form-input"
+                                    placeholder="Введите пароль" required>
+                            </div>
+                        </div>
+
+                        <div class="form-item">
+                            <label class="checkbox-wrapper">
+                                <input type="checkbox" class="checkbox">
+                                <span class="checkbox-label">Запомнить меня</span>
+                            </label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block" id="login-btn">
+                            <span class="btn-loading" style="display: none;">⏳</span>
+                            <span class="btn-text">Войти в систему</span>
+                        </button>
+                    </form>
+
+                    <div class="login-footer">
+                        <p>© 2025 CRM System. Все права защищены.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script src="login.js"></script>
+</body>
+
+</html>

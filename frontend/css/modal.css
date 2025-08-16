@@ -1,0 +1,234 @@
+/* Modal - Ant Design */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    animation: modalMaskFadeIn 0.2s ease-out;
+}
+
+.modal.show {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--padding-md);
+}
+
+.modal-content {
+    background: var(--component-background);
+    border-radius: var(--border-radius-lg);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow: hidden;
+    box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+    transform: scale(0.9);
+    animation: modalContentShow 0.3s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
+    position: relative;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--padding-md) var(--padding-lg);
+    border-bottom: 1px solid var(--border-color-split);
+    background: var(--component-background);
+}
+
+.modal-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-sm);
+    transition: all 0.3s;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: var(--text-primary);
+}
+
+/* Modal Body */
+.modal-content form {
+    padding: var(--padding-lg);
+    max-height: calc(90vh - 120px);
+    overflow-y: auto;
+}
+
+/* Form Tabs */
+.form-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color-split);
+    margin-bottom: var(--padding-lg);
+    background: var(--background-color);
+    border-radius: var(--border-radius-base) var(--border-radius-base) 0 0;
+    overflow-x: auto;
+}
+
+.tab-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: var(--padding-sm) var(--padding-md);
+    border: none;
+    background: none;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    color: var(--text-secondary);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s;
+    white-space: nowrap;
+    position: relative;
+}
+
+.tab-btn:hover {
+    color: var(--primary-hover);
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    background: var(--component-background);
+}
+
+.tab-btn.active::before {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: var(--component-background);
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+    animation: tabContentShow 0.3s ease-out;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.tab-content .form-group {
+    margin-bottom: var(--padding-md);
+}
+
+/* Modal Actions */
+.modal-actions {
+    display: flex;
+    gap: var(--padding-xs);
+    justify-content: flex-end;
+    padding: var(--padding-md) var(--padding-lg);
+    border-top: 1px solid var(--border-color-split);
+    background: var(--background-color);
+}
+
+.modal-actions .btn {
+    min-width: 80px;
+}
+
+/* Animations */
+@keyframes modalMaskFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes modalContentShow {
+    from {
+        transform: scale(0.9);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes tabContentShow {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: var(--padding-md);
+    }
+    
+    .modal-header {
+        padding: var(--padding-md);
+    }
+    
+    .modal-content form {
+        padding: var(--padding-md);
+    }
+    
+    .modal-actions {
+        padding: var(--padding-md);
+        flex-direction: column;
+    }
+    
+    .modal-actions .btn {
+        width: 100%;
+    }
+    
+    .form-tabs {
+        flex-wrap: wrap;
+    }
+    
+    .tab-btn {
+        flex: 1 1 auto;
+        min-width: 0;
+        padding: var(--padding-xs) var(--padding-sm);
+    }
+}
+
+/* Scrollbar for modal content */
+.modal-content form::-webkit-scrollbar {
+    width: 6px;
+}
+
+.modal-content form::-webkit-scrollbar-track {
+    background: var(--background-color);
+    border-radius: 3px;
+}
+
+.modal-content form::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 3px;
+}
+
+.modal-content form::-webkit-scrollbar-thumb:hover {
+    background: var(--text-disabled);
+}

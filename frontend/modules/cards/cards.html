@@ -1,0 +1,230 @@
+<div class="module-header">
+    <div class="header-left">
+        <h2>Управление картами</h2>
+        <div class="view-toggle">
+            <button class="view-btn active" data-view="grid" title="Карточки">
+                <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
+                    <path d="M928 224H768v-56c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v56H548v-56c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v56H328v-56c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v56H96c-17.7 0-32 14.3-32 32v576c0 17.7 14.3 32 32 32h832c17.7 0 32-14.3 32-32V256c0-17.7-14.3-32-32-32zM888 792H136V296h120v56c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-56h148v56c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-56h148v56c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-56h120v496z"/>
+                </svg>
+            </button>
+            <button class="view-btn" data-view="table" title="Таблица">
+                <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
+                    <path d="M928 160H96c-17.7 0-32 14.3-32 32v640c0 17.7 14.3 32 32 32h832c17.7 0 32-14.3 32-32V192c0-17.7-14.3-32-32-32zM888 792H136V232h752v560z"/>
+                    <path d="M424 400h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H424c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H424c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H424c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8z"/>
+                    <path d="M232 336h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H232c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H232c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H232c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-primary" id="add-card-btn">
+            <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor" style="margin-right: 6px;">
+                <path d="M482 152h60q8 0 8 8v704q0 8-8 8h-60q-8 0-8-8V160q0-8 8-8z"/>
+                <path d="M176 474h672q8 0 8 8v60q0 8-8 8H176q-8 0-8-8v-60q0-8 8-8z"/>
+            </svg>
+            Добавить карту
+        </button>
+    </div>
+</div>
+
+<div class="cards-filters">
+    <div class="filter-group">
+        <input type="text" id="search-cards" class="form-input" placeholder="Поиск по названию карты...">
+    </div>
+    <div class="filter-group">
+        <select id="status-filter" class="form-select">
+            <option value="">Все статусы</option>
+            <option value="active">Активные</option>
+            <option value="blocked">Заблокированные</option>
+            <option value="limit_exceeded">Превышен лимит</option>
+        </select>
+    </div>
+    <div class="filter-group">
+        <select id="sort-cards" class="form-select">
+            <option value="created_desc">Новые сначала</option>
+            <option value="created_asc">Старые сначала</option>
+            <option value="name_asc">По названию А-Я</option>
+            <option value="name_desc">По названию Я-А</option>
+            <option value="balance_desc">По балансу (больше)</option>
+            <option value="balance_asc">По балансу (меньше)</option>
+        </select>
+    </div>
+</div>
+
+<!-- Grid вид (карточки) -->
+<div class="cards-grid" id="cards-container" style="display: grid;">
+    <!-- Карты загружаются динамически -->
+</div>
+
+<!-- Table вид (таблица) -->
+<div class="cards-table-container" id="cards-table-container" style="display: none;">
+    <table class="cards-table">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Статус</th>
+                <th>Валюта</th>
+                <th>Баланс</th>
+                <th>Доход</th>
+                <th>Скручено</th>
+                <th>Прогрев</th>
+                <th>Подрядчик</th>
+                <th>Создана</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody id="cards-table-body">
+            <!-- Строки таблицы загружаются динамически -->
+        </tbody>
+    </table>
+</div>
+
+<!-- Модальное окно добавления карты -->
+<div id="card-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Добавить новую карту</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form id="card-form">
+        <div class="form-tabs">
+            <button type="button" class="tab-btn active" data-tab="basic">Основные</button>
+            <button type="button" class="tab-btn" data-tab="personal">Личные данные</button>
+            <button type="button" class="tab-btn" data-tab="second-bank">Второй банк</button>
+            <button type="button" class="tab-btn" data-tab="contractor">Подрядчик</button>
+            <button type="button" class="tab-btn" data-tab="finance">Финансы</button>
+        </div>
+
+            <!-- Основные данные -->
+            <div class="tab-content active" data-tab="basic">
+                <div class="form-group">
+                    <label class="form-label">Название карты</label>
+                    <input type="text" name="name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Валюта</label>
+                    <select name="currency" class="form-select">
+                        <option value="USD">USD</option>
+                        <option value="EUR">EUR</option>
+                        <option value="UAH">UAH</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Команда</label>
+                    <select name="team_id" class="form-select">
+                        <option value="">Выберите команду</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Личные данные -->
+            <div class="tab-content" data-tab="personal">
+                <div class="form-group">
+                    <label class="form-label">ПІБ</label>
+                    <input type="text" name="full_name" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль банк</label>
+                    <input type="password" name="bank_password" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль карты</label>
+                    <input type="password" name="card_password" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Телефон</label>
+                    <input type="tel" name="phone" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Почта</label>
+                    <input type="email" name="email" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль почты</label>
+                    <input type="password" name="email_password" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дата рождения</label>
+                    <input type="date" name="birth_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дата выдачи паспорта</label>
+                    <input type="date" name="passport_issue_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">ІПН</label>
+                    <input type="text" name="ipn" class="form-input">
+                </div>
+            </div>
+
+            <!-- Подрядчик -->
+            <div class="tab-content" data-tab="contractor">
+                <div class="form-group">
+                    <label class="form-label">Имя подрядчика</label>
+                    <input type="text" name="contractor_name" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дата запуска карты</label>
+                    <input type="date" name="launch_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дата следующей оплаты</label>
+                    <input type="date" name="next_payment_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Счет подрядчика</label>
+                    <input type="text" name="contractor_account" class="form-input">
+                </div>
+            </div>
+
+            <!-- Второй банк -->
+            <div class="tab-content" data-tab="second-bank">
+                <div class="form-group">
+                    <label class="form-label">Телефон второго банка</label>
+                    <input type="tel" name="second_bank_phone" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пин второго банка</label>
+                    <input type="text" name="second_bank_pin" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Почта второго банка</label>
+                    <input type="email" name="second_bank_email" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пароль второго банка</label>
+                    <input type="password" name="second_bank_password" class="form-input">
+                </div>
+            </div>
+
+            <!-- Финансы -->
+            <div class="tab-content" data-tab="finance">
+                <div class="form-group">
+                    <label class="form-label">Доход по карте</label>
+                    <input type="number" step="0.01" name="income_amount" class="form-input" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Пополнение грн этой карты</label>
+                    <input type="number" step="0.01" name="top_up_uah" class="form-input" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Остаток по этой карте</label>
+                    <input type="number" step="0.01" name="remaining_balance" class="form-input" placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дневной лимит</label>
+                    <input type="number" step="0.01" name="daily_limit" class="form-input" value="8000">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Дата последней транзакции</label>
+                    <input type="date" name="last_transaction_date" class="form-input">
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary modal-cancel">Отмена</button>
+                <button type="submit" class="btn btn-primary">Создать</button>
+            </div>
+        </form>
+    </div>
+</div>
