@@ -3,6 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+const db = require('./models/database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;

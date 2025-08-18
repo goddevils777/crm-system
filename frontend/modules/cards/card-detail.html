@@ -1,0 +1,98 @@
+<div class="card-detail-container">
+    <div class="card-detail-header">
+        <button class="btn btn-secondary back-btn" id="back-to-cards">
+            ← Назад к картам
+        </button>
+        <h2 id="card-title">Карта загружается...</h2>
+        <div class="card-status-badge" id="card-status"></div>
+    </div>
+
+    <div class="card-info-grid">
+        <div class="info-card">
+            <h3>Основная информация</h3>
+            <div class="info-content" id="basic-info">
+                <!-- Основные данные карты -->
+            </div>
+        </div>
+
+        <div class="info-card">
+            <h3>Финансовая сводка</h3>
+            <div class="finance-summary" id="finance-summary">
+                <!-- Баланс, скручено, прогрев -->
+            </div>
+        </div>
+    </div>
+
+    <div class="card-tabs">
+        <button class="tab-btn active" data-tab="operations">Ежедневные операции</button>
+        <button class="tab-btn" data-tab="history">История</button>
+        <button class="tab-btn" data-tab="topups">Пополнения</button>
+        <button class="tab-btn" data-tab="settings">Настройки</button>
+    </div>
+
+    <div class="tab-content active" data-tab="operations">
+        <div class="daily-operations">
+            <h3>Обновить данные карты</h3>
+            <form id="daily-update-form" class="update-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Текущий остаток на карте</label>
+                        <input type="number" step="0.01" id="current-balance" class="form-input" required>
+                        <small class="form-help">Сколько денег сейчас на карте</small>
+                    </div>
+                    <div class="form-group">
+                        <label>Пополнение (если было)</label>
+                        <input type="number" step="0.01" id="topup-amount" class="form-input" value="0">
+                        <small class="form-help">Сумма пополнения за сегодня</small>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Описание операции (необязательно)</label>
+                    <input type="text" id="update-description" class="form-input" placeholder="Комментарий к операции">
+                </div>
+                <button type="submit" class="btn btn-primary">Обновить</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="tab-content" data-tab="history">
+        <div class="operations-history">
+            <h3>История операций</h3>
+            <div class="history-controls">
+                <button class="btn btn-secondary" id="refresh-history-btn">
+                    🔄 Обновить
+                </button>
+            </div>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Тип операции</th>
+                        <th>Баланс до</th>
+                        <th>Баланс после</th>
+                        <th>Изменение</th>
+                        <th>Описание</th>
+                        <th>Кто обновил</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table-body">
+                    <!-- История загружается динамически -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="tab-content" data-tab="topups">
+        <div class="topups-management">
+            <h3>Управление пополнениями</h3>
+            <p>Раздел в разработке</p>
+        </div>
+    </div>
+
+    <div class="tab-content" data-tab="settings">
+        <div class="card-settings">
+            <h3>Настройки карты</h3>
+            <p>Раздел в разработке</p>
+        </div>
+    </div>
+</div>

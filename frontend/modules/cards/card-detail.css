@@ -1,0 +1,365 @@
+/* Card Detail Page Styles - Изолированные */
+.card-detail-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.card-detail-container .card-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color-split);
+}
+
+.card-detail-container .card-detail-header h2 {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.card-detail-container .card-status-badge {
+  padding: 6px 16px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-detail-container .card-status-badge.active {
+  background: #f6ffed;
+  color: var(--success-color);
+  border: 1px solid #b7eb8f;
+}
+
+.card-detail-container .card-status-badge.blocked {
+  background: #fff2f0;
+  color: var(--error-color);
+  border: 1px solid #ffccc7;
+}
+
+.card-detail-container .card-status-badge.limit_exceeded {
+  background: #fff7e6;
+  color: var(--warning-color);
+  border: 1px solid #ffd591;
+}
+
+.card-detail-container .card-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.card-detail-container .info-card {
+  background: var(--component-background);
+  border: 1px solid var(--border-color-split);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.card-detail-container .info-card h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 16px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color-split);
+}
+
+.card-detail-container .info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.card-detail-container .info-item:last-child {
+  border-bottom: none;
+}
+
+.card-detail-container .finance-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.card-detail-container .finance-item {
+  text-align: center;
+  padding: 16px;
+  background: var(--background-color);
+  border-radius: 8px;
+  border: 1px solid var(--border-color-split);
+}
+
+.card-detail-container .finance-item.warning {
+  background: rgba(250, 173, 20, 0.06);
+  border-color: rgba(250, 173, 20, 0.2);
+}
+
+.card-detail-container .finance-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.card-detail-container .finance-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-color);
+  line-height: 1.2;
+}
+
+.card-detail-container .finance-item.warning .finance-value {
+  color: var(--warning-color);
+}
+
+.card-detail-container .card-tabs {
+  display: flex;
+  background: var(--component-background);
+  border-radius: 12px 12px 0 0;
+  border: 1px solid var(--border-color-split);
+  border-bottom: none;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.card-detail-container .tab-btn {
+  flex: 1;
+  padding: 16px 24px;
+  border: none;
+  background: var(--background-color);
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+  border-bottom: 3px solid transparent;
+}
+
+.card-detail-container .tab-btn:hover {
+  color: var(--primary-color);
+  background: var(--component-background);
+}
+
+.card-detail-container .tab-btn.active {
+  color: var(--primary-color);
+  background: var(--component-background);
+  border-bottom-color: var(--primary-color);
+}
+
+.card-detail-container .tab-content {
+  display: none;
+  background: var(--component-background);
+  border: 1px solid var(--border-color-split);
+  border-radius: 0 0 12px 12px;
+  padding: 32px;
+  min-height: 400px;
+}
+
+.card-detail-container .tab-content.active {
+  display: block;
+}
+
+.card-detail-container .daily-operations h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 24px 0;
+}
+
+.card-detail-container .update-form {
+  max-width: 600px;
+}
+
+.card-detail-container .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.card-detail-container .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-detail-container .form-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.card-detail-container .form-group .form-input {
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.card-detail-container .form-group .form-input:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
+}
+
+.card-detail-container .operations-history h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 24px 0;
+}
+
+.card-detail-container .history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.card-detail-container .history-table th {
+  background: var(--background-color);
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color-split);
+}
+
+.card-detail-container .history-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-color-split);
+  color: var(--text-primary);
+}
+
+.card-detail-container .history-table tbody tr:hover {
+  background: var(--background-color);
+}
+
+.card-detail-container .topups-management h3,
+.card-detail-container .card-settings h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 24px 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .card-detail-container {
+    padding: 16px;
+  }
+  
+  .card-detail-container .card-detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  
+  .card-detail-container .card-info-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-detail-container .finance-summary {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-detail-container .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .card-detail-container .card-tabs {
+    flex-direction: column;
+  }
+  
+  .card-detail-container .tab-content {
+    padding: 20px;
+  }
+}
+
+/* Добавь в конец файла: */
+
+.card-detail-container .form-help {
+  font-size: 11px;
+  color: var(--text-disabled);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.card-detail-container .history-controls {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 16px;
+}
+
+.card-detail-container .transaction-type {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.card-detail-container .transaction-type.positive {
+  background: #f6ffed;
+  color: var(--success-color);
+  border: 1px solid #b7eb8f;
+}
+
+.card-detail-container .transaction-type.negative {
+  background: #fff2f0;
+  color: var(--error-color);
+  border: 1px solid #ffccc7;
+}
+
+.card-detail-container .transaction-type.neutral {
+  background: #f0f0f0;
+  color: var(--text-secondary);
+  border: 1px solid #d9d9d9;
+}
+
+.card-detail-container .amount.positive {
+  color: var(--success-color);
+  font-weight: 600;
+}
+
+.card-detail-container .amount.negative {
+  color: var(--error-color);
+  font-weight: 600;
+}
+
+.card-detail-container .amount.neutral {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.card-detail-container .history-table th {
+  font-size: 12px;
+  padding: 12px 8px;
+}
+
+.card-detail-container .history-table td {
+  font-size: 13px;
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+.card-detail-container .history-table tbody tr:nth-child(even) {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.card-detail-container .update-form .form-group:last-child {
+  margin-bottom: 24px;
+}

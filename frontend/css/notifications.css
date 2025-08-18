@@ -1,0 +1,173 @@
+/* Notification System - Ant Design Style */
+.notifications-container {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 9999;
+  pointer-events: none;
+  width: 384px;
+  max-width: calc(100vw - 48px);
+}
+
+.notification {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: var(--component-background);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--border-color-split);
+  pointer-events: all;
+  transform: translateX(100%);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.notification.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.notification.hide {
+  transform: translateX(100%);
+  opacity: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  max-height: 0;
+}
+
+.notification-success {
+  border-left: 4px solid var(--success-color);
+  background: linear-gradient(90deg, rgba(82, 196, 26, 0.02) 0%, var(--component-background) 100%);
+}
+
+.notification-error {
+  border-left: 4px solid var(--error-color);
+  background: linear-gradient(90deg, rgba(245, 34, 45, 0.02) 0%, var(--component-background) 100%);
+}
+
+.notification-warning {
+  border-left: 4px solid var(--warning-color);
+  background: linear-gradient(90deg, rgba(250, 173, 20, 0.02) 0%, var(--component-background) 100%);
+}
+
+.notification-info {
+  border-left: 4px solid var(--info-color);
+  background: linear-gradient(90deg, rgba(19, 194, 194, 0.02) 0%, var(--component-background) 100%);
+}
+
+.notification-icon {
+  font-size: 20px;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.notification-message {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+.notification-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: var(--text-disabled);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.notification-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-secondary);
+}
+
+.notification-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--primary-color), var(--primary-hover));
+  border-radius: 0 0 8px 8px;
+  animation: notificationProgress linear forwards;
+  width: 100%;
+  transform-origin: left;
+}
+
+@keyframes notificationProgress {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 768px) {
+  .notifications-container {
+    top: 16px;
+    right: 16px;
+    left: 16px;
+    width: auto;
+    max-width: none;
+  }
+  
+  .notification {
+    margin-bottom: 12px;
+    padding: 12px;
+  }
+  
+  .notification-title {
+    font-size: 15px;
+  }
+  
+  .notification-message {
+    font-size: 13px;
+  }
+}
+
+/* Анимация входа для множественных уведомлений */
+.notification:nth-child(1) { animation-delay: 0ms; }
+.notification:nth-child(2) { animation-delay: 100ms; }
+.notification:nth-child(3) { animation-delay: 200ms; }
+.notification:nth-child(4) { animation-delay: 300ms; }
+.notification:nth-child(5) { animation-delay: 400ms; }
+
+/* Эффект размытия для фона при множественных уведомлениях */
+.notifications-container:has(.notification:nth-child(3)) .notification:not(:nth-child(1)):not(:nth-child(2)) {
+  opacity: 0.9;
+  transform: scale(0.98);
+}
