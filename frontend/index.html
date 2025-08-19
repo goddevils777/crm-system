@@ -1,41 +1,63 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CRM Система</title>
+    <title>CRM System</title>
 
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>CRM System</title>
-        <link rel="icon"
-            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
-        <link rel="apple-touch-icon"
-            href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
-        <link rel="stylesheet" href="css/style.css">
-    </head>
+    <style>
+        /* Предотвращение FOUC без блокировки */
+        body { 
+            margin: 0; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #fafafa;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        
+        body.loaded { 
+            opacity: 1; 
+        }
+    </style>
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/modal.css">
+    <link rel="stylesheet" href="css/notifications.css">
+</head>
 
 <body>
     <div id="app">
-        <header class="header">
-            <div class="container">
-                <h1 class="logo">CRM System</h1>
-                <nav class="nav">
-                    <span id="user-info"></span>
-                    <button id="logout-btn" class="btn btn-secondary">Выйти</button>
-                </nav>
-            </div>
-        </header>
+        <!-- Шапка будет заменена компонентом -->
+        <div id="header-container">
+            <header class="header">
+                <div class="container">
+                    <div class="header-left">
+                        <button class="burger-btn" id="burger-btn">
+                            <span class="burger-line"></span>
+                            <span class="burger-line"></span>
+                            <span class="burger-line"></span>
+                        </button>
+                        <h1 class="logo">CRM System</h1>
+                    </div>
+                    <nav class="nav">
+                        <span id="user-info"></span>
+                        <button id="logout-btn" class="btn btn-secondary">Выйти</button>
+                    </nav>
+                </div>
+            </header>
+        </div>
 
         <main class="main">
             <div class="container">
-                <aside class="sidebar">
-                    <ul class="menu" id="main-menu">
-                        <!-- Меню загружается динамически -->
-                    </ul>
-                </aside>
+                <!-- Сайдбар будет заменен компонентом -->
+                <div id="sidebar-container">
+                    <aside class="sidebar">
+                        <ul class="menu" id="main-menu">
+                            <!-- Меню загружается динамически -->
+                        </ul>
+                    </aside>
+                </div>
 
                 <div class="content">
                     <div id="content-area">
@@ -47,8 +69,12 @@
         </main>
     </div>
 
+    <script src="js/security.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/module-loader.js"></script>
     <script src="js/api.js"></script>
+    <script src="components/header.js"></script>
+    <script src="components/sidebar.js"></script>
     <script src="js/app.js"></script>
 </body>
-
 </html>

@@ -57,13 +57,13 @@ if (typeof CardDetailModule === 'undefined') {
         fillBasicInfo() {
             const basicInfo = document.getElementById('basic-info');
             basicInfo.innerHTML = `
-      <div class="info-item"><strong>ПІБ:</strong> ${this.card.full_name || '—'}</div>
-      <div class="info-item"><strong>Телефон:</strong> ${this.card.phone || '—'}</div>
-      <div class="info-item"><strong>Email:</strong> ${this.card.email || '—'}</div>
-      <div class="info-item"><strong>Валюта:</strong> ${this.card.currency}</div>
-      <div class="info-item"><strong>Подрядчик:</strong> ${this.card.contractor_name || '—'}</div>
-      <div class="info-item"><strong>Дата запуска:</strong> ${this.card.launch_date ? new Date(this.card.launch_date).toLocaleDateString() : '—'}</div>
-    `;
+                <div class="info-item"><strong>ПІБ:</strong> ${this.card.full_name || '—'}</div>
+                <div class="info-item"><strong>Телефон:</strong> ${this.card.phone || '—'}</div>
+                <div class="info-item"><strong>Email:</strong> ${this.card.email || '—'}</div>
+                <div class="info-item"><strong>Валюта:</strong> ${this.card.currency}</div>
+                <div class="info-item"><strong>Подрядчик:</strong> ${this.card.contractor_name || '—'}</div>
+                <div class="info-item"><strong>Дата запуска:</strong> ${this.card.launch_date ? new Date(this.card.launch_date).toLocaleDateString() : '—'}</div>
+            `;
         }
 
         fillFinanceSummary() {
@@ -71,25 +71,25 @@ if (typeof CardDetailModule === 'undefined') {
             const daysSince = this.calculateDaysSinceTransaction(this.card.last_transaction_date);
 
             financeSummary.innerHTML = `
-    <div class="finance-item">
-      <div class="finance-label">Баланс</div>
-      <div class="finance-value">${this.card.balance || 0} ${this.card.currency}</div>
-    </div>
-    <div class="finance-item">
-      <div class="finance-label">Скручено</div>
-      <div class="finance-value">${this.card.total_spent_calculated || 0} ${this.card.currency}</div>
-    </div>
-    <div class="finance-item">
-      <div class="finance-label">Прогрев</div>
-      <div class="finance-value">${this.card.warm_up_amount || 0} ${this.card.currency}</div>
-    </div>
-    ${daysSince >= 3 ? `
-    <div class="finance-item warning">
-      <div class="finance-label">⚠️ Без операций</div>
-      <div class="finance-value">${daysSince} дней</div>
-    </div>
-    ` : ''}
-  `;
+                <div class="finance-item">
+                    <div class="finance-label">Баланс</div>
+                    <div class="finance-value">${this.card.balance || 0} ${this.card.currency}</div>
+                </div>
+                <div class="finance-item">
+                    <div class="finance-label">Скручено</div>
+                    <div class="finance-value">${this.card.total_spent_calculated || 0} ${this.card.currency}</div>
+                </div>
+                <div class="finance-item">
+                    <div class="finance-label">Прогрев</div>
+                    <div class="finance-value">${this.card.warm_up_amount || 0} ${this.card.currency}</div>
+                </div>
+                ${daysSince >= 3 ? `
+                <div class="finance-item warning">
+                    <div class="finance-label">⚠️ Без операций</div>
+                    <div class="finance-value">${daysSince} дней</div>
+                </div>
+                ` : ''}
+            `;
         }
 
         setupEventListeners() {
@@ -125,170 +125,6 @@ if (typeof CardDetailModule === 'undefined') {
             // Добавляем активные классы
             document.querySelector(`[data-tab="${tabName}"].tab-btn`).classList.add('active');
             document.querySelector(`[data-tab="${tabName}"].tab-content`).classList.add('active');
-        }
-
-        async handleDailyUpdate(e) {
-            e.preventDefault();
-
-            console.log('=== DAILY UPDATE TRIGGERED ===');
-            console.log('Card ID:', this.cardId);
-
-            const currentBalance = parseFloat(document.getElementById('current-balance').value);
-            const topupAmount = parseFloat(document.getElementById('topup-amount').value) || 0;
-            const description = document.getElementById('update-description')?.value || '';
-
-            console.log('Form data:', { currentBalance, topupAmount, description });
-
-            try {
-                console.log('Sending API request...');
-                // API запрос на обновление карты
-                await api.request(`/cards/${this.cardId}/update`, {
-                    method: 'POST',
-                    body: JSON.stringify({
-                        balance: currentBalance,
-                        topup_amount: topupAmount,
-                        update_date: new Date().toISOString().split('T')[0]
-                    })
-                });
-
-                // Перезагружаем данные карты
-                await this.loadCard();
-                this.fillFinanceSummary();
-
-                // Сбрасываем поле пополнения
-                document.getElementById('topup-amount').value = 0;
-
-                this.showSuccess('Данные карты обновлены успешно!');
-
-            } catch (error) {
-                console.error('Ошибка обновления карты:', error);
-                this.showError('Ошибка обновления данных');
-            }
-        }
-
-        goBackToCards() {
-            // Простой способ - перезагружаем модуль карт
-            window.location.hash = 'cards';
-
-            // Загружаем HTML модуля карт
-            fetch('modules/cards/cards.html')
-                .then(response => response.text())
-                .then(html => {
-                    document.getElementById('content-area').innerHTML = html;
-
-                    // Загружаем скрипт модуля карт
-                    const script = document.createElement('script');
-                    script.src = `modules/cards/cards.js?v=${Date.now()}`;
-                    document.head.appendChild(script);
-                })
-                .catch(error => {
-                    console.error('Ошибка возврата к картам:', error);
-                    // В крайнем случае перезагружаем страницу
-                    window.location.reload();
-                });
-        }
-
-        calculateDaysSinceTransaction(lastTransactionDate) {
-            if (!lastTransactionDate) return 0;
-
-            const today = new Date();
-            const lastDate = new Date(lastTransactionDate);
-            const diffTime = Math.abs(today - lastDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            return diffDays;
-        }
-
-        getStatusText(status) {
-            const statusMap = {
-                'active': 'Активна',
-                'blocked': 'Заблокирована',
-                'limit_exceeded': 'Превышен лимит',
-                'deleted': 'Удалена'
-            };
-            return statusMap[status] || 'Неизвестно';
-        }
-
-        showError(message) {
-            alert('Ошибка: ' + message);
-        }
-
-        showSuccess(message) {
-            alert('Успех: ' + message);
-        }
-
-        // Добавь эти функции в класс CardDetailModule:
-
-        renderTransactionHistory() {
-            console.log('Rendering transaction history, transactions:', this.transactions);
-            const tbody = document.getElementById('history-table-body');
-            console.log('History table body element:', tbody);
-
-            if (!tbody) {
-                console.error('History table body not found!');
-                return;
-            }
-
-            if (this.transactions.length === 0) {
-                console.log('No transactions to display');
-                tbody.innerHTML = `
-      <tr>
-        <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
-          <div>
-            <h4 style="margin-bottom: 8px;">История операций пуста</h4>
-            <p>Операции появятся после обновления карты</p>
-          </div>
-        </td>
-      </tr>
-    `;
-                return;
-            }
-
-            console.log('Generating transaction rows for', this.transactions.length, 'transactions');
-            tbody.innerHTML = this.transactions.map(transaction => this.renderTransactionRow(transaction)).join('');
-        }
-
-        renderTransactionRow(transaction) {
-            const typeNames = {
-                'balance_update': 'Обновление баланса',
-                'topup': 'Пополнение',
-                'expense': 'Расход'
-            };
-
-            const typeClass = {
-                'balance_update': 'neutral',
-                'topup': 'positive',
-                'expense': 'negative'
-            };
-
-            return `
-    <tr>
-      <td>${new Date(transaction.transaction_date).toLocaleDateString()}</td>
-      <td>
-        <span class="transaction-type ${typeClass[transaction.transaction_type]}">
-          ${typeNames[transaction.transaction_type] || transaction.transaction_type}
-        </span>
-      </td>
-      <td>${transaction.balance_before || 0} ${transaction.currency}</td>
-      <td>${transaction.balance_after || 0} ${transaction.currency}</td>
-      <td class="amount ${typeClass[transaction.transaction_type]}">
-        ${transaction.amount > 0 ? '+' : ''}${transaction.amount} ${transaction.currency}
-      </td>
-      <td>${transaction.description || '—'}</td>
-      <td>${transaction.created_by_name || '—'}</td>
-    </tr>
-  `;
-        }
-
-        // Обнови функцию switchTab чтобы загружать историю при переходе на вкладку:
-        switchTab(tabName) {
-            // Убираем активные классы
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-
-            // Добавляем активные классы
-            document.querySelector(`[data-tab="${tabName}"].tab-btn`).classList.add('active');
-            document.querySelector(`[data-tab="${tabName}"].tab-content`).classList.add('active');
 
             // Загружаем данные для конкретных вкладок
             if (tabName === 'history') {
@@ -296,7 +132,6 @@ if (typeof CardDetailModule === 'undefined') {
             }
         }
 
-        // Обнови функцию handleDailyUpdate чтобы перезагружать историю после обновления:
         async handleDailyUpdate(e) {
             e.preventDefault();
 
@@ -331,12 +166,101 @@ if (typeof CardDetailModule === 'undefined') {
                     document.getElementById('update-description').value = '';
                 }
 
-                this.showSuccess('Данные карты обновлены успешно!');
+                notifications.success('Обновлено', 'Данные карты успешно обновлены');
 
             } catch (error) {
                 console.error('Ошибка обновления карты:', error);
-                this.showError('Ошибка обновления данных');
+                notifications.error('Ошибка обновления', 'Не удалось обновить данные карты');
             }
+        }
+
+        goBackToCards() {
+            // Используем глобальное приложение для возврата к модулю карт
+            if (window.app && window.app.loadModule) {
+                window.app.loadModule('cards');
+            } else {
+                // Запасной вариант - перезагрузка страницы
+                console.error('App instance not found, reloading page');
+                window.location.reload();
+            }
+        }
+
+        calculateDaysSinceTransaction(lastTransactionDate) {
+            if (!lastTransactionDate) return 0;
+
+            const today = new Date();
+            const lastDate = new Date(lastTransactionDate);
+            const diffTime = Math.abs(today - lastDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            return diffDays;
+        }
+
+        getStatusText(status) {
+            const statusMap = {
+                'active': 'Активна',
+                'blocked': 'Заблокирована',
+                'limit_exceeded': 'Превышен лимит',
+                'deleted': 'Удалена'
+            };
+            return statusMap[status] || 'Неизвестно';
+        }
+
+        renderTransactionHistory() {
+            const tbody = document.getElementById('history-table-body');
+
+            if (!tbody) {
+                console.error('History table body not found!');
+                return;
+            }
+
+            if (this.transactions.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                            <div>
+                                <h4 style="margin-bottom: 8px;">История операций пуста</h4>
+                                <p>Операции появятся после обновления карты</p>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = this.transactions.map(transaction => this.renderTransactionRow(transaction)).join('');
+        }
+
+        renderTransactionRow(transaction) {
+            const typeNames = {
+                'balance_update': 'Обновление баланса',
+                'topup': 'Пополнение',
+                'expense': 'Расход'
+            };
+
+            const typeClass = {
+                'balance_update': 'neutral',
+                'topup': 'positive',
+                'expense': 'negative'
+            };
+
+            return `
+                <tr>
+                    <td>${new Date(transaction.transaction_date).toLocaleDateString()}</td>
+                    <td>
+                        <span class="transaction-type ${typeClass[transaction.transaction_type]}">
+                            ${typeNames[transaction.transaction_type] || transaction.transaction_type}
+                        </span>
+                    </td>
+                    <td>${transaction.balance_before || 0} ${transaction.currency}</td>
+                    <td>${transaction.balance_after || 0} ${transaction.currency}</td>
+                    <td class="amount ${typeClass[transaction.transaction_type]}">
+                        ${transaction.amount > 0 ? '+' : ''}${transaction.amount} ${transaction.currency}
+                    </td>
+                    <td>${transaction.description || '—'}</td>
+                    <td>${transaction.created_by_name || '—'}</td>
+                </tr>
+            `;
         }
 
         async loadTransactionHistory() {
@@ -348,11 +272,10 @@ if (typeof CardDetailModule === 'undefined') {
                 this.renderTransactionHistory();
             } catch (error) {
                 console.error('Ошибка загрузки истории:', error);
-                this.showError('Не удалось загрузить историю операций');
+                notifications.error('Ошибка', 'Не удалось загрузить историю операций');
             }
         }
     }
-
 
     window.CardDetailModule = CardDetailModule;
 

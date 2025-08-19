@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../models/database');
 const { authenticateToken, checkRole } = require('../middleware/auth');
+const { validateCardData, validateFinancialData } = require('../middleware/validation');
 
 const router = express.Router();
 
@@ -9,10 +10,14 @@ router.get('/', authenticateToken, async (req, res) => {
   try {
     let query = 'SELECT * FROM cards WHERE status != $1';
     let params = ['deleted'];
+    let paramIndex = 2;
 
-    // Ограничение доступа по ролям
+    // Безопасная фильтрация по команде
     if (req.user.role === 'manager' || req.user.role === 'buyer') {
-      query += ' AND team_id = $2';
+      if (!req.user.team_id || typeof req.user.team_id !== 'number') {
+        return res.status(403).json({ error: 'Некорректный ID команды' });
+      }
+      query += ` AND team_id = $${paramIndex}`;
       params.push(req.user.team_id);
     }
 
@@ -31,7 +36,7 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Создание новой карты (только админ и менеджер)
-router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCardData, async (req, res) => {
   try {
     const { 
       name, currency = 'USD', team_id, full_name, bank_password, 
@@ -158,7 +163,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
 });
 
 // Обновление финансовых данных карты (с сохранением истории)
-router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), validateFinancialData, async (req, res) => {
   console.log('=== UPDATE ROUTE CALLED ===');
   console.log('Card ID:', req.params.id);
   console.log('Body:', req.body);
@@ -166,10 +171,16 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), a
   
   try {
     const cardId = req.params.id;
+    
+    // ДОБАВЬ ВАЛИДАЦИЮ ID КАРТЫ
+    if (!cardId || isNaN(parseInt(cardId))) {
+      return res.status(400).json({ error: 'Некорректный ID карты' });
+    }
+    
     const { balance, topup_amount, update_date, description } = req.body;
 
     // Получаем текущие данные карты
-    const cardResult = await db.query('SELECT * FROM cards WHERE id = $1', [cardId]);
+    const cardResult = await db.query('SELECT * FROM cards WHERE id = $1', [parseInt(cardId)]);
     
     if (cardResult.rows.length === 0) {
       console.log('Card not found');

@@ -15,8 +15,14 @@ class LoginPage {
 
   init() {
     this.setupEventListeners();
-    this.setupValidation();
     this.checkAutoLogin();
+  }
+
+  setupValidation() {
+    // Валидация полей формы
+    [this.usernameInput, this.passwordInput].forEach(input => {
+      input.addEventListener('input', () => this.removeFieldError(input));
+    });
   }
 
   setupEventListeners() {

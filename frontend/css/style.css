@@ -231,7 +231,19 @@ body {
   width: 100%;
   height: calc(100vh - 64px);
   padding: 0;
+  transition: grid-template-columns 0.3s ease;
+  position: relative; /* Добавили */
 }
+
+.main .container.sidebar-hidden {
+  grid-template-columns: 0px 1fr;
+}
+
+
+
+
+
+
 /* Sidebar - Ant Design */
 .sidebar {
   background: var(--component-background);
@@ -240,6 +252,12 @@ body {
   overflow-y: auto;
   position: sticky;
   top: 0;
+  transition: transform 0.3s ease;
+  z-index: 1000;
+}
+
+.sidebar.hide {
+  transform: translateX(-100%);
 }
 
 .menu {
@@ -312,16 +330,23 @@ body {
 .content {
   background: var(--component-background);
   border-radius: 0;
-  padding: var(--padding-lg);
+  padding: var(--padding-md);
   border: none;
   box-shadow: none;
   height: 100%;
   overflow-y: auto;
-  margin: var(--padding-md);
+  margin: var(--padding-xs);
   margin-left: 0;
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--border-color-split);
+  grid-column: 2;
+  align-self: start; /* Добавили */
+  position: relative; /* Добавили */
+  top: 0; /* Добавили */
 }
+
+
+
 
 /* Form Elements - Ant Design */
 .form-input,
@@ -359,4 +384,156 @@ body {
 
 .form-group {
   margin-bottom: var(--padding-md);
+}
+/* Burger Menu */
+/* Burger Menu */
+/* Burger Menu */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.burger-btn {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.3s;
+}
+
+.burger-btn:hover {
+  background: var(--background-color);
+}
+
+.burger-line {
+  width: 18px;
+  height: 2px;
+  background: var(--text-primary);
+  margin: 2px 0;
+  border-radius: 1px;
+}
+
+/* Sidebar overlay for mobile */
+.sidebar-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s;
+}
+
+.sidebar-overlay.show {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Mobile sidebar */
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    width: 280px;
+    height: calc(100vh - 64px);
+    transform: translateX(-100%);
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
+  }
+  
+  .sidebar.show {
+    transform: translateX(0);
+  }
+  
+  .sidebar.hide {
+    transform: translateX(-100%);
+  }
+  
+  .main .container {
+    grid-template-columns: 1fr;
+  }
+  
+  .content {
+    margin-left: 0;
+  }
+}
+
+/* Module Loader Styles */
+.module-loader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  padding: 60px 20px;
+  text-align: center;
+}
+
+.loader-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border-color-split);
+  border-top: 3px solid var(--primary-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+.module-loader p {
+  color: var(--text-secondary);
+  font-size: var(--font-size-base);
+  margin: 0;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Skeleton для быстрого показа структуры */
+.content-skeleton {
+  padding: var(--padding-lg);
+  background: var(--component-background);
+  margin: var(--padding-xs);
+  margin-left: 0;
+  border-radius: var(--border-radius-lg);
+  border: 1px solid var(--border-color-split);
+  min-height: calc(100vh - 100px);
+}
+
+.skeleton-header {
+  height: 32px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.skeleton-line {
+  height: 20px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.skeleton-line:nth-child(2) { width: 80%; }
+.skeleton-line:nth-child(3) { width: 60%; }
+.skeleton-line:nth-child(4) { width: 90%; }
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

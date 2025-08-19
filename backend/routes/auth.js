@@ -3,8 +3,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../models/database');
 const { authenticateToken } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/validation');
 
 const router = express.Router();
+
+// Применяем rate limiting к роутам авторизации
+router.use('/login', authLimiter); // ДОБАВЬ ЭТУ СТРОКУ
+router.use('/register', authLimiter); // ДОБАВЬ ЭТУ СТРОКУ
 
 // Регистрация пользователя
 router.post('/register', async (req, res) => {

@@ -176,26 +176,31 @@ class ExpensesModule {
     }
 
     async deleteExpense(expenseId) {
-        if (!confirm('Вы уверены, что хотите удалить этот расход?')) return;
+        // Заменяем системный confirm на красивый модал
+        const confirmed = await confirmDelete('Вы уверены, что хотите удалить этот расход?');
+
+        if (!confirmed) {
+            return;
+        }
 
         try {
             await api.request(`/expenses/${expenseId}`, { method: 'DELETE' });
             await this.loadExpenses();
             this.renderExpenses();
             this.updateSummary();
-            this.showSuccess('Расход успешно удален');
+            notifications.success('Расход удален', 'Запись о расходе удалена из системы');
         } catch (error) {
             console.error('Ошибка удаления расхода:', error);
-            this.showError('Не удалось удалить расход');
+            notifications.error('Ошибка удаления', 'Не удалось удалить расход');
         }
     }
 
     showError(message) {
-        alert('Ошибка: ' + message);
+        notifications.error('Ошибка', message);
     }
 
     showSuccess(message) {
-        alert('Успех: ' + message);
+        notifications.success('Успех', message);
     }
 }
 
