@@ -228,6 +228,31 @@
     border-color: rgba(250, 173, 20, 0.3);
 }
 
+.card-status.reissue {
+    background: rgba(24, 144, 255, 0.9);
+    border-color: rgba(24, 144, 255, 0.3);
+}
+
+.card-status.error {
+    background: rgba(245, 34, 45, 0.9);
+    border-color: rgba(245, 34, 45, 0.3);
+}
+
+.card-status.rebind {
+    background: rgba(114, 46, 209, 0.9);
+    border-color: rgba(114, 46, 209, 0.3);
+}
+
+.card-status.not_issued {
+    background: rgba(140, 140, 140, 0.9);
+    border-color: rgba(140, 140, 140, 0.3);
+}
+
+.card-status.not_spinning {
+    background: rgba(250, 173, 20, 0.9);
+    border-color: rgba(250, 173, 20, 0.3);
+}
+
 .card-currency {
     position: relative;
     z-index: 2;
@@ -235,6 +260,9 @@
     color: rgba(255, 255, 255, 0.8);
     font-weight: 500;
 }
+
+
+
 
 /* Card Actions */
 .card-actions {
@@ -542,6 +570,36 @@
 }
 
 .table-status.limit_exceeded {
+    background: #fff7e6;
+    color: var(--warning-color);
+    border: 1px solid #ffd591;
+}
+
+.table-status.reissue {
+    background: #e6f7ff;
+    color: #1890ff;
+    border: 1px solid #91d5ff;
+}
+
+.table-status.error {
+    background: #fff2f0;
+    color: var(--error-color);
+    border: 1px solid #ffccc7;
+}
+
+.table-status.rebind {
+    background: #f9f0ff;
+    color: #722ed1;
+    border: 1px solid #d3adf7;
+}
+
+.table-status.not_issued {
+    background: #f0f0f0;
+    color: #595959;
+    border: 1px solid #d9d9d9;
+}
+
+.table-status.not_spinning {
     background: #fff7e6;
     color: var(--warning-color);
     border: 1px solid #ffd591;

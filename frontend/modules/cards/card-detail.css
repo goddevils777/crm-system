@@ -42,6 +42,38 @@
   border: 1px solid #ffccc7;
 }
 
+
+.card-detail-container .card-status-badge.reissue {
+  background: #e6f7ff;
+  color: #1890ff;
+  border: 1px solid #91d5ff;
+}
+
+.card-detail-container .card-status-badge.error {
+  background: #fff2f0;
+  color: var(--error-color);
+  border: 1px solid #ffccc7;
+}
+
+.card-detail-container .card-status-badge.rebind {
+  background: #f9f0ff;
+  color: #722ed1;
+  border: 1px solid #d3adf7;
+}
+
+.card-detail-container .card-status-badge.not_issued {
+  background: #f0f0f0;
+  color: #595959;
+  border: 1px solid #d9d9d9;
+}
+
+.card-detail-container .card-status-badge.not_spinning {
+  background: #fff7e6;
+  color: var(--warning-color);
+  border: 1px solid #ffd591;
+}
+
+
 .card-detail-container .card-status-badge.limit_exceeded {
   background: #fff7e6;
   color: var(--warning-color);
@@ -252,6 +284,29 @@
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 24px 0;
+}
+
+.edit-info-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(24, 144, 255, 0.1);
+    color: var(--primary-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-left: 16px;
+}
+
+.edit-info-btn:hover {
+    background: var(--primary-color);
+    color: var(--component-background);
+    transform: scale(1.05);
 }
 
 /* Responsive */

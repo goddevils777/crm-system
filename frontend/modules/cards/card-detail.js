@@ -48,8 +48,13 @@ if (typeof CardDetailModule === 'undefined') {
             // Заголовок и статус
             document.getElementById('card-title').textContent = this.card.name;
             const statusBadge = document.getElementById('card-status');
-            statusBadge.textContent = this.getStatusText(this.card.status);
-            statusBadge.className = `card-status-badge ${this.card.status}`;
+            const statusText = document.getElementById('status-text');
+            if (statusText) {
+                statusText.textContent = this.getStatusText(this.card.status);
+            } else {
+                statusBadge.textContent = this.getStatusText(this.card.status);
+            }
+            statusBadge.className = `card-status-badge clickable-status ${this.card.status}`;
 
             // Основная информация
             this.fillBasicInfo();
@@ -102,6 +107,24 @@ if (typeof CardDetailModule === 'undefined') {
             const basicInfo = document.getElementById('basic-info');
             const createdDate = this.card.created_at ? new Date(this.card.created_at).toLocaleDateString() : '—';
 
+            // Сначала добавляем кнопку в заголовок секции
+            const infoCard = basicInfo.closest('.info-card');
+            const header = infoCard.querySelector('h3');
+            if (header && !header.querySelector('.edit-info-btn')) {
+                header.style.display = 'flex';
+                header.style.justifyContent = 'space-between';
+                header.style.alignItems = 'center';
+
+                const editBtn = document.createElement('button');
+                editBtn.className = 'edit-info-btn';
+                editBtn.onclick = () => this.openEditModal();
+                editBtn.title = 'Редактировать информацию';
+                editBtn.innerHTML = '✏️';
+
+                header.appendChild(editBtn);
+            }
+
+            // Заполняем содержимое
             basicInfo.innerHTML = `
         <div class="info-item"><strong>ПІБ:</strong> ${this.card.full_name || '—'}</div>
         <div class="info-item"><strong>Телефон:</strong> ${this.card.phone || '—'}</div>
@@ -117,22 +140,30 @@ if (typeof CardDetailModule === 'undefined') {
             const financeSummary = document.getElementById('finance-summary');
             const daysSince = this.calculateDaysSinceTransaction(this.card.last_transaction_date);
 
+            // Сохраняем оригинальные значения
+            this.originalStats = {
+                spent: this.card.total_spent_calculated || 0,
+                topup: this.card.total_top_up || 0,
+                commission: this.card.commission_paid || 0,
+                balance: this.card.balance || 0
+            };
+
             financeSummary.innerHTML = `
         <div class="finance-item">
             <div class="finance-label">Баланс</div>
-            <div class="finance-value">${this.card.balance || 0} ${this.card.currency}</div>
+            <div class="finance-value" id="display-balance">${this.card.balance || 0} ${this.card.currency}</div>
         </div>
         <div class="finance-item">
             <div class="finance-label">Скручено</div>
-            <div class="finance-value">${this.card.total_spent_calculated || 0} ${this.card.currency}</div>
+            <div class="finance-value" id="display-spent">${this.card.total_spent_calculated || 0} ${this.card.currency}</div>
         </div>
         <div class="finance-item">
             <div class="finance-label">Комиссия</div>
-            <div class="finance-value">${this.card.commission_paid || 0} ${this.card.currency}</div>
+            <div class="finance-value" id="display-commission">${this.card.commission_paid || 0} ${this.card.currency}</div>
         </div>
         <div class="finance-item">
             <div class="finance-label">Всего пополнено</div>
-            <div class="finance-value">${this.card.total_top_up || 0} ${this.card.currency}</div>
+            <div class="finance-value" id="display-topup">${this.card.total_top_up || 0} ${this.card.currency}</div>
         </div>
         ${daysSince >= 3 ? `
         <div class="finance-item warning">
@@ -140,8 +171,37 @@ if (typeof CardDetailModule === 'undefined') {
             <div class="finance-value">${daysSince} дней</div>
         </div>
         ` : ''}
+        
+        <!-- Фильтр периода -->
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color-split);">
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 12px; color: var(--text-secondary);">Показать за период:</label>
+                <select id="period-filter" class="form-select" style="font-size: 13px;">
+                    <option value="">Все время</option>
+                    <option value="today">Сегодня</option>
+                    <option value="yesterday">Вчера</option>
+                    <option value="week">Последние 7 дней</option>
+                    <option value="month">Последние 30 дней</option>
+                    <option value="custom">Произвольный период</option>
+                </select>
+            </div>
+            
+            <div id="custom-period-inputs" style="display: none;">
+                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                    <input type="date" id="period-from" class="form-input" style="flex: 1; font-size: 12px;">
+                    <input type="date" id="period-to" class="form-input" style="flex: 1; font-size: 12px;">
+                </div>
+            </div>
+            
+            <button id="reset-period-filter" class="btn btn-secondary" style="width: 100%; font-size: 12px; padding: 4px 8px; display: none;">
+                Сбросить фильтр
+            </button>
+        </div>
     `;
+
+            this.setupPeriodFilter();
         }
+
 
         setupEventListeners() {
             // Кнопка "Назад"
@@ -367,10 +427,15 @@ if (typeof CardDetailModule === 'undefined') {
             const statusMap = {
                 'active': 'Активна',
                 'blocked': 'Заблокирована',
-                'limit_exceeded': 'Превышен лимит',
-                'deleted': 'Удалена'
+                'reissue': 'Перевыпуск',
+                'error': 'Ошибка',
+                'rebind': 'Переподвязать',
+                'not_issued': 'Не выдана',
+                'not_spinning': 'Не крутит',
+                'limit_exceeded': 'Лимит достигнут'
             };
-            return statusMap[status] || 'Неизвестно';
+
+            return statusMap[status] || status;
         }
 
         renderTransactionHistory() {
@@ -579,9 +644,9 @@ if (typeof CardDetailModule === 'undefined') {
                 const statusBadge = document.getElementById('card-status');
                 const statusText = document.getElementById('status-text');
                 if (statusText) {
-                    statusText.textContent = this.availableStatuses[newStatus] || newStatus;
+                    statusText.textContent = this.getStatusText(newStatus);
                 } else {
-                    statusBadge.textContent = this.availableStatuses[newStatus] || newStatus;
+                    statusBadge.textContent = this.getStatusText(newStatus);
                 }
                 statusBadge.className = `card-status-badge clickable-status ${newStatus}`;
 
@@ -591,6 +656,171 @@ if (typeof CardDetailModule === 'undefined') {
                 notifications.error('Ошибка', 'Не удалось изменить статус карты');
             }
         }
+
+        openEditModal() {
+            const modal = new CardEditModal();
+            modal.open(this.cardId);
+        }
+
+        setupPeriodFilter() {
+            const periodFilter = document.getElementById('period-filter');
+            const customInputs = document.getElementById('custom-period-inputs');
+            const resetBtn = document.getElementById('reset-period-filter');
+            const fromInput = document.getElementById('period-from');
+            const toInput = document.getElementById('period-to');
+
+            periodFilter?.addEventListener('change', (e) => {
+                const value = e.target.value;
+
+                if (value === 'custom') {
+                    customInputs.style.display = 'block';
+                    resetBtn.style.display = 'block';
+                } else {
+                    customInputs.style.display = 'none';
+
+                    if (value === '') {
+                        this.resetToOriginalStats();
+                        resetBtn.style.display = 'none';
+                    } else {
+                        this.applyPeriodFilter(value);
+                        resetBtn.style.display = 'block';
+                    }
+                }
+            });
+
+            // Автоматическое применение при изменении дат
+            [fromInput, toInput].forEach(input => {
+                input?.addEventListener('change', () => {
+                    if (fromInput.value && toInput.value) {
+                        this.applyCustomPeriod();
+                    }
+                });
+            });
+
+            resetBtn?.addEventListener('click', () => {
+                periodFilter.value = '';
+                customInputs.style.display = 'none';
+                resetBtn.style.display = 'none';
+                fromInput.value = '';
+                toInput.value = '';
+                this.resetToOriginalStats();
+            });
+        }
+
+
+        async applyPeriodFilter(period) {
+            const today = new Date();
+            let fromDate, toDate;
+
+            switch (period) {
+                case 'today':
+                    fromDate = toDate = today.toISOString().split('T')[0];
+                    break;
+                case 'yesterday':
+                    const yesterday = new Date(today);
+                    yesterday.setDate(yesterday.getDate() - 1);
+                    fromDate = toDate = yesterday.toISOString().split('T')[0];
+                    break;
+                case 'week':
+                    const weekAgo = new Date(today);
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    fromDate = weekAgo.toISOString().split('T')[0];
+                    toDate = today.toISOString().split('T')[0];
+                    break;
+                case 'month':
+                    const monthAgo = new Date(today);
+                    monthAgo.setDate(monthAgo.getDate() - 30);
+                    fromDate = monthAgo.toISOString().split('T')[0];
+                    toDate = today.toISOString().split('T')[0];
+                    break;
+            }
+
+            await this.loadAndUpdateStats(fromDate, toDate);
+        }
+
+
+
+        async applyCustomPeriod() {
+            const fromDate = document.getElementById('period-from').value;
+            const toDate = document.getElementById('period-to').value;
+
+            if (!fromDate || !toDate) {
+                notifications.warning('Внимание', 'Выберите обе даты');
+                return;
+            }
+
+            await this.loadAndUpdateStats(fromDate, toDate);
+        }
+
+        async loadAndUpdateStats(fromDate, toDate) {
+            try {
+                const response = await api.request(`/cards/${this.cardId}/transactions`);
+
+                let periodSpent = 0;
+                let periodTopup = 0;
+
+                response.transactions.forEach(transaction => {
+                    if (transaction.is_cancelled) return;
+
+                    // Конвертируем UTC время в киевское время (UTC+3)
+                    const utcDate = new Date(transaction.transaction_date);
+                    const kyivDate = new Date(utcDate.getTime() + (3 * 60 * 60 * 1000));
+                    const transactionDate = kyivDate.toISOString().split('T')[0];
+
+                    // Сравниваем даты в киевском времени
+                    if (transactionDate >= fromDate && transactionDate <= toDate) {
+                        const amount = parseFloat(transaction.amount) || 0;
+
+                        if (transaction.transaction_type === 'expense') {
+                            // Исключаем комиссию из подсчета трат
+                            if (!transaction.description || !transaction.description.includes('омиссия')) {
+                                periodSpent += Math.abs(amount);
+                            }
+                        } else if (transaction.transaction_type === 'topup') {
+                            periodTopup += amount;
+                        }
+                    }
+                });
+
+                this.updateDisplayValues(periodSpent, periodTopup);
+
+            } catch (error) {
+                console.error('Error loading period stats:', error);
+                notifications.error('Ошибка', 'Не удалось загрузить статистику за период');
+            }
+        }
+
+
+        updateDisplayValues(spent, topup) {
+            document.getElementById('display-spent').textContent = `${spent.toFixed(2)} ${this.card.currency}`;
+            document.getElementById('display-topup').textContent = `${topup.toFixed(2)} ${this.card.currency}`;
+
+            // Комиссия и баланс остаются неизменными
+            document.getElementById('display-commission').textContent = `${this.originalStats.commission} ${this.card.currency}`;
+            document.getElementById('display-balance').textContent = `${this.originalStats.balance} ${this.card.currency}`;
+        }
+
+        resetToOriginalStats() {
+            document.getElementById('display-spent').textContent = `${this.originalStats.spent} ${this.card.currency}`;
+            document.getElementById('display-topup').textContent = `${this.originalStats.topup} ${this.card.currency}`;
+            document.getElementById('display-commission').textContent = `${this.originalStats.commission} ${this.card.currency}`;
+            document.getElementById('display-balance').textContent = `${this.originalStats.balance} ${this.card.currency}`;
+        }
+        getPeriodTitle(period) {
+            const titles = {
+                'today': 'Сегодня',
+                'yesterday': 'Вчера',
+                'week': 'Последние 7 дней',
+                'month': 'Последние 30 дней'
+            };
+            return titles[period] || period;
+        }
+
+
+
+
+
+
 
 
     }

@@ -275,7 +275,7 @@ if (typeof window.CardsModule === 'undefined') {
             <td>${totalSpent} ${card.currency}</td>
             <td>${commissionPaid} ${card.currency}</td>
             <td>${totalTopUp} ${card.currency}</td>
-            <td title="${card.contractor_name || ''}">${card.contractor_name || '—'}</td>
+            <td title="${card.team_name || ''}">${card.team_name || '—'}</td>
             <td>${new Date(card.created_at).toLocaleDateString()}</td>
             <td>
                 <div class="table-actions">
@@ -486,21 +486,22 @@ if (typeof window.CardsModule === 'undefined') {
       const diffTime = Math.abs(today - lastDate);
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
-    getStatusText(status) {
-      if (this.availableStatuses && this.availableStatuses[status]) {
-        return this.availableStatuses[status];
-      }
 
-      // Fallback для старых статусов
+    getStatusText(status) {
       const statusMap = {
         'active': 'Активна',
         'blocked': 'Заблокирована',
-        'limit_exceeded': 'Превышен лимит',
+        'reissue': 'Перевыпуск',
+        'error': 'Ошибка',
+        'rebind': 'Переподвязать',
+        'not_issued': 'Не выдана',
+        'not_spinning': 'Не крутит',
+        'limit_exceeded': 'Лимит достигнут',
         'deleted': 'Удалена'
       };
-      return statusMap[status] || 'Неизвестно';
-    }
 
+      return statusMap[status] || status;
+    }
     showModal() {
       const modal = document.getElementById('card-modal');
       modal?.classList.add('show');
@@ -571,6 +572,15 @@ if (typeof window.CardsModule === 'undefined') {
         const formData = new FormData(e.target);
         const editCardId = e.target.dataset.editCardId;
 
+        // Если это режим редактирования - закрываем старое окно и открываем новое
+        if (editCardId) {
+          this.hideModal();
+          const modal = new CardEditModal();
+          modal.open(editCardId);
+          return;
+        }
+
+        // Логика создания новой карты остается без изменений
         const cardData = {
           name: formData.get('name'),
           currency: formData.get('currency'),
@@ -602,18 +612,9 @@ if (typeof window.CardsModule === 'undefined') {
           return;
         }
 
-        if (editCardId) {
-          // Режим редактирования - PUT запрос
-          await api.request(`/cards/${editCardId}`, {
-            method: 'PUT',
-            body: JSON.stringify(cardData)
-          });
-          notifications.success('Карта обновлена', 'Данные карты успешно изменены');
-        } else {
-          // Режим создания - POST запрос
-          await api.createCard(cardData);
-          notifications.success('Карта создана', 'Новая карта успешно добавлена в систему');
-        }
+        // Создание новой карты
+        await api.createCard(cardData);
+        notifications.success('Карта создана', 'Новая карта успешно добавлена в систему');
 
         await this.loadCards();
         this.renderCards();
@@ -621,70 +622,15 @@ if (typeof window.CardsModule === 'undefined') {
 
       } catch (error) {
         console.error('Ошибка сохранения карты:', error);
-        const action = e.target.dataset.editCardId ? 'обновить' : 'создать';
-        notifications.error('Ошибка', `Не удалось ${action} карту`);
+        notifications.error('Ошибка', 'Не удалось создать карту');
       }
     }
 
     async editCard(cardId) {
-      try {
-        // Загружаем полные данные карты
-        const response = await api.request(`/cards/${cardId}`);
-        const card = response.card;
-
-        // Открываем модальное окно
-        this.showModal();
-
-        // Заполняем форму данными карты
-        this.fillEditForm(card);
-
-        // Меняем заголовок и кнопку
-        document.querySelector('.modal-header h3').textContent = 'Редактировать карту';
-        const submitBtn = document.querySelector('#card-form button[type="submit"]');
-        submitBtn.textContent = 'Сохранить изменения';
-
-        // Сохраняем ID карты для обновления
-        document.getElementById('card-form').dataset.editCardId = cardId;
-
-      } catch (error) {
-        console.error('Ошибка загрузки карты для редактирования:', error);
-        notifications.error('Ошибка', 'Не удалось загрузить данные карты');
-      }
+      const modal = new CardEditModal();
+      modal.open(cardId);
     }
 
-    fillEditForm(card) {
-      // Основные данные
-      document.querySelector('input[name="name"]').value = card.name || '';
-      document.querySelector('select[name="currency"]').value = card.currency || 'USD';
-      document.querySelector('select[name="team_id"]').value = card.team_id || '';
-
-      // Личные данные
-      document.querySelector('input[name="full_name"]').value = card.full_name || '';
-      document.querySelector('input[name="bank_password"]').value = card.bank_password || '';
-      document.querySelector('input[name="card_password"]').value = card.card_password || '';
-      document.querySelector('input[name="phone"]').value = card.phone || '';
-      document.querySelector('input[name="email"]').value = card.email || '';
-      document.querySelector('input[name="email_password"]').value = card.email_password || '';
-      document.querySelector('input[name="birth_date"]').value = card.birth_date || '';
-      document.querySelector('input[name="passport_issue_date"]').value = card.passport_issue_date || '';
-      document.querySelector('input[name="ipn"]').value = card.ipn || '';
-
-      // Подрядчик
-      document.querySelector('input[name="contractor_name"]').value = card.contractor_name || '';
-      document.querySelector('input[name="launch_date"]').value = card.launch_date || '';
-      document.querySelector('input[name="next_payment_date"]').value = card.next_payment_date || '';
-      document.querySelector('input[name="contractor_account"]').value = card.contractor_account || '';
-
-      // Второй банк
-      document.querySelector('input[name="second_bank_phone"]').value = card.second_bank_phone || '';
-      document.querySelector('input[name="second_bank_pin"]').value = card.second_bank_pin || '';
-      document.querySelector('input[name="second_bank_email"]').value = card.second_bank_email || '';
-      document.querySelector('input[name="second_bank_password"]').value = card.second_bank_password || '';
-
-      // Финансы
-      document.querySelector('input[name="remaining_balance"]').value = card.remaining_balance || '';
-      document.querySelector('input[name="commission_amount"]').value = card.commission_paid || 15;
-    }
 
     async deleteCard(cardId) {
       const confirmed = await confirmDelete('Вы уверены, что хотите удалить эту карту? Это действие нельзя отменить.');

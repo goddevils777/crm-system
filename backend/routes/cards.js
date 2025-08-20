@@ -7,7 +7,7 @@ const router = express.Router();
 
 const CARD_STATUSES = {
   'active': 'Активна',
-  'blocked': 'В блоке',
+  'blocked': 'Заблокирована',
   'reissue': 'Перевыпуск', 
   'error': 'Ошибка',
   'rebind': 'Переподвязать',
@@ -28,6 +28,59 @@ function checkCardActivity(card) {
   
   return card.status;
 }
+
+// Получение доступных статусов карт
+router.get('/statuses', authenticateToken, async (req, res) => {
+  try {
+    res.json({ 
+      statuses: CARD_STATUSES 
+    });
+  } catch (error) {
+    console.error('Ошибка получения статусов:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Обновление статуса карты
+router.put('/:id/status', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const cardId = req.params.id;
+    const { status } = req.body;
+
+    // Валидация статуса
+    const validStatuses = ['active', 'blocked', 'reissue', 'error', 'rebind', 'not_issued', 'not_spinning'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Некорректный статус карты' });
+    }
+
+    // Проверяем существование карты
+    const checkResult = await db.query('SELECT id, team_id FROM cards WHERE id = $1', [cardId]);
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Карта не найдена' });
+    }
+
+    const card = checkResult.rows[0];
+
+    // Проверяем права доступа
+    if (req.user.role === 'manager' && card.team_id !== req.user.team_id) {
+      return res.status(403).json({ error: 'Недостаточно прав для изменения статуса этой карты' });
+    }
+
+    // Обновляем статус
+    const result = await db.query(
+      'UPDATE cards SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      [status, cardId]
+    );
+
+    res.json({
+      message: 'Статус карты обновлен',
+      card: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Ошибка обновления статуса:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
 
 // Получение всех карт (с учетом роли)
 // Получение всех карт (с учетом роли)
@@ -338,6 +391,8 @@ router.get('/period', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
+
+
 // Получение одной карты по ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {

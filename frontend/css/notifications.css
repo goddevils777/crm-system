@@ -1,7 +1,7 @@
 /* Notification System - Ant Design Style */
 .notifications-container {
   position: fixed;
-  top: 24px;
+  bottom: 24px;
   right: 24px;
   z-index: 9999;
   pointer-events: none;
@@ -21,23 +21,23 @@
   box-shadow: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--border-color-split);
   pointer-events: all;
-  transform: translateX(100%);
+  transform: translateY(100%);
   opacity: 0;
   transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
   overflow: hidden;
   max-width: 100%;
-    background: rgba(255, 255, 255, 0.0);
+  background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .notification.show {
-  transform: translateX(0);
+  transform: translateY(0);
   opacity: 1;
 }
 
 .notification.hide {
-  transform: translateX(100%);
+  transform: translateY(100%);
   opacity: 0;
   margin-bottom: 0;
   padding-top: 0;
@@ -141,7 +141,7 @@
 /* Адаптация для мобильных */
 @media (max-width: 768px) {
   .notifications-container {
-    top: 16px;
+    bottom: 16px;
     right: 16px;
     left: 16px;
     width: auto;
