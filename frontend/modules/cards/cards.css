@@ -67,7 +67,7 @@
 /* Enhanced Filters */
 .cards-filters {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-columns: 2fr 1fr 1.5fr 1fr;
     gap: 16px;
     margin-bottom: 24px;
     padding: 20px;
@@ -92,6 +92,27 @@
 .filter-group .form-select:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+}
+
+
+/* Стили для полей дат */
+.filter-group input[type="date"] {
+    font-size: 12px;
+    padding: 6px 8px;
+}
+
+/* Responsive для фильтров */
+@media (max-width: 1200px) {
+    .cards-filters {
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+}
+
+@media (max-width: 768px) {
+    .cards-filters {
+        grid-template-columns: 1fr;
+    }
 }
 
 /* Modern Cards Grid */
@@ -430,18 +451,30 @@
     white-space: nowrap;
 }
 
-.cards-table tbody tr {
-    transition: background-color 0.2s;
-    cursor: pointer;
+.cards-table tbody tr:nth-child(even) {
+    background: rgba(0, 0, 0, 0.02);
 }
 
 .cards-table tbody tr:hover {
     background: var(--background-color);
 }
 
+
 .cards-table tbody tr.warning-row {
     background: rgba(250, 173, 20, 0.04);
     border-left: 3px solid var(--warning-color);
+}
+
+.card-name-link {
+    color: var(--primary-color);
+    text-decoration: underline;
+    font-weight: 600;
+    transition: color 0.2s;
+}
+
+.card-name-link:hover {
+    color: var(--primary-hover);
+    text-decoration: underline;
 }
 
 .table-actions {
@@ -564,5 +597,112 @@
     
     .cards-table {
         min-width: 800px;
+    }
+}
+
+/* Сводка по периоду */
+.period-summary-block {
+    background: var(--component-background);
+    border: 1px solid var(--primary-color);
+    border-left: 4px solid var(--primary-color);
+    padding: 16px 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.period-summary-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.period-info h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+}
+
+.period-stats {
+    display: flex;
+    gap: 24px;
+}
+
+.period-stats .stat-item {
+    font-size: 14px;
+}
+
+.period-stats .stat-label {
+    color: var(--text-secondary);
+    margin-right: 8px;
+}
+
+
+.period-stats .stat-value {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.period-stats .stat-value.spent {
+    color: var(--error-color);
+}
+
+
+.period-stats .stat-value.topup {
+    color: var(--success-color);
+}
+
+.reset-period-btn {
+    font-size: 13px;
+    padding: 6px 12px;
+}
+
+.reset-period-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: var(--component-background);
+}
+
+@media (max-width: 768px) {
+    .period-summary-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .period-stats {
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+}
+
+/* Анимация появления */
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .period-summary-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .period-stats {
+        gap: 16px;
+    }
+    
+    .reset-period-btn {
+        align-self: stretch;
+        min-width: auto;
     }
 }

@@ -1,11 +1,11 @@
 // Компонент шапки
 class HeaderComponent {
-  constructor() {
-    this.currentUser = null;
-  }
+    constructor() {
+        this.currentUser = null;
+    }
 
-  render() {
-    return `
+    render() {
+        return `
       <header class="header">
         <div class="container">
           <div class="header-left">
@@ -23,39 +23,60 @@ class HeaderComponent {
         </div>
       </header>
     `;
-  }
+    }
 
-  mount(container) {
-    container.innerHTML = this.render();
-    this.setupEvents();
-    this.updateUserInfo();
-  }
+    mount(container) {
+        container.innerHTML = this.render();
+        this.setupEvents();
+        this.updateUserInfo();
+    }
 
-  setupEvents() {
-    const burgerBtn = document.getElementById('burger-btn');
-    const logoutBtn = document.getElementById('logout-btn');
+    setupEvents() {
+        const burgerBtn = document.getElementById('burger-btn');
+        const logoutBtn = document.getElementById('logout-btn');
 
-    burgerBtn?.addEventListener('click', () => {
-      document.querySelector('.sidebar')?.classList.toggle('hide');
-      document.querySelector('.main .container')?.classList.toggle('sidebar-hidden');
-    });
+        burgerBtn?.addEventListener('click', () => {
+            const sidebar = document.querySelector('.sidebar');
+            const mainContainer = document.querySelector('.main .container');
+            const overlay = document.querySelector('.sidebar-overlay');
 
-    logoutBtn?.addEventListener('click', () => {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('userData');
-      window.location.href = 'auth/login.html';
-    });
-  }
+            // Создаем overlay если его нет
+            if (!overlay) {
+                const newOverlay = document.createElement('div');
+                newOverlay.className = 'sidebar-overlay';
+                newOverlay.addEventListener('click', () => {
+                    sidebar?.classList.remove('show');
+                    newOverlay.classList.remove('show');
+                });
+                document.body.appendChild(newOverlay);
+            }
 
-  updateUserInfo() {
-    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-    const loginUsername = userData.loginUsername || userData.username || 'Пользователь';
-    const role = userData.role || 'buyer';
+            // На мобильных - показываем/скрываем сайдбар
+            if (window.innerWidth <= 768) {
+                sidebar?.classList.toggle('show');
+                document.querySelector('.sidebar-overlay')?.classList.toggle('show');
+            } else {
+                // На десктопе - скрываем/показываем как раньше
+                sidebar?.classList.toggle('hide');
+                mainContainer?.classList.toggle('sidebar-hidden');
+            }
+        });
 
-    const roleIcons = { 'admin': '👑', 'manager': '⭐', 'buyer': '😇' };
-    const roleText = { 'admin': 'Администратор', 'manager': 'Менеджер', 'buyer': 'Байер' };
+        logoutBtn?.addEventListener('click', () => {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userData');
+            window.location.href = 'auth/login.html';
+        });
+    }
+    updateUserInfo() {
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        const loginUsername = userData.loginUsername || userData.username || 'Пользователь';
+        const role = userData.role || 'buyer';
 
-    document.getElementById('user-info').innerHTML = `
+        const roleIcons = { 'admin': '👑', 'manager': '⭐', 'buyer': '😇' };
+        const roleText = { 'admin': 'Администратор', 'manager': 'Менеджер', 'buyer': 'Байер' };
+
+        document.getElementById('user-info').innerHTML = `
       <div class="user-profile">
         <span class="user-avatar">${roleIcons[role]}</span>
         <div class="user-details">
@@ -64,7 +85,7 @@ class HeaderComponent {
         </div>
       </div>
     `;
-  }
+    }
 }
 
 window.HeaderComponent = HeaderComponent;

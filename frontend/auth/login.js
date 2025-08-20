@@ -1,6 +1,8 @@
 // Логика страницы входа - Ant Design стиль
 class LoginPage {
   constructor() {
+    this.checkExistingAuth();
+
     this.form = document.getElementById('login-form');
     this.usernameInput = document.getElementById('username');
     this.passwordInput = document.getElementById('password');
@@ -11,6 +13,17 @@ class LoginPage {
     this.errorMessage = document.getElementById('error-message');
 
     this.init();
+  }
+
+  checkExistingAuth() {
+    const token = localStorage.getItem('authToken');
+    const userData = localStorage.getItem('userData');
+
+    if (token && userData) {
+      console.log('User already authenticated, redirecting...');
+      window.location.href = '../index.html';
+      return;
+    }
   }
 
   init() {
@@ -144,7 +157,11 @@ class LoginPage {
 
     } catch (error) {
       console.error('Ошибка входа:', error);
-      this.showError(error.message || 'Ошибка соединения с сервером');
+
+      // Показываем ошибку только если это реально ошибка авторизации
+      if (error.message && !error.message.includes('successfully')) {
+        this.showError(error.message || 'Ошибка соединения с сервером');
+      }
     } finally {
       this.setLoading(false);
     }

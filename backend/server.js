@@ -40,14 +40,19 @@ app.use(cors({
       process.env.FRONTEND_URL
     ].filter(Boolean);
 
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Разрешаем все ngrok домены
+    if (!origin || allowedOrigins.includes(origin) || 
+        (origin && origin.includes('.ngrok.io')) || 
+        (origin && origin.includes('.ngrok-free.app'))) {
       callback(null, true);
     } else {
       callback(new Error('Запрещено CORS политикой'));
     }
   },
   credentials: true,
-  optionsSuccessStatus: 200
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(securityLogger);

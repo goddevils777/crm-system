@@ -44,6 +44,12 @@
         </select>
     </div>
     <div class="filter-group">
+        <div style="display: flex; gap: 8px;">
+            <input type="date" id="date-from" class="form-input" title="Дата начала">
+            <input type="date" id="date-to" class="form-input" title="Дата окончания">
+        </div>
+    </div>
+    <div class="filter-group">
         <select id="sort-cards" class="form-select">
             <option value="created_desc">Новые сначала</option>
             <option value="created_asc">Старые сначала</option>
@@ -51,6 +57,8 @@
             <option value="name_desc">По названию Я-А</option>
             <option value="balance_desc">По балансу (больше)</option>
             <option value="balance_asc">По балансу (меньше)</option>
+            <option value="spent_desc">По скрученному (больше)</option>
+            <option value="spent_asc">По скрученному (меньше)</option>
         </select>
     </div>
 </div>
@@ -70,7 +78,8 @@
                 <th>Валюта</th>
                 <th>Баланс</th>
                 <th>Скручено</th>
-                <th>Прогрев</th>
+                <th>Комиссия</th>
+                <th>Всего пополнено</th>
                 <th>Подрядчик</th>
                 <th>Создана</th>
                 <th>Действия</th>
@@ -199,6 +208,7 @@
                 </div>
             </div>
             <!-- Финансы -->
+            <!-- Финансы -->
             <div class="tab-content" data-tab="finance">
                 <div class="form-group">
                     <label class="form-label">Текущий остаток по этой карте (баланс)</label>
@@ -206,9 +216,9 @@
                     <small class="form-help">Сколько денег находится на карте сейчас</small>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Дневной лимит (по умолчанию 8000)</label>
-                    <input type="number" step="0.01" name="daily_limit" class="form-input" value="8000">
-                    <small class="form-help">Максимальная сумма трат в день</small>
+                    <label class="form-label">Комиссия за открытие карты</label>
+                    <input type="number" step="0.01" name="commission_amount" class="form-input" value="15">
+                    <small class="form-help">Размер комиссии при создании карты (по умолчанию 15 USD)</small>
                 </div>
             </div>
             <div class="modal-actions">

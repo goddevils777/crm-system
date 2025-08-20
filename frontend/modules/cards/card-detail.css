@@ -363,3 +363,33 @@
 .card-detail-container .update-form .form-group:last-child {
   margin-bottom: 24px;
 }
+
+/* Стили для отмененных транзакций */
+.cancelled-transaction {
+    background: rgba(245, 34, 45, 0.05);
+    opacity: 0.7;
+    text-decoration: line-through;
+}
+
+.cancelled-transaction td {
+    color: var(--text-disabled);
+}
+
+.btn-sm {
+    padding: 4px 8px;
+    font-size: 11px;
+    height: auto;
+    min-height: 24px;
+}
+
+.history-table th:last-child,
+.history-table td:last-child {
+    width: 100px;
+    text-align: center;
+}
+
+.history-table .btn {
+    white-space: nowrap;
+    font-size: 11px;
+    padding: 2px 6px;
+}

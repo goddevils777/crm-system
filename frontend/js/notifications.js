@@ -174,6 +174,9 @@ class ConfirmModal {
             this.modal.style.display = 'flex';
             setTimeout(() => this.modal.classList.add('show'), 10);
 
+            // Фокус на кнопку подтверждения для работы Enter
+            setTimeout(() => okBtn.focus(), 100);
+
             const handleConfirm = () => {
                 this.hide();
                 resolve(true);
@@ -186,10 +189,22 @@ class ConfirmModal {
                 cleanup();
             };
 
+            // ДОБАВЬ: Обработчик клавиатуры
+            const handleKeyDown = (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConfirm();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    handleCancel();
+                }
+            };
+
             const cleanup = () => {
                 okBtn.removeEventListener('click', handleConfirm);
                 cancelBtn.removeEventListener('click', handleCancel);
                 this.modal.removeEventListener('click', handleModalClick);
+                document.removeEventListener('keydown', handleKeyDown); // ДОБАВЬ
             };
 
             const handleModalClick = (e) => {
@@ -199,6 +214,7 @@ class ConfirmModal {
             okBtn.addEventListener('click', handleConfirm);
             cancelBtn.addEventListener('click', handleCancel);
             this.modal.addEventListener('click', handleModalClick);
+            document.addEventListener('keydown', handleKeyDown); // ДОБАВЬ
         });
     }
 

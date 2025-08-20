@@ -5,6 +5,7 @@ class ModuleLoader {
         this.loadingModules = new Map();
         this.moduleAssets = new Map();
     }
+
     async loadModule(moduleName) {
         console.log('=== LOADING MODULE:', moduleName, '===');
 
@@ -29,6 +30,7 @@ class ModuleLoader {
 
         return loadingPromise;
     }
+
     async reinitModule(moduleName) {
         console.log('Reinitializing module:', moduleName);
 
@@ -36,6 +38,9 @@ class ModuleLoader {
         if (!contentArea) {
             throw new Error('Content area not found');
         }
+
+        // Скрываем контент перед обновлением
+        contentArea.style.opacity = '0';
 
         // Получаем сохраненный HTML
         const moduleAssets = this.moduleAssets.get(moduleName);
@@ -46,6 +51,11 @@ class ModuleLoader {
             this.loadedModules.delete(moduleName);
             return this.loadModule(moduleName);
         }
+
+        // Показываем контент с плавным появлением
+        setTimeout(() => {
+            contentArea.style.opacity = '1';
+        }, 50);
 
         // Даем время DOM обновиться
         await new Promise(resolve => setTimeout(resolve, 100));
@@ -64,7 +74,6 @@ class ModuleLoader {
         return true;
     }
 
-    // Метод для получения сохраненных ресурсов модуля
     getModuleAssets(moduleName) {
         return this.moduleAssets.get(moduleName) || null;
     }
@@ -77,34 +86,32 @@ class ModuleLoader {
             const moduleAssets = await this.loadModuleAssets(moduleName);
             console.log('Assets loaded:', moduleAssets);
 
-            // Вставляем HTML
+            // Подготавливаем контент для плавной вставки
             const contentArea = document.getElementById('content-area');
-            if (contentArea && moduleAssets.html) {
+            if (!contentArea) {
+                throw new Error('Content area not found');
+            }
+
+            // Скрываем область перед вставкой нового контента
+            contentArea.style.opacity = '0';
+            
+            // Ждем завершения CSS загрузки перед вставкой HTML
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            if (moduleAssets.html) {
                 console.log('Inserting HTML into content area...');
                 contentArea.innerHTML = moduleAssets.html;
                 console.log('HTML inserted successfully');
-
-                // ДОБАВЬ ПРОВЕРКУ ПОСЛЕ ВСТАВКИ:
-                setTimeout(() => {
-                    const viewBtnsAfterInsert = document.querySelectorAll('.view-btn');
-                    const containerAfterInsert = document.getElementById('cards-container');
-                    const tableContainerAfterInsert = document.getElementById('cards-table-container');
-                    console.log('After HTML insert - view buttons:', viewBtnsAfterInsert.length);
-                    console.log('After HTML insert - cards container exists:', !!containerAfterInsert);
-                    console.log('After HTML insert - table container exists:', !!tableContainerAfterInsert);
-
-                    if (viewBtnsAfterInsert.length > 0) {
-                        console.log('View buttons found in DOM after insert!');
-                    } else {
-                        console.error('View buttons STILL not found after HTML insert!');
-                        console.log('Current content area HTML:', contentArea.innerHTML.substring(0, 500));
-                    }
-                }, 50);
             } else {
-                throw new Error('Content area not found or HTML not loaded');
+                throw new Error('HTML not loaded');
             }
 
-            // Даем время DOM обновиться
+            // Показываем контент плавно после вставки
+            setTimeout(() => {
+                contentArea.style.opacity = '1';
+            }, 50);
+
+            // Даем время DOM и CSS полностью обновиться
             console.log('Waiting for DOM to update...');
             await new Promise(resolve => setTimeout(resolve, 200));
 
@@ -132,7 +139,7 @@ class ModuleLoader {
                 console.log('ExpensesModule instance created and saved globally');
             }
 
-            // На эту с проверкой:
+            // Сохраняем ресурсы модуля
             if (this.moduleAssets) {
                 this.moduleAssets.set(moduleName, moduleAssets);
             } else {
@@ -140,11 +147,10 @@ class ModuleLoader {
                 this.moduleAssets = new Map();
                 this.moduleAssets.set(moduleName, moduleAssets);
             }
+            
             this.loadedModules.add(moduleName);
             this.loadingModules.delete(moduleName);
             this.hideLoader();
-
-
 
             console.log('=== loadAndInitModule COMPLETED for:', moduleName, '===');
             return moduleInstance;
@@ -152,19 +158,21 @@ class ModuleLoader {
             console.error('=== ERROR in loadAndInitModule:', error, '===');
             this.loadingModules.delete(moduleName);
             this.hideLoader();
+            
             const contentArea = document.getElementById('content-area');
             if (contentArea) {
-                contentArea.classList.add('loaded');
+                contentArea.style.opacity = '1';
             }
 
             throw error;
         }
     }
+
     async loadModuleAssets(moduleName) {
         console.log('Starting to load assets for:', moduleName);
 
         try {
-            // Загружаем CSS первым
+            // Загружаем CSS первым и ждем его полной загрузки
             console.log('Loading CSS...');
             const cssLoaded = await this.loadCSS(moduleName);
             console.log('CSS loaded:', cssLoaded);
@@ -200,7 +208,12 @@ class ModuleLoader {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = `modules/${moduleName}/${moduleName}.css?v=${Date.now()}`;
-            link.onload = () => resolve(true);
+            
+            // Ждем полной загрузки CSS
+            link.onload = () => {
+                // Даем время браузеру применить стили
+                setTimeout(() => resolve(true), 50);
+            };
             link.onerror = () => reject(new Error(`Failed to load CSS for ${moduleName}`));
             document.head.appendChild(link);
         });
@@ -213,21 +226,13 @@ class ModuleLoader {
             const html = await response.text();
             console.log('HTML loaded for module:', moduleName, 'length:', html.length);
 
-            // ДОБАВЬ ОТЛАДКУ СОДЕРЖИМОГО HTML:
-            console.log('HTML content preview:', html.substring(0, 500));
-
-            // Проверяем есть ли нужные элементы в HTML
-            const hasViewBtns = html.includes('view-btn');
-            const hasCardsContainer = html.includes('cards-container');
-            console.log('HTML contains view-btn:', hasViewBtns);
-            console.log('HTML contains cards-container:', hasCardsContainer);
-
             return html;
         } catch (error) {
             console.error('Error loading HTML:', error);
             throw error;
         }
     }
+
     loadJS(moduleName) {
         return new Promise((resolve, reject) => {
             const existingScript = document.querySelector(`script[src*="${moduleName}.js"]`);
@@ -239,7 +244,7 @@ class ModuleLoader {
 
             const script = document.createElement('script');
             script.src = `modules/${moduleName}/${moduleName}.js?v=${Date.now()}`;
-            script.setAttribute('data-module', moduleName); // Добавляем метку
+            script.setAttribute('data-module', moduleName);
             script.onload = () => {
                 console.log('JS loaded for', moduleName);
                 resolve(true);
@@ -251,54 +256,30 @@ class ModuleLoader {
 
     showLoader() {
         const contentArea = document.getElementById('content-area');
+        
+        // Устанавливаем переход для плавности
+        contentArea.style.transition = 'opacity 0.2s ease';
+        contentArea.style.opacity = '0';
+        
+        // Вставляем лоадер
         contentArea.innerHTML = `
-      <div class="module-loader">
-        <div class="loader-spinner"></div>
-        <p>Загрузка модуля...</p>
-      </div>
-    `;
+            <div class="module-loader">
+                <div class="loader-spinner"></div>
+                <p>Загрузка модуля...</p>
+            </div>
+        `;
+        
+        // Показываем лоадер плавно
+        setTimeout(() => {
+            contentArea.style.opacity = '1';
+        }, 10);
     }
 
     hideLoader() {
         // Лоадер скроется когда загрузится контент
-    }
-
-    async initModule(moduleName) {
-        try {
-            // Получаем загруженные ресурсы
-            const moduleAssets = await this.loadingModules.get(moduleName);
-
-            // ВАЖНО: сначала вставляем HTML
-            if (moduleAssets && moduleAssets.html) {
-                const contentArea = document.getElementById('content-area');
-                if (contentArea) {
-                    contentArea.innerHTML = moduleAssets.html;
-                    console.log('HTML inserted for module:', moduleName);
-                } else {
-                    throw new Error('Content area not found');
-                }
-            } else {
-                throw new Error('HTML not loaded for module: ' + moduleName);
-            }
-
-            // Ждем чтобы DOM обновился
-            await new Promise(resolve => setTimeout(resolve, 100));
-
-            // Проверяем что элементы появились
-            const viewBtns = document.querySelectorAll('.view-btn');
-            console.log('View buttons found after HTML insert:', viewBtns.length);
-
-            // Инициализируем модуль
-            if (moduleName === 'cards' && window.CardsModule) {
-                return new window.CardsModule();
-            } else if (moduleName === 'expenses' && window.ExpensesModule) {
-                return new window.ExpensesModule();
-            }
-
-            return true;
-        } catch (error) {
-            console.error('Error initializing module:', error);
-            throw error;
+        const contentArea = document.getElementById('content-area');
+        if (contentArea) {
+            contentArea.style.transition = 'opacity 0.2s ease';
         }
     }
 }

@@ -73,6 +73,7 @@
                         <th>Изменение</th>
                         <th>Описание</th>
                         <th>Кто обновил</th>
+                        <th>Действия</th>
                     </tr>
                 </thead>
                 <tbody id="history-table-body">
@@ -92,7 +93,44 @@
     <div class="tab-content" data-tab="settings">
         <div class="card-settings">
             <h3>Настройки карты</h3>
-            <p>Раздел в разработке</p>
+
+            <div class="settings-section">
+                <h4>Лимиты и ограничения</h4>
+
+                <form id="limits-form" style="max-width: 400px;">
+                    <div class="form-group">
+                        <label class="form-label">Лимит пополнений на карту</label>
+                        <input type="number" id="topup-limit" class="form-input" step="0.01" placeholder="8000">
+                        <small class="form-help">При достижении этого лимита статус карты изменится на "Достигнут
+                            лимит"</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Сохранить лимит</button>
+                </form>
+
+                <div
+                    style="margin-top: 16px; padding: 12px; background: var(--background-color); border-radius: 8px; border: 1px solid var(--border-color-split);">
+                    <div style="font-size: 13px; color: var(--text-secondary);">
+                        <strong>Текущий статус:</strong> <span id="current-limit-status">Проверяется...</span>
+                    </div>
+                    <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">
+                        <strong>Всего пополнено:</strong> <span id="total-topups">0</span> / <span
+                            id="limit-display">8000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section"
+                style="margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border-color-split);">
+                <h4 style="color: var(--error-color);">Опасная зона</h4>
+                <p style="color: var(--text-secondary); margin-bottom: 16px; font-size: 13px;">
+                    Удаление карты необратимо. Все данные и история операций будут потеряны.
+                </p>
+                <button class="btn btn-danger" onclick="window.cardDetailModule?.deleteCard()"
+                    style="background: var(--error-color); border-color: var(--error-color);">
+                    🗑️ Удалить карту навсегда
+                </button>
+            </div>
         </div>
     </div>
 </div>

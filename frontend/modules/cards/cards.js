@@ -1,6 +1,6 @@
 // Проверяем существует ли уже класс и не объявляем повторно
 if (typeof window.CardsModule === 'undefined') {
-  
+
   // Модуль управления картами
   class CardsModule {
     constructor() {
@@ -19,15 +19,39 @@ if (typeof window.CardsModule === 'undefined') {
       try {
         await this.loadCards();
         this.sortCards();
-        console.log('Cards loaded:', this.cards.length);
-        console.log('Filtered cards:', this.filteredCards.length);
 
         this.setupViewToggle();
+
+        // ДОБАВЬ: Проверяем нужно ли восстановить детальную страницу
+        this.checkRestoreCardDetail();
+
         this.renderCards();
         console.log('CardsModule init completed');
       } catch (error) {
         console.error('Error in CardsModule init:', error);
         notifications.error('Ошибка загрузки', 'Не удалось загрузить модуль карт');
+      }
+    }
+
+    checkRestoreCardDetail() {
+      // ДОБАВЬ: Проверяем действительно ли нужно восстанавливать детальную страницу
+      const hash = window.location.hash;
+      const currentCardId = localStorage.getItem('current_card_detail');
+
+      console.log('checkRestoreCardDetail called');
+      console.log('- Hash:', hash);
+      console.log('- Saved card ID:', currentCardId);
+      console.log('- Should restore:', hash && hash.startsWith('#card/'));
+
+      // Восстанавливаем ТОЛЬКО если URL содержит #card/
+      if (hash && hash.startsWith('#card/')) {
+        const cardIdFromHash = hash.replace('#card/', '');
+        console.log('Restoring card detail for ID:', cardIdFromHash);
+        this.openCardDetail(cardIdFromHash);
+      } else {
+        // Если хеша нет - очищаем сохраненное состояние
+        console.log('No card hash found, clearing saved state');
+        localStorage.removeItem('current_card_detail');
       }
     }
 
@@ -60,9 +84,15 @@ if (typeof window.CardsModule === 'undefined') {
       const statusFilter = document.getElementById('status-filter');
       statusFilter?.addEventListener('change', (e) => this.filterCards());
 
+      // Новые обработчики для фильтра дат
+      const dateFrom = document.getElementById('date-from');
+      dateFrom?.addEventListener('change', () => this.filterCardsByPeriod());
+
+      const dateTo = document.getElementById('date-to');
+      dateTo?.addEventListener('change', () => this.filterCardsByPeriod());
+
       this.setupModalEvents();
     }
-
     setupViewToggle() {
       console.log('Setting up view toggle, current view:', this.currentView);
 
@@ -141,6 +171,10 @@ if (typeof window.CardsModule === 'undefined') {
             return (b.balance || 0) - (a.balance || 0);
           case 'balance_asc':
             return (a.balance || 0) - (b.balance || 0);
+          case 'spent_desc':
+            return (b.total_spent_calculated || 0) - (a.total_spent_calculated || 0);
+          case 'spent_asc':
+            return (a.total_spent_calculated || 0) - (b.total_spent_calculated || 0);
           default:
             return 0;
         }
@@ -204,108 +238,119 @@ if (typeof window.CardsModule === 'undefined') {
       const statusClass = card.status || 'active';
       const statusText = this.getStatusText(card.status);
       const totalSpent = card.total_spent_calculated || 0;
-      const warmUp = card.warm_up_amount || 0;
+      const commissionPaid = card.commission_paid || 0;
+      const totalTopUp = card.total_top_up || 0;
       const daysSinceTransaction = this.calculateDaysSinceTransaction(card.last_transaction_date);
 
       return `
         <tr class="${daysSinceTransaction >= 3 ? 'warning-row' : ''}" data-card-id="${card.id}">
-          <td title="${card.name}">
-            <a href="#" class="card-name-link" onclick="window.cardsModule?.openCardDetail(${card.id}); return false;">
-              ${card.name}
-            </a>
-          </td>
-          <td><span class="table-status ${statusClass}">${statusText}</span></td>
-          <td>${card.currency}</td>
-          <td>${card.balance || 0} ${card.currency}</td>
-          <td>${totalSpent} ${card.currency}</td>
-          <td>${warmUp} ${card.currency}</td>
-          <td title="${card.contractor_name || ''}">${card.contractor_name || '—'}</td>
-          <td>${new Date(card.created_at).toLocaleDateString()}</td>
-          <td>
-            <div class="table-actions">
-              <button class="table-action-btn edit" title="Редактировать" onclick="window.cardsModule?.editCard(${card.id})">
-                ✏️
-              </button>
-              <button class="table-action-btn delete" title="Удалить" onclick="window.cardsModule?.deleteCard(${card.id})">
-                ×
-              </button>
-            </div>
-          </td>
+            <td title="${card.name}">
+                <a href="#" class="card-name-link" onclick="window.cardsModule?.openCardDetail(${card.id}); return false;">
+                    ${card.name}
+                </a>
+            </td>
+            <td><span class="table-status ${statusClass}">${statusText}</span></td>
+            <td>${card.currency}</td>
+            <td>${card.balance || 0} ${card.currency}</td>
+            <td>${totalSpent} ${card.currency}</td>
+            <td>${commissionPaid} ${card.currency}</td>
+            <td>${totalTopUp} ${card.currency}</td>
+            <td title="${card.contractor_name || ''}">${card.contractor_name || '—'}</td>
+            <td>${new Date(card.created_at).toLocaleDateString()}</td>
+            <td>
+                <div class="table-actions">
+                    <button class="table-action-btn edit" title="Редактировать" onclick="window.cardsModule?.editCard(${card.id})">
+                        ✏️
+                    </button>
+                    <button class="table-action-btn delete" title="Удалить" onclick="window.cardsModule?.deleteCard(${card.id})">
+                        ×
+                    </button>
+                </div>
+            </td>
         </tr>
-      `;
+    `;
     }
 
     renderCard(card) {
       const statusClass = card.status || 'active';
       const statusText = this.getStatusText(card.status);
       const totalSpent = card.total_spent_calculated || 0;
-      const warmUp = card.warm_up_amount || 0;
+      const commissionPaid = card.commission_paid || 0;
+      const totalTopUp = card.total_top_up || 0;
       const balance = card.balance || 0;
       const daysSinceTransaction = this.calculateDaysSinceTransaction(card.last_transaction_date);
 
       return `
         <div class="card-item ${daysSinceTransaction >= 3 ? 'warning-card' : ''}" data-card-id="${card.id}">
-          <div class="card-actions">
-            <button class="card-action-btn edit" onclick="window.cardsModule?.editCard(${card.id})" title="Редактировать карту">
-              <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor">
-                <path d="M257.7 752c2 0 4-.2 6-.5L431.9 722c2-.4 3.9-1.3 5.3-2.8l423.9-423.9c3.9-3.9 3.9-10.2 0-14.1L694.9 114.9c-1.9-1.9-4.4-2.9-7.1-2.9s-5.2 1-7.1 2.9L256.8 538.8c-1.5 1.5-2.4 3.3-2.8 5.3l-29.5 168.2c-.4 2.2.1 4.5 1.4 6.2.9 1.2 2.2 1.9 3.8 1.9z"/>
-              </svg>
-            </button>
-            <button class="card-action-btn delete" onclick="window.cardsModule?.deleteCard(${card.id})" title="Удалить карту">
-              <svg width="12" height="12" viewBox="0 0 1024 1024" fill="currentColor">
-                <path d="M563.8 512l262.5-312.9c4.4-5.2.7-13.1-6.1-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.7L511.6 449.8 295.1 191.7c-3-3.6-7.5-5.7-12.3-5.7H203c-6.8 0-10.5 7.9-6.1 13.1L459.4 512 196.9 824.9c-4.4 5.2-.7 13.1 6.1 13.1h79.8c4.7 0 9.2-2.1 12.3-5.7l216.5-258.1 216.5 258.1c3 3.6 7.5 5.7 12.3 5.7h79.8c6.8 0 10.5-7.9 6.1-13.1L563.8 512z"/>
-              </svg>
-            </button>
-          </div>
-          <div class="card-top">
-            <div class="card-header">
-              <h3 class="card-title">${card.name}</h3>
-              <span class="card-status ${statusClass}">${statusText}</span>
+            <div class="card-actions">
+                <button class="card-action-btn edit" onclick="window.cardsModule?.editCard(${card.id})" title="Редактировать карту">
+                    <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor">
+                        <path d="M257.7 752c2 0 4-.2 6-.5L431.9 722c2-.4 3.9-1.3 5.3-2.8l423.9-423.9c3.9-3.9 3.9-10.2 0-14.1L694.9 114.9c-1.9-1.9-4.4-2.9-7.1-2.9s-5.2 1-7.1 2.9L256.8 538.8c-1.5 1.5-2.4 3.3-2.8 5.3l-29.5 168.2c-.4 2.2.1 4.5 1.4 6.2.9 1.2 2.2 1.9 3.8 1.9z"/>
+                    </svg>
+                </button>
+                <button class="card-action-btn delete" onclick="window.cardsModule?.deleteCard(${card.id})" title="Удалить карту">
+                    <svg width="12" height="12" viewBox="0 0 1024 1024" fill="currentColor">
+                        <path d="M563.8 512l262.5-312.9c4.4-5.2.7-13.1-6.1-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.7L511.6 449.8 295.1 191.7c-3-3.6-7.5-5.7-12.3-5.7H203c-6.8 0-10.5 7.9-6.1 13.1L459.4 512 196.9 824.9c-4.4 5.2-.7 13.1 6.1 13.1h79.8c4.7 0 9.2-2.1 12.3-5.7l216.5-258.1 216.5 258.1c3 3.6 7.5 5.7 12.3 5.7h79.8c6.8 0 10.5-7.9 6.1-13.1L563.8 512z"/>
+                    </svg>
+                </button>
             </div>
-            <div class="card-currency">💳 ${card.currency}</div>
-          </div>
-          <div class="card-stats">
-            <div class="stat-item">
-              <div class="stat-label">Баланс</div>
-              <div class="stat-value ${balance > 0 ? 'positive' : ''}">${balance} ${card.currency}</div>
+            <div class="card-top">
+                <div class="card-header">
+                    <h3 class="card-title">
+                        <a href="#" onclick="window.cardsModule?.openCardDetail(${card.id}); return false;" style="color: inherit; text-decoration: none;">
+                            ${card.name}
+                        </a>
+                    </h3>
+                    <span class="card-status ${statusClass}">${statusText}</span>
+                </div>
+                <div class="card-currency">💳 ${card.currency}</div>
             </div>
-            <div class="stat-item">
-              <div class="stat-label">Скручено</div>
-              <div class="stat-value ${totalSpent > 0 ? 'warning' : ''}">${totalSpent} ${card.currency}</div>
+            <div class="card-stats">
+                <div class="stat-item">
+                    <div class="stat-label">Баланс</div>
+                    <div class="stat-value ${balance > 0 ? 'positive' : ''}">${balance} ${card.currency}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Скручено</div>
+                    <div class="stat-value ${totalSpent > 0 ? 'warning' : ''}">${totalSpent} ${card.currency}</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Комиссия</div>
+                    <div class="stat-value ${commissionPaid > 0 ? 'warning' : ''}">${commissionPaid} ${card.currency}</div>
+                </div>
             </div>
-            <div class="stat-item">
-              <div class="stat-label">Прогрев</div>
-              <div class="stat-value ${warmUp > 0 ? 'warning' : ''}">${warmUp} ${card.currency}</div>
+            <div class="card-body">
+                <div class="card-info">
+                    ${card.full_name ? `
+                    <div class="card-info-item">
+                        <span class="card-info-label">Владелец</span>
+                        <span class="card-info-value">${card.full_name}</span>
+                    </div>
+                    ` : ''}
+                    ${card.contractor_name ? `
+                    <div class="card-info-item">
+                        <span class="card-info-label">Подрядчик</span>
+                        <span class="card-info-value">${card.contractor_name}</span>
+                    </div>
+                    ` : ''}
+                    <div class="card-info-item">
+                        <span class="card-info-label">Всего пополнено</span>
+                        <span class="card-info-value">${totalTopUp} ${card.currency}</span>
+                    </div>
+                    ${daysSinceTransaction >= 3 ? `
+                    <div class="card-info-item warning">
+                        <span class="card-info-label">⚠️ Без транзакций</span>
+                        <span class="card-info-value">${daysSinceTransaction} дней</span>
+                    </div>
+                    ` : ''}
+                </div>
             </div>
-          </div>
-          <div class="card-body">
-            <div class="card-info">
-              ${card.full_name ? `
-              <div class="card-info-item">
-                <span class="card-info-label">Владелец</span>
-                <span class="card-info-value">${card.full_name}</span>
-              </div>
-              ` : ''}
-              ${card.contractor_name ? `
-              <div class="card-info-item">
-                <span class="card-info-label">Подрядчик</span>
-                <span class="card-info-value">${card.contractor_name}</span>
-              </div>
-              ` : ''}
-              ${daysSinceTransaction >= 3 ? `
-              <div class="card-info-item warning">
-                <span class="card-info-label">⚠️ Без транзакций</span>
-                <span class="card-info-value">${daysSinceTransaction} дней</span>
-              </div>
-              ` : ''}
+            <div class="card-footer">
+                <div class="card-created">📅 ${new Date(card.created_at).toLocaleDateString()}</div>
+                <div class="card-id">ID: ${card.id}</div>
             </div>
-          </div>
-          <div class="card-footer">
-            <div class="card-created">📅 ${new Date(card.created_at).toLocaleDateString()}</div>
-            <div class="card-id">ID: ${card.id}</div>
-          </div>
         </div>
-      `;
+    `;
     }
 
     setupModalEvents() {
@@ -364,6 +409,56 @@ if (typeof window.CardsModule === 'undefined') {
       this.renderCards();
     }
 
+    async filterCardsByPeriod() {
+      const dateFrom = document.getElementById('date-from')?.value;
+      const dateTo = document.getElementById('date-to')?.value;
+
+      // Если обе даты пустые - показываем обычные данные
+      if (!dateFrom && !dateTo) {
+        this.renderCards();
+        return;
+      }
+
+      // Если выбрана только дата "до" - ищем только за этот день
+      let fromDate, toDate;
+      if (!dateFrom && dateTo) {
+        fromDate = dateTo;
+        toDate = dateTo;
+        console.log('Filtering by single day:', toDate);
+      } else if (dateFrom && !dateTo) {
+        // Если выбрана только дата "от" - ищем с этого дня до сегодня
+        fromDate = dateFrom;
+        toDate = new Date().toISOString().split('T')[0];
+        console.log('Filtering from date to today:', fromDate, 'to', toDate);
+      } else {
+        // Если обе даты выбраны - обычный период
+        fromDate = dateFrom;
+        toDate = dateTo;
+        console.log('Filtering by period:', fromDate, 'to', toDate);
+      }
+
+      try {
+        // Запрашиваем пересчитанные данные с сервера
+        const response = await api.request(`/cards/period?from=${fromDate}&to=${toDate}`);
+
+        // Временно сохраняем оригинальные карты
+        this.originalCards = this.originalCards || [...this.cards];
+
+        // Обновляем карты с пересчитанными данными за период
+        this.cards = response.cards || [];
+        this.filteredCards = [...this.cards];
+
+        this.renderCards();
+
+        // Показываем сводку по периоду
+        this.showPeriodSummary(response.summary, response.period_from, response.period_to, response.total_cards);
+
+      } catch (error) {
+        console.error('Ошибка фильтрации по периоду:', error);
+        notifications.error('Ошибка', 'Не удалось загрузить данные за период');
+      }
+    }
+
     calculateDaysSinceTransaction(lastTransactionDate) {
       if (!lastTransactionDate) return 0;
       const today = new Date();
@@ -385,17 +480,73 @@ if (typeof window.CardsModule === 'undefined') {
     showModal() {
       const modal = document.getElementById('card-modal');
       modal?.classList.add('show');
+
+      // Генерируем уникальный ID для новой карты
+      const uniqueId = this.generateUniqueCardId();
+
+      // Автоматически заполняем название карты
+      const nameField = document.querySelector('input[name="name"]');
+      if (nameField && !nameField.value) {
+        nameField.value = uniqueId;
+        nameField.select(); // Выделяем текст чтобы можно было сразу заменить
+      }
     }
+    generateUniqueCardId() {
+      // Находим максимальный номер среди существующих карт
+      let maxNumber = 0;
+
+      this.cards.forEach(card => {
+        if (card.name && card.name.startsWith('CARD_')) {
+          const numberPart = card.name.replace('CARD_', '');
+          const number = parseInt(numberPart);
+          if (!isNaN(number) && number > maxNumber) {
+            maxNumber = number;
+          }
+        }
+      });
+
+      // Следующий номер
+      const nextNumber = maxNumber + 1;
+
+      // Форматируем с ведущими нулями (11 цифр)
+      return `CARD_${nextNumber.toString().padStart(11, '0')}`;
+    }
+
 
     hideModal() {
       const modal = document.getElementById('card-modal');
       modal?.classList.remove('show');
-      document.getElementById('card-form')?.reset();
+
+      const form = document.getElementById('card-form');
+      form?.reset();
+
+      // Очищаем режим редактирования
+      delete form.dataset.editCardId;
+
+      // Возвращаем оригинальные тексты
+      document.querySelector('.modal-header h3').textContent = 'Добавить новую карту';
+      const submitBtn = document.querySelector('#card-form button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.textContent = 'Создать';
+      }
+
+      // Возвращаемся на первую вкладку
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+      const firstTab = document.querySelector('.tab-btn[data-tab="basic"]');
+      const firstContent = document.querySelector('.tab-content[data-tab="basic"]');
+      if (firstTab && firstContent) {
+        firstTab.classList.add('active');
+        firstContent.classList.add('active');
+      }
     }
 
     async handleCardSubmit(e) {
       try {
         const formData = new FormData(e.target);
+        const editCardId = e.target.dataset.editCardId;
+
         const cardData = {
           name: formData.get('name'),
           currency: formData.get('currency'),
@@ -418,7 +569,7 @@ if (typeof window.CardsModule === 'undefined') {
           launch_date: formData.get('launch_date'),
           next_payment_date: formData.get('next_payment_date'),
           remaining_balance: formData.get('remaining_balance'),
-          daily_limit: formData.get('daily_limit')
+          commission_amount: formData.get('commission_amount')
         };
 
         const errors = SecurityUtils.validateCardInput(cardData);
@@ -427,19 +578,88 @@ if (typeof window.CardsModule === 'undefined') {
           return;
         }
 
-        await api.createCard(cardData);
+        if (editCardId) {
+          // Режим редактирования - PUT запрос
+          await api.request(`/cards/${editCardId}`, {
+            method: 'PUT',
+            body: JSON.stringify(cardData)
+          });
+          notifications.success('Карта обновлена', 'Данные карты успешно изменены');
+        } else {
+          // Режим создания - POST запрос
+          await api.createCard(cardData);
+          notifications.success('Карта создана', 'Новая карта успешно добавлена в систему');
+        }
+
         await this.loadCards();
         this.renderCards();
         this.hideModal();
-        notifications.success('Карта создана', 'Новая карта успешно добавлена в систему');
+
       } catch (error) {
-        console.error('Ошибка создания карты:', error);
-        notifications.error('Ошибка', 'Не удалось создать карту');
+        console.error('Ошибка сохранения карты:', error);
+        const action = e.target.dataset.editCardId ? 'обновить' : 'создать';
+        notifications.error('Ошибка', `Не удалось ${action} карту`);
       }
     }
 
-    editCard(cardId) {
-      notifications.info('В разработке', 'Редактирование карты скоро будет доступно');
+    async editCard(cardId) {
+      try {
+        // Загружаем полные данные карты
+        const response = await api.request(`/cards/${cardId}`);
+        const card = response.card;
+
+        // Открываем модальное окно
+        this.showModal();
+
+        // Заполняем форму данными карты
+        this.fillEditForm(card);
+
+        // Меняем заголовок и кнопку
+        document.querySelector('.modal-header h3').textContent = 'Редактировать карту';
+        const submitBtn = document.querySelector('#card-form button[type="submit"]');
+        submitBtn.textContent = 'Сохранить изменения';
+
+        // Сохраняем ID карты для обновления
+        document.getElementById('card-form').dataset.editCardId = cardId;
+
+      } catch (error) {
+        console.error('Ошибка загрузки карты для редактирования:', error);
+        notifications.error('Ошибка', 'Не удалось загрузить данные карты');
+      }
+    }
+
+    fillEditForm(card) {
+      // Основные данные
+      document.querySelector('input[name="name"]').value = card.name || '';
+      document.querySelector('select[name="currency"]').value = card.currency || 'USD';
+      document.querySelector('select[name="team_id"]').value = card.team_id || '';
+
+      // Личные данные
+      document.querySelector('input[name="full_name"]').value = card.full_name || '';
+      document.querySelector('input[name="bank_password"]').value = card.bank_password || '';
+      document.querySelector('input[name="card_password"]').value = card.card_password || '';
+      document.querySelector('input[name="phone"]').value = card.phone || '';
+      document.querySelector('input[name="email"]').value = card.email || '';
+      document.querySelector('input[name="email_password"]').value = card.email_password || '';
+      document.querySelector('input[name="birth_date"]').value = card.birth_date || '';
+      document.querySelector('input[name="passport_issue_date"]').value = card.passport_issue_date || '';
+      document.querySelector('input[name="ipn"]').value = card.ipn || '';
+
+      // Подрядчик
+      document.querySelector('input[name="contractor_name"]').value = card.contractor_name || '';
+      document.querySelector('input[name="launch_date"]').value = card.launch_date || '';
+      document.querySelector('input[name="next_payment_date"]').value = card.next_payment_date || '';
+      document.querySelector('input[name="contractor_account"]').value = card.contractor_account || '';
+
+      // Второй банк
+      document.querySelector('input[name="second_bank_phone"]').value = card.second_bank_phone || '';
+      document.querySelector('input[name="second_bank_pin"]').value = card.second_bank_pin || '';
+      document.querySelector('input[name="second_bank_email"]').value = card.second_bank_email || '';
+      document.querySelector('input[name="second_bank_password"]').value = card.second_bank_password || '';
+
+      // Финансы
+      document.querySelector('input[name="remaining_balance"]').value = card.remaining_balance || '';
+      document.querySelector('input[name="commission_amount"]').value = card.commission_paid || 15;
     }
 
     async deleteCard(cardId) {
@@ -459,25 +679,57 @@ if (typeof window.CardsModule === 'undefined') {
 
     async openCardDetail(cardId) {
       try {
+        // ДОБАВЬ: Сохраняем ID карты для восстановления после перезагрузки
+        localStorage.setItem('current_card_detail', cardId);
+
+        // ДОБАВЬ: Обновляем URL без перезагрузки страницы
+        window.history.pushState({ module: 'card-detail', cardId: cardId }, '', `#card/${cardId}`);
+
+        // Сначала скрываем текущий контент
+        const contentArea = document.getElementById('content-area');
+        contentArea.style.transition = 'opacity 0.2s ease';
+        contentArea.style.opacity = '0';
+
+        // Показываем лоадер
+        setTimeout(() => {
+          contentArea.innerHTML = `
+                <div class="module-loader">
+                    <div class="loader-spinner"></div>
+                    <p>Загрузка карты...</p>
+                </div>
+            `;
+          contentArea.style.opacity = '1';
+        }, 50);
+
         // Загружаем HTML детальной страницы
         const response = await fetch('modules/cards/card-detail.html');
         const html = await response.text();
-        
-        // Заменяем содержимое content-area
-        const contentArea = document.getElementById('content-area');
-        contentArea.innerHTML = html;
 
         // Загружаем скрипт детальной страницы
         await this.loadCardDetailScript();
 
-        // Инициализируем детальную страницу
+        // Ждем загрузки стилей
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // Скрываем перед вставкой нового контента
+        contentArea.style.opacity = '0';
+
+        // Вставляем HTML
         setTimeout(() => {
-          if (window.CardDetailModule) {
-            new window.CardDetailModule(cardId);
-          } else {
-            console.error('CardDetailModule не загружен');
-            notifications.error('Ошибка', 'Не удалось загрузить детальную страницу');
-          }
+          contentArea.innerHTML = html;
+
+          // Показываем готовый контент
+          setTimeout(() => {
+            contentArea.style.opacity = '1';
+
+            // Инициализируем детальную страницу
+            if (window.CardDetailModule) {
+              window.cardDetailModule = new window.CardDetailModule(cardId);
+            } else {
+              console.error('CardDetailModule не загружен');
+              notifications.error('Ошибка', 'Не удалось загрузить детальную страницу');
+            }
+          }, 50);
         }, 100);
 
       } catch (error) {
@@ -499,6 +751,104 @@ if (typeof window.CardsModule === 'undefined') {
         script.onerror = reject;
         document.head.appendChild(script);
       });
+    }
+
+    showPeriodSummary(summary, periodFrom, periodTo, totalCards) {
+      // Создаем или обновляем блок сводки
+      let summaryBlock = document.getElementById('period-summary');
+
+      if (!summaryBlock) {
+        summaryBlock = document.createElement('div');
+        summaryBlock.id = 'period-summary';
+        summaryBlock.className = 'period-summary-block';
+
+        // Вставляем перед контейнером карт
+        const cardsContainer = document.getElementById('cards-container').parentNode;
+        cardsContainer.insertBefore(summaryBlock, document.getElementById('cards-container'));
+      }
+
+      const fromDate = new Date(periodFrom).toLocaleDateString();
+      const toDate = new Date(periodTo).toLocaleDateString();
+
+      // Проверяем есть ли операции за период
+      const hasOperations = Object.values(summary).some(data =>
+        data.total_spent > 0 || data.total_topup > 0
+      );
+
+      let content;
+      if (Object.keys(summary).length === 0 || !hasOperations) {
+        // Если нет операций за период
+        content = `
+            <div class="period-summary-content">
+                <div class="period-info">
+                    <h3>📊 ${fromDate} - ${toDate}</h3>
+                    <p style="color: var(--text-secondary); margin: 8px 0 0 0;">
+                        Нет операций за выбранный период
+                    </p>
+                </div>
+                <button class="btn btn-secondary reset-period-btn" onclick="window.cardsModule?.resetPeriodFilter()">
+                    Сбросить фильтр
+                </button>
+            </div>
+        `;
+      } else {
+        // Создаем строки для каждой валюты
+        const currencyRows = Object.keys(summary).map(currency => {
+          const data = summary[currency];
+          return `
+                <div class="period-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Скручено:</span>
+                        <span class="stat-value spent">${data.total_spent.toFixed(2)} ${currency}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Общие пополнения:</span>
+                        <span class="stat-value topup">${data.total_topup.toFixed(2)} ${currency}</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Карт с операциями:</span>
+                        <span class="stat-value">${data.cards_count}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        content = `
+            <div class="period-summary-content">
+                <div class="period-info">
+                    <h3>📊 ${fromDate} - ${toDate}</h3>
+                    ${currencyRows}
+                </div>
+                <button class="btn btn-secondary reset-period-btn" onclick="window.cardsModule?.resetPeriodFilter()">
+                    Сбросить фильтр
+                </button>
+            </div>
+        `;
+      }
+
+      summaryBlock.innerHTML = content;
+    }
+
+    resetPeriodFilter() {
+      // Очищаем поля дат
+      document.getElementById('date-from').value = '';
+      document.getElementById('date-to').value = '';
+
+      // Восстанавливаем оригинальные данные
+      if (this.originalCards) {
+        this.cards = [...this.originalCards];
+        this.filteredCards = [...this.cards];
+        this.originalCards = null;
+      }
+
+      // Убираем блок сводки
+      const summaryBlock = document.getElementById('period-summary');
+      if (summaryBlock) {
+        summaryBlock.remove();
+      }
+
+      this.renderCards();
+      notifications.info('Фильтр сброшен', 'Показаны все данные за всё время');
     }
   }
 
