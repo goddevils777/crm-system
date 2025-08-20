@@ -33,6 +33,26 @@ if (typeof window.CardsModule === 'undefined') {
       }
     }
 
+    async loadStatuses() {
+      try {
+        const response = await api.request('/cards/statuses');
+        this.availableStatuses = response.statuses;
+        console.log('Available statuses loaded:', this.availableStatuses);
+      } catch (error) {
+        console.error('Error loading statuses:', error);
+        // Fallback статусы если API недоступно
+        this.availableStatuses = {
+          'active': 'Активна (в работе)',
+          'blocked': 'В блоке',
+          'reissue': 'Перевыпуск',
+          'error': 'Ошибка',
+          'rebind': 'Переподвязать',
+          'not_issued': 'Не выдана',
+          'not_spinning': 'Не крутит'
+        };
+      }
+    }
+
     checkRestoreCardDetail() {
       // ДОБАВЬ: Проверяем действительно ли нужно восстанавливать детальную страницу
       const hash = window.location.hash;
@@ -466,8 +486,12 @@ if (typeof window.CardsModule === 'undefined') {
       const diffTime = Math.abs(today - lastDate);
       return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
-
     getStatusText(status) {
+      if (this.availableStatuses && this.availableStatuses[status]) {
+        return this.availableStatuses[status];
+      }
+
+      // Fallback для старых статусов
       const statusMap = {
         'active': 'Активна',
         'blocked': 'Заблокирована',

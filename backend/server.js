@@ -36,14 +36,18 @@ app.use(cors({
     const allowedOrigins = [
       'http://localhost:8080',
       'http://127.0.0.1:8080',
+      'http://localhost:8000',    // ДОБАВЬ для тестирования
+      'http://127.0.0.1:8000',    // ДОБАВЬ для тестирования  
       'http://[::]:8080',
+      'http://[::]:8000',         // ДОБАВЬ для тестирования
       process.env.FRONTEND_URL
     ].filter(Boolean);
 
     // Разрешаем все ngrok домены
-    if (!origin || allowedOrigins.includes(origin) || 
-        (origin && origin.includes('.ngrok.io')) || 
-        (origin && origin.includes('.ngrok-free.app'))) {
+    if (!origin || allowedOrigins.includes(origin) ||
+      (origin && origin.includes('.ngrok.io')) ||
+      (origin && origin.includes('.ngrok-free.app')) ||
+      origin.startsWith('file://')) {  // ДОБАВЬ эту строку
       callback(null, true);
     } else {
       callback(new Error('Запрещено CORS политикой'));

@@ -9,6 +9,10 @@ if (typeof CardDetailModule === 'undefined') {
 
         async init() {
             this.loadStyles();
+
+            // ДОБАВЬ: Загружаем доступные статусы
+            await this.loadStatuses();
+
             await this.loadCard();
             this.fillCardInfo();
             this.setupEventListeners();
@@ -493,6 +497,102 @@ if (typeof CardDetailModule === 'undefined') {
                 notifications.error('Ошибка удаления', 'Не удалось удалить карту');
             }
         }
+
+        // Загрузка доступных статусов
+        async loadStatuses() {
+            try {
+                const response = await api.request('/cards/statuses');
+                this.availableStatuses = response.statuses;
+                console.log('Available statuses loaded:', this.availableStatuses);
+            } catch (error) {
+                console.error('Error loading statuses:', error);
+                // Fallback статусы
+                this.availableStatuses = {
+                    'active': 'Активна',
+                    'blocked': 'В блоке',
+                    'reissue': 'Перевыпуск',
+                    'error': 'Ошибка',
+                    'rebind': 'Переподвязать',
+                    'not_issued': 'Не выдана',
+                    'not_spinning': 'Не крутит'
+                };
+            }
+        }
+
+        // Показать выпадающий список статусов
+        showStatusDropdown(event) {
+            event.stopPropagation();
+
+            // Удаляем существующий dropdown
+            const existingDropdown = document.querySelector('.status-dropdown');
+            if (existingDropdown) {
+                existingDropdown.remove();
+            }
+
+            // Создаем выпадающий список
+            const dropdown = document.createElement('div');
+            dropdown.className = 'status-dropdown';
+            dropdown.innerHTML = Object.entries(this.availableStatuses).map(([value, text]) => `
+    <div class="status-option ${value === this.card.status ? 'current' : ''}" 
+         onclick="window.cardDetailModule?.changeCardStatus('${value}')">
+      ${text}
+    </div>
+  `).join('');
+
+            // Позиционируем dropdown
+            const rect = event.target.getBoundingClientRect();
+            dropdown.style.position = 'fixed';
+            dropdown.style.top = (rect.bottom + 5) + 'px';
+            dropdown.style.left = rect.left + 'px';
+            dropdown.style.zIndex = '9999';
+
+            document.body.appendChild(dropdown);
+
+            // Закрытие при клике вне dropdown
+            setTimeout(() => {
+                document.addEventListener('click', function closeDropdown() {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                });
+            }, 10);
+        }
+
+        // Изменить статус карты
+        async changeCardStatus(newStatus) {
+            try {
+                // Удаляем dropdown
+                const dropdown = document.querySelector('.status-dropdown');
+                if (dropdown) {
+                    dropdown.remove();
+                }
+
+                // Отправляем запрос на изменение статуса
+                await api.request(`/cards/${this.cardId}/status`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ status: newStatus })
+                });
+
+                // Обновляем локальные данные
+                this.card.status = newStatus;
+
+                // Обновляем отображение статуса
+                const statusBadge = document.getElementById('card-status');
+                const statusText = document.getElementById('status-text');
+                if (statusText) {
+                    statusText.textContent = this.availableStatuses[newStatus] || newStatus;
+                } else {
+                    statusBadge.textContent = this.availableStatuses[newStatus] || newStatus;
+                }
+                statusBadge.className = `card-status-badge clickable-status ${newStatus}`;
+
+                notifications.success('Статус изменен', 'Статус карты успешно обновлен');
+            } catch (error) {
+                console.error('Error changing card status:', error);
+                notifications.error('Ошибка', 'Не удалось изменить статус карты');
+            }
+        }
+
+
     }
 
     window.CardDetailModule = CardDetailModule;

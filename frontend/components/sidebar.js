@@ -1,78 +1,106 @@
 // Компонент сайдбара
 class SidebarComponent {
-  constructor() {
-    this.activeModule = localStorage.getItem('active_module') || 'cards';
-    this.onModuleChange = null; // Callback для смены модуля
-  }
+ constructor() {
+   this.activeModule = localStorage.getItem('active_module') || 'cards';
+   this.onModuleChange = null; // Callback для смены модуля
+ }
 
-  render() {
-    const menuItems = [
-      { id: 'cards', title: 'Карты', icon: '💳' },
-      { id: 'expenses', title: 'Расходы', icon: '💰' },
-      { id: 'teams', title: 'Команды', icon: '👥' },
-      { id: 'income', title: 'Доходы', icon: '📈' },
-      { id: 'analytics', title: 'Аналитика', icon: '📊' }
-    ];
+ render() {
+   const menuItems = [
+     { id: 'cards', title: 'Карты', icon: '💳' },
+     { id: 'expenses', title: 'Расходы', icon: '💰' },
+     { id: 'teams', title: 'Команды', icon: '👥' },
+     { id: 'income', title: 'Доходы', icon: '📈' },
+     { id: 'analytics', title: 'Аналитика', icon: '📊' }
+   ];
 
-    const menuHtml = menuItems.map(item => `
-      <li>
-        <a href="#" data-module="${item.id}" class="menu-item ${item.id === this.activeModule ? 'active' : ''}">
-          <span class="menu-icon">${item.icon}</span>
-          <span class="menu-text">${item.title}</span>
-        </a>
-      </li>
-    `).join('');
+   const menuHtml = menuItems.map(item => `
+     <li>
+       <a href="#" data-module="${item.id}" class="menu-item ${item.id === this.activeModule ? 'active' : ''}">
+         <span class="menu-icon">${item.icon}</span>
+         <span class="menu-text">${item.title}</span>
+       </a>
+     </li>
+   `).join('');
 
-    return `
-      <aside class="sidebar">
-        <ul class="menu" id="main-menu">
-          ${menuHtml}
-        </ul>
-      </aside>
-    `;
-  }
+   return `
+     <aside class="sidebar">
+       <ul class="menu" id="main-menu">
+         ${menuHtml}
+       </ul>
+     </aside>
+   `;
+ }
 
-  mount(container) {
-    container.innerHTML = this.render();
-    this.setupEvents();
-  }
+ mount(container) {
+   // Проверяем актуальный модуль перед рендером
+   this.activeModule = localStorage.getItem('active_module') || 'cards';
 
-  setupEvents() {
-    const menu = document.getElementById('main-menu');
-    
-    menu?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const link = e.target.closest('.menu-item');
-      if (link) {
-        const module = link.dataset.module;
-        this.setActiveModule(module);
-        
-        // Вызываем callback для смены модуля
-        if (this.onModuleChange) {
-          this.onModuleChange(module);
-        }
-      }
-    });
-  }
+   container.innerHTML = this.render();
+   this.setupEvents();
 
-  setActiveModule(moduleName) {
-    this.activeModule = moduleName;
-    localStorage.setItem('active_module', moduleName);
-    
-    // Обновляем активный пункт
-    document.querySelectorAll('.menu-item').forEach(link => {
-      link.classList.remove('active');
-    });
-    
-    const activeLink = document.querySelector(`[data-module="${moduleName}"]`);
-    if (activeLink) {
-      activeLink.classList.add('active');
-    }
-  }
+   // Принудительно устанавливаем активный класс после рендера
+   setTimeout(() => {
+     this.setActiveModule(this.activeModule);
+   }, 10);
+ }
 
-  setModuleChangeCallback(callback) {
-    this.onModuleChange = callback;
-  }
+ setupEvents() {
+   const menu = document.getElementById('main-menu');
+
+   menu?.addEventListener('click', (e) => {
+     e.preventDefault();
+     const link = e.target.closest('.menu-item');
+     if (link) {
+       const module = link.dataset.module;
+       
+       // НОВАЯ ЛОГИКА: Если кликнули на "Карты" находясь на детальной странице
+       if (module === 'cards' && window.location.hash.startsWith('#card/')) {
+         console.log('Forcing return to cards list from detail page');
+         // Очищаем детальную страницу
+         localStorage.removeItem('current_card_detail');
+         // Принудительно меняем URL на список карт
+         window.history.replaceState({module: 'cards'}, '', '#cards');
+         // Принудительно перезагружаем модуль
+         if (window.moduleLoader) {
+           window.moduleLoader.loadedModules.delete('cards');
+         }
+       }
+       
+       this.setActiveModule(module);
+
+       // Вызываем callback для смены модуля
+       if (this.onModuleChange) {
+         this.onModuleChange(module);
+       }
+     }
+   });
+ }
+
+ setActiveModule(moduleName) {
+   console.log('Setting active module:', moduleName);
+   this.activeModule = moduleName;
+   localStorage.setItem('active_module', moduleName);
+
+   // ИСПРАВЛЕННЫЙ СЕЛЕКТОР - ищем только ссылки меню
+   document.querySelectorAll('.menu-item').forEach(link => {
+     link.classList.remove('active');
+   });
+
+   // ИСПРАВЛЕННЫЙ СЕЛЕКТОР - более точный поиск
+   const activeLink = document.querySelector(`.menu-item[data-module="${moduleName}"]`);
+   console.log('Found active link:', activeLink);
+   if (activeLink) {
+     activeLink.classList.add('active');
+     console.log('Added active class to:', moduleName);
+   } else {
+     console.error('Active link not found for module:', moduleName);
+   }
+ }
+
+ setModuleChangeCallback(callback) {
+   this.onModuleChange = callback;
+ }
 }
 
 window.SidebarComponent = SidebarComponent;

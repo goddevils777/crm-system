@@ -4,7 +4,11 @@
             ← Назад к картам
         </button>
         <h2 id="card-title">Карта загружается...</h2>
-        <div class="card-status-badge" id="card-status"></div>
+        <div class="card-status-badge clickable-status" id="card-status"
+            onclick="window.cardDetailModule?.showStatusDropdown(event)">
+            <span id="status-text">Карта загружается...</span>
+            <span class="status-arrow">▼</span>
+        </div>
     </div>
 
     <div class="card-info-grid">

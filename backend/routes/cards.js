@@ -5,6 +5,30 @@ const { validateCardData, validateFinancialData } = require('../middleware/valid
 
 const router = express.Router();
 
+const CARD_STATUSES = {
+  'active': 'Активна',
+  'blocked': 'В блоке',
+  'reissue': 'Перевыпуск', 
+  'error': 'Ошибка',
+  'rebind': 'Переподвязать',
+  'not_issued': 'Не выдана',
+  'not_spinning': 'Не крутит'
+};
+
+// Функция автоматической проверки статуса
+function checkCardActivity(card) {
+  const lastActivity = new Date(card.last_transaction_date || card.created_at);
+  const now = new Date();
+  const daysDiff = Math.floor((now - lastActivity) / (1000 * 60 * 60 * 24));
+  
+  // Если нет активности 3 дня и статус "активна" - меняем на "не крутит"
+  if (daysDiff >= 3 && card.status === 'active') {
+    return 'not_spinning';
+  }
+  
+  return card.status;
+}
+
 // Получение всех карт (с учетом роли)
 // Получение всех карт (с учетом роли)
 router.get('/', authenticateToken, async (req, res) => {

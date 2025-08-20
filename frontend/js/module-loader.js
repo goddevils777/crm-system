@@ -32,47 +32,60 @@ class ModuleLoader {
     }
 
     async reinitModule(moduleName) {
-        console.log('Reinitializing module:', moduleName);
+    console.log('Reinitializing module:', moduleName);
 
-        const contentArea = document.getElementById('content-area');
-        if (!contentArea) {
-            throw new Error('Content area not found');
-        }
-
-        // Скрываем контент перед обновлением
-        contentArea.style.opacity = '0';
-
-        // Получаем сохраненный HTML
-        const moduleAssets = this.moduleAssets.get(moduleName);
-        if (moduleAssets && moduleAssets.html) {
-            contentArea.innerHTML = moduleAssets.html;
-        } else {
-            // Если HTML потерялся, перезагружаем модуль полностью
-            this.loadedModules.delete(moduleName);
-            return this.loadModule(moduleName);
-        }
-
-        // Показываем контент с плавным появлением
-        setTimeout(() => {
-            contentArea.style.opacity = '1';
-        }, 50);
-
-        // Даем время DOM обновиться
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // НЕ ЗАГРУЖАЕМ JS ПОВТОРНО - просто создаем новый экземпляр
-        if (moduleName === 'cards' && window.CardsModule) {
-            const instance = new window.CardsModule();
-            window.cardsModule = instance;
-            return instance;
-        } else if (moduleName === 'expenses' && window.ExpensesModule) {
-            const instance = new window.ExpensesModule();
-            window.expensesModule = instance;
-            return instance;
-        }
-
-        return true;
+    const contentArea = document.getElementById('content-area');
+    if (!contentArea) {
+        throw new Error('Content area not found');
     }
+
+    // Скрываем контент перед обновлением
+    contentArea.style.opacity = '0';
+
+    // Получаем сохраненный HTML
+    const moduleAssets = this.moduleAssets.get(moduleName);
+    if (moduleAssets && moduleAssets.html) {
+        contentArea.innerHTML = moduleAssets.html;
+    } else {
+        // Если HTML потерялся, перезагружаем модуль полностью
+        console.log('HTML assets lost, reloading module completely');
+        this.loadedModules.delete(moduleName);
+        this.moduleAssets.delete(moduleName);
+        return this.loadModule(moduleName);
+    }
+
+    // Показываем контент с плавным появлением
+    setTimeout(() => {
+        contentArea.style.opacity = '1';
+    }, 50);
+
+    // Даем время DOM обновиться
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    // УЛУЧШЕННАЯ ИНИЦИАЛИЗАЦИЯ - проверяем что класс существует
+    let moduleInstance = null;
+    try {
+        if (moduleName === 'cards' && window.CardsModule) {
+            console.log('Creating new CardsModule instance...');
+            moduleInstance = new window.CardsModule();
+            window.cardsModule = moduleInstance;
+        } else if (moduleName === 'expenses' && window.ExpensesModule) {
+            console.log('Creating new ExpensesModule instance...');
+            moduleInstance = new window.ExpensesModule();
+            window.expensesModule = moduleInstance;
+        } else {
+            console.warn(`Module class not found for: ${moduleName}`);
+        }
+    } catch (error) {
+        console.error('Error creating module instance:', error);
+        // Если ошибка создания - перезагружаем модуль
+        this.loadedModules.delete(moduleName);
+        this.moduleAssets.delete(moduleName);
+        return this.loadModule(moduleName);
+    }
+
+    return moduleInstance;
+}
 
     getModuleAssets(moduleName) {
         return this.moduleAssets.get(moduleName) || null;
