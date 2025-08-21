@@ -1,0 +1,104 @@
+<div class="team-detail-container">
+    <!-- Шапка команды -->
+    <div class="team-detail-header">
+        <button class="btn btn-secondary back-btn" onclick="window.teamDetailModule?.goBackToTeams()">
+            ← Назад к командам
+        </button>
+        <div class="team-info">
+            <h2 id="team-name">Загрузка...</h2>
+            <div class="team-stats-summary">
+                <div class="stat-item">
+                    <span class="stat-label">Баеров:</span>
+                    <span class="stat-value" id="buyers-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Карт:</span>
+                    <span class="stat-value" id="cards-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Общий баланс:</span>
+                    <span class="stat-value" id="total-balance">0 USD</span>
+                </div>
+            </div>
+        </div>
+        <div class="team-actions">
+            <button class="btn btn-primary" onclick="window.teamDetailModule?.showAddBuyerModal()">
+                + Добавить баера
+            </button>
+        </div>
+    </div>
+
+    <!-- Контент баеров -->
+    <div class="buyers-section">
+        <div class="section-header">
+            <h3>Баеры команды</h3>
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="grid">
+                    <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
+                        <path
+                            d="M384 384h256v256H384zm0 512h256v256H384zm512-512h256v256H896zm-512-512h256v256H384zm512 0h256v256H896zm0 512h256v256H896z" />
+                    </svg>
+                </button>
+                <button class="view-btn" data-view="table">
+                    <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
+                        <path
+                            d="M120 120v784h784V120H120zm752 72v140H152V192h720zm0 212v140H152V404h720zm0 212v140H152V616h720z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Сетка баеров -->
+        <div id="buyers-grid" class="buyers-grid">
+            <!-- Заполняется JS -->
+        </div>
+
+        <!-- Таблица баеров -->
+        <div id="buyers-table-container" class="buyers-table-container" style="display: none;">
+            <table class="buyers-table">
+                <thead>
+                    <tr>
+                        <th>Баер</th>
+                        <th>Telegram</th>
+                        <th>Карт</th>
+                        <th>Баланс</th>
+                        <th>Дата создания</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="buyers-table-body">
+                    <!-- Заполняется JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Модальное окно добавления баера -->
+    <!-- Модальное окно добавления баера -->
+    <div id="add-buyer-modal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Добавить баера</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <form id="add-buyer-form" class="modal-body">
+                <div class="form-group">
+                    <label for="buyer-username">Имя баера *</label>
+                    <input type="text" id="buyer-username" name="username" required maxlength="50"
+                        placeholder="Введите имя баера">
+                </div>
+
+                <div class="form-group">
+                    <label for="buyer-telegram">Telegram *</label>
+                    <input type="text" id="buyer-telegram" name="telegram" required maxlength="100"
+                        placeholder="@username или ссылка">
+                </div>
+            </form>
+
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary modal-cancel">Отмена</button>
+                <button type="submit" form="add-buyer-form" class="btn btn-primary">Создать баера</button>
+            </div>
+        </div>
+    </div>
+</div>

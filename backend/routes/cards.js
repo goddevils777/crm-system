@@ -89,8 +89,10 @@ router.get('/', authenticateToken, async (req, res) => {
     let query = `
       SELECT 
         c.*,
+        t.name as team_name,
         COALESCE(commission_sum.total_commission, 0) as calculated_commission
       FROM cards c
+      LEFT JOIN teams t ON c.team_id = t.id
       LEFT JOIN (
         SELECT 
           card_id,
@@ -392,7 +394,6 @@ router.get('/period', authenticateToken, async (req, res) => {
   }
 });
 
-
 // Получение одной карты по ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
@@ -401,8 +402,10 @@ router.get('/:id', authenticateToken, async (req, res) => {
     const result = await db.query(
       `SELECT 
         c.*,
+        t.name as team_name,
         COALESCE(commission_sum.total_commission, 0) as calculated_commission
        FROM cards c
+       LEFT JOIN teams t ON c.team_id = t.id
        LEFT JOIN (
          SELECT 
            card_id,
@@ -437,6 +440,7 @@ router.get('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
+
 // Обновление финансовых данных карты (с сохранением истории)
 router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), validateFinancialData, async (req, res) => {
   console.log('=== UPDATE ROUTE CALLED ===');

@@ -79,6 +79,35 @@ class API {
             method: 'DELETE'
         });
     }
+
+    // Методы для баеров команды
+    async getBuyers(teamId) {
+        return this.request(`/teams/${teamId}/buyers`);
+    }
+
+    async deleteBuyer(buyerId) {
+        return this.request(`/teams/buyers/${buyerId}`, {
+            method: 'DELETE'
+        });
+    }
+    async createBuyer(teamId, buyerData) {
+        return this.request(`/teams/${teamId}/buyers`, {
+            method: 'POST',
+            body: JSON.stringify(buyerData)
+        });
+    }
+
+    // Методы для назначения карт баерам
+    async assignCardToBuyer(cardId, buyerId) {
+        return this.request(`/cards/${cardId}/assign`, {
+            method: 'PUT',
+            body: JSON.stringify({ buyer_id: buyerId })
+        });
+    }
+
+    async getAvailableCards(teamId) {
+        return this.request(`/cards?team_id=${teamId}&unassigned=true`);
+    }
 }
 
 // Создание глобального экземпляра API

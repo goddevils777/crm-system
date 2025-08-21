@@ -48,12 +48,15 @@
             <option value="limit_exceeded">Лимит достигнут</option>
         </select>
     </div>
+
     <div class="filter-group">
         <div style="display: flex; gap: 8px;">
             <input type="date" id="date-from" class="form-input" title="Дата начала">
             <input type="date" id="date-to" class="form-input" title="Дата окончания">
         </div>
     </div>
+
+
     <div class="filter-group">
         <select id="sort-cards" class="form-select">
             <option value="created_desc">Новые сначала</option>
@@ -66,6 +69,33 @@
             <option value="spent_asc">По скрученному (меньше)</option>
         </select>
     </div>
+    <div class="teams-filter-container">
+        <button type="button" class="teams-filter-button" id="teams-filter-button">
+            <span class="filter-text">Все команды</span>
+            <span class="filter-arrow">▼</span>
+        </button>
+        <div class="teams-filter-dropdown" id="teams-filter-dropdown">
+            <div class="filter-option" data-value="all">
+                <label>
+                    <input type="checkbox" name="team-filter" value="all" checked>
+                    Все команды
+                </label>
+            </div>
+                  <div class="filter-option" data-value="no-team">
+            <label>
+                <input type="checkbox" name="team-filter" value="no-team">
+                Без команды
+            </label>
+        </div>
+            <div class="filter-divider"></div>
+            <div id="teams-filter-list">
+                <!-- Команды загружаются JS -->
+            </div>
+        </div>
+    </div>
+
+
+
 </div>
 
 <!-- Grid вид (карточки) -->

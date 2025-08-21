@@ -173,4 +173,108 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
   }
 });
 
+// Получение баеров команды
+// Получение баеров команды - ДОБАВЬ ЭТОТ РОУТ
+router.get('/:id/buyers', authenticateToken, async (req, res) => {
+  try {
+    const teamId = req.params.id;
+    
+    const query = `
+      SELECT 
+        tb.id,
+        tb.name as username,
+        tb.telegram,
+        tb.is_registered,
+        tb.invitation_token,
+        tb.created_at,
+        u.email,
+        COUNT(c.id) as cards_count,
+        COALESCE(SUM(CASE WHEN c.status != 'deleted' THEN c.balance ELSE 0 END), 0) as total_balance
+      FROM team_buyers tb
+      LEFT JOIN users u ON tb.user_id = u.id
+      LEFT JOIN cards c ON u.id = c.buyer_id AND c.status != 'deleted'
+      WHERE tb.team_id = $1
+      GROUP BY tb.id, tb.name, tb.telegram, tb.is_registered, tb.invitation_token, tb.created_at, u.email
+      ORDER BY tb.created_at DESC
+    `;
+
+    const result = await db.query(query, [teamId]);
+    res.json({ buyers: result.rows });
+  } catch (error) {
+    console.error('Ошибка получения баеров:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Создание баера в команде (только админ и менеджер)  
+router.post('/:id/buyers', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const teamId = req.params.id;
+    const { username, telegram } = req.body;
+
+    // Валидация
+    if (!username || !telegram) {
+      return res.status(400).json({ error: 'Имя и телеграм обязательны' });
+    }
+
+    // Проверяем существование команды
+    const teamCheck = await db.query('SELECT id FROM teams WHERE id = $1', [teamId]);
+    if (teamCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Команда не найдена' });
+    }
+
+    // Генерируем токен приглашения
+    const crypto = require('crypto');
+    const invitationToken = crypto.randomBytes(32).toString('hex');
+
+    // Создаем запись баера (пока без user_id)
+    const result = await db.query(
+      'INSERT INTO team_buyers (name, telegram, team_id, invitation_token) VALUES ($1, $2, $3, $4) RETURNING *',
+      [username.trim(), telegram.trim(), teamId, invitationToken]
+    );
+
+    res.status(201).json({
+      message: 'Баер создан успешно',
+      buyer: result.rows[0],
+      invitationLink: `${process.env.FRONTEND_URL}/invite/${invitationToken}`
+    });
+
+  } catch (error) {
+    console.error('Ошибка создания баера:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+
+// И ЗАМЕНИ роут удаления на:
+router.delete('/buyers/:buyerId', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const buyerId = req.params.buyerId;
+
+    // Проверяем что баер существует
+    const buyerCheck = await db.query(
+      'SELECT id, name FROM team_buyers WHERE id = $1',
+      [buyerId]
+    );
+
+    if (buyerCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Баер не найден' });
+    }
+
+    // Удаляем баера
+    await db.query('DELETE FROM team_buyers WHERE id = $1', [buyerId]);
+
+    res.json({ 
+      message: 'Баер успешно удален',
+      deletedBuyer: buyerCheck.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Ошибка удаления баера:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+
+
 module.exports = router;

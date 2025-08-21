@@ -18,6 +18,8 @@ if (typeof window.CardsModule === 'undefined') {
 
       try {
         await this.loadCards();
+        await this.loadTeams();
+        this.setupTeamsFilter();
         this.sortCards();
 
         this.setupViewToggle();
@@ -415,15 +417,30 @@ if (typeof window.CardsModule === 'undefined') {
         notifications.error('Ошибка', 'Не удалось загрузить карты');
       }
     }
-
     filterCards() {
       const searchTerm = document.getElementById('search-cards')?.value.toLowerCase() || '';
       const statusFilter = document.getElementById('status-filter')?.value || '';
+      const selectedTeams = this.getSelectedTeams();
 
       this.filteredCards = this.cards.filter(card => {
         const matchesSearch = card.name.toLowerCase().includes(searchTerm);
         const matchesStatus = !statusFilter || card.status === statusFilter;
-        return matchesSearch && matchesStatus;
+
+        let matchesTeam = false;
+        if (selectedTeams.all) {
+          matchesTeam = true;
+        } else {
+          // Проверяем есть ли карта в выбранных командах
+          if (selectedTeams.teamIds.length > 0 && selectedTeams.teamIds.includes(card.team_id)) {
+            matchesTeam = true;
+          }
+          // Проверяем карты без команды
+          if (selectedTeams.includeNoTeam && (!card.team_id || card.team_id === null)) {
+            matchesTeam = true;
+          }
+        }
+
+        return matchesSearch && matchesStatus && matchesTeam;
       });
 
       this.renderCards();
@@ -509,6 +526,8 @@ if (typeof window.CardsModule === 'undefined') {
       // Генерируем уникальный ID для новой карты
       const uniqueId = this.generateUniqueCardId();
 
+      this.populateTeamsSelect();
+
       // Автоматически заполняем название карты
       const nameField = document.querySelector('input[name="name"]');
       if (nameField && !nameField.value) {
@@ -516,6 +535,7 @@ if (typeof window.CardsModule === 'undefined') {
         nameField.select(); // Выделяем текст чтобы можно было сразу заменить
       }
     }
+
     generateUniqueCardId() {
       // Находим максимальный номер среди существующих карт
       let maxNumber = 0;
@@ -819,6 +839,152 @@ if (typeof window.CardsModule === 'undefined') {
 
       this.renderCards();
       notifications.info('Фильтр сброшен', 'Показаны все данные за всё время');
+    }
+
+    async loadTeams() {
+      try {
+        const response = await api.request('/teams');
+        this.teams = response.teams || [];
+        this.populateTeamsSelect(); // Заполняем после загрузки
+      } catch (error) {
+        console.error('Ошибка загрузки команд:', error);
+        this.teams = [];
+      }
+    }
+    populateTeamsSelect() {
+      const teamSelect = document.querySelector('select[name="team_id"]');
+      if (!teamSelect) return;
+
+      // Очищаем текущие опции (кроме первой)
+      teamSelect.innerHTML = '<option value="">Выберите команду</option>';
+
+      // Проверяем что команды загружены
+      if (!this.teams || this.teams.length === 0) {
+        console.log('Teams not loaded yet, will populate when available');
+        return;
+      }
+
+      // Добавляем команды
+      this.teams.forEach(team => {
+        const option = document.createElement('option');
+        option.value = team.id;
+        option.textContent = team.name;
+        teamSelect.appendChild(option);
+      });
+    }
+
+
+    setupTeamsFilter() {
+      const filterButton = document.getElementById('teams-filter-button');
+      const filterDropdown = document.getElementById('teams-filter-dropdown');
+
+      console.log('Setting up teams filter');
+      console.log('Button found:', !!filterButton);
+      console.log('Dropdown found:', !!filterDropdown);
+
+      if (!filterButton || !filterDropdown) {
+        console.error('Teams filter elements not found');
+        return;
+      }
+
+      // Открытие/закрытие dropdown
+      filterButton.addEventListener('click', (e) => {
+        console.log('Filter button clicked');
+        e.stopPropagation();
+        filterDropdown.classList.toggle('show');
+        console.log('Dropdown classes:', filterDropdown.className);
+      });
+
+      // Закрытие при клике вне
+      document.addEventListener('click', (e) => {
+        if (!filterButton.contains(e.target) && !filterDropdown.contains(e.target)) {
+          filterDropdown.classList.remove('show');
+        }
+      });
+
+      this.populateTeamsFilter();
+    }
+
+    populateTeamsFilter() {
+      const teamsList = document.getElementById('teams-filter-list');
+      if (!teamsList || !this.teams) return;
+
+      const html = this.teams.map(team => `
+        <div class="filter-option" data-value="${team.id}">
+            <label>
+                <input type="checkbox" name="team-filter" value="${team.id}">
+                ${team.name}
+            </label>
+        </div>
+    `).join('');
+
+      teamsList.innerHTML = html;
+      this.setupTeamsFilterEvents();
+    }
+
+    setupTeamsFilterEvents() {
+      const allCheckbox = document.querySelector('input[name="team-filter"][value="all"]');
+      const teamCheckboxes = document.querySelectorAll('input[name="team-filter"]:not([value="all"])');
+
+      allCheckbox?.addEventListener('change', () => {
+        if (allCheckbox.checked) {
+          teamCheckboxes.forEach(cb => cb.checked = false);
+        }
+        this.updateTeamsFilterText();
+        this.filterCards();
+      });
+
+      teamCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+          if (checkbox.checked) {
+            allCheckbox.checked = false;
+          }
+
+          const anySelected = Array.from(teamCheckboxes).some(cb => cb.checked);
+          if (!anySelected) {
+            allCheckbox.checked = true;
+          }
+
+          this.updateTeamsFilterText();
+          this.filterCards();
+        });
+      });
+    }
+
+    updateTeamsFilterText() {
+      const filterText = document.querySelector('.filter-text');
+      const allCheckbox = document.querySelector('input[name="team-filter"][value="all"]');
+      const selectedTeams = document.querySelectorAll('input[name="team-filter"]:not([value="all"]):checked');
+
+      if (allCheckbox.checked || selectedTeams.length === 0) {
+        filterText.textContent = 'Все команды';
+      } else if (selectedTeams.length === 1) {
+        const teamName = selectedTeams[0].closest('label').textContent.trim();
+        filterText.textContent = teamName;
+      } else {
+        filterText.textContent = `Команд: ${selectedTeams.length}`;
+      }
+    }
+
+    getSelectedTeams() {
+      const allCheckbox = document.querySelector('input[name="team-filter"][value="all"]');
+      if (allCheckbox?.checked) {
+        return { all: true };
+      }
+
+      const selectedTeams = document.querySelectorAll('input[name="team-filter"]:not([value="all"]):checked');
+      const teamIds = [];
+      let includeNoTeam = false;
+
+      selectedTeams.forEach(cb => {
+        if (cb.value === 'no-team') {
+          includeNoTeam = true;
+        } else {
+          teamIds.push(parseInt(cb.value));
+        }
+      });
+
+      return { teamIds, includeNoTeam };
     }
   }
 

@@ -130,25 +130,26 @@ if (typeof CardDetailModule === 'undefined') {
         <div class="info-item"><strong>Телефон:</strong> ${this.card.phone || '—'}</div>
         <div class="info-item"><strong>Email:</strong> ${this.card.email || '—'}</div>
         <div class="info-item"><strong>Валюта:</strong> ${this.card.currency}</div>
+        <div class="info-item"><strong>Команда:</strong> ${this.card.team_name || '—'}</div>
         <div class="info-item"><strong>Подрядчик:</strong> ${this.card.contractor_name || '—'}</div>
         <div class="info-item"><strong>Дата запуска:</strong> ${this.card.launch_date ? new Date(this.card.launch_date).toLocaleDateString() : '—'}</div>
         <div class="info-item"><strong>Дата создания:</strong> ${createdDate}</div>
     `;
         }
 
-        fillFinanceSummary() {
-            const financeSummary = document.getElementById('finance-summary');
-            const daysSince = this.calculateDaysSinceTransaction(this.card.last_transaction_date);
+       fillFinanceSummary() {
+    const financeSummary = document.getElementById('finance-summary');
+    const daysSince = this.calculateDaysSinceTransaction(this.card.last_transaction_date);
 
-            // Сохраняем оригинальные значения
-            this.originalStats = {
-                spent: this.card.total_spent_calculated || 0,
-                topup: this.card.total_top_up || 0,
-                commission: this.card.commission_paid || 0,
-                balance: this.card.balance || 0
-            };
+    // Сохраняем оригинальные значения
+    this.originalStats = {
+        spent: this.card.total_spent_calculated || 0,
+        topup: this.card.total_top_up || 0,
+        commission: this.card.commission_paid || 0,
+        balance: this.card.balance || 0
+    };
 
-            financeSummary.innerHTML = `
+    financeSummary.innerHTML = `
         <div class="finance-item">
             <div class="finance-label">Баланс</div>
             <div class="finance-value" id="display-balance">${this.card.balance || 0} ${this.card.currency}</div>
@@ -165,15 +166,9 @@ if (typeof CardDetailModule === 'undefined') {
             <div class="finance-label">Всего пополнено</div>
             <div class="finance-value" id="display-topup">${this.card.total_top_up || 0} ${this.card.currency}</div>
         </div>
-        ${daysSince >= 3 ? `
-        <div class="finance-item warning">
-            <div class="finance-label">⚠️ Без операций</div>
-            <div class="finance-value">${daysSince} дней</div>
-        </div>
-        ` : ''}
         
         <!-- Фильтр периода -->
-        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color-split);">
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color-split); grid-column: 1 / -1;">
             <div class="form-group" style="margin-bottom: 8px;">
                 <label style="font-size: 12px; color: var(--text-secondary);">Показать за период:</label>
                 <select id="period-filter" class="form-select" style="font-size: 13px;">
@@ -197,10 +192,17 @@ if (typeof CardDetailModule === 'undefined') {
                 Сбросить фильтр
             </button>
         </div>
+
+        ${daysSince >= 3 ? `
+        <div class="finance-item warning" style="grid-column: 1 / -1; margin-top: 8px;">
+            <div class="finance-label">⚠️ Без операций</div>
+            <div class="finance-value">${daysSince} дней</div>
+        </div>
+        ` : ''}
     `;
 
-            this.setupPeriodFilter();
-        }
+    this.setupPeriodFilter();
+}
 
 
         setupEventListeners() {

@@ -250,9 +250,75 @@ class TeamsModule {
     }
 
     openTeamDetail(teamId) {
-        console.log('Открытие детали команды:', teamId);
-        notifications.info('В разработке', 'Детальная страница команды скоро будет готова');
+        // Сохраняем ID команды
+        localStorage.setItem('current_team_detail', teamId);
+
+        // Обновляем URL
+        window.history.pushState({ module: 'team-detail', teamId: teamId }, '', `#team/${teamId}`);
+
+        // Загружаем детальную страницу
+        this.loadTeamDetail(teamId);
     }
+
+    async loadTeamDetail(teamId) {
+        try {
+            const contentArea = document.getElementById('content-area');
+            contentArea.style.opacity = '0';
+
+            // Показываем лоадер
+            setTimeout(() => {
+                contentArea.innerHTML = `
+                <div class="module-loader">
+                    <div class="loader-spinner"></div>
+                    <p>Загрузка команды...</p>
+                </div>
+            `;
+                contentArea.style.opacity = '1';
+            }, 50);
+
+            // Загружаем HTML детальной страницы
+            const htmlResponse = await fetch('modules/teams/team-detail.html');
+            const html = await htmlResponse.text();
+
+            // Загружаем CSS если еще не загружен
+            if (!document.querySelector('link[href*="team-detail.css"]')) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'modules/teams/team-detail.css';
+                document.head.appendChild(link);
+            }
+
+            // Загружаем JS модуль
+            if (!window.TeamDetailModule) {
+                const script = document.createElement('script');
+                script.src = 'modules/teams/team-detail.js';
+                document.head.appendChild(script);
+
+                // Ждем загрузки скрипта
+                await new Promise((resolve) => {
+                    script.onload = resolve;
+                });
+            }
+
+            // Вставляем HTML
+            contentArea.style.opacity = '0';
+            setTimeout(() => {
+                contentArea.innerHTML = html;
+                contentArea.style.opacity = '1';
+
+                // Инициализируем модуль детальной страницы
+                setTimeout(() => {
+                    window.teamDetailModule = new window.TeamDetailModule();
+                }, 100);
+            }, 100);
+
+        } catch (error) {
+            console.error('Ошибка загрузки детальной страницы:', error);
+            notifications.error('Ошибка', 'Не удалось загрузить страницу команды');
+        }
+    }
+
+
     async editTeam(teamId) {
         try {
             const response = await api.request(`/teams/${teamId}`);
@@ -310,7 +376,7 @@ class TeamsModule {
         }
 
         // Временно используем стандартный confirm пока не исправим showConfirm
-        const confirmed = confirm(`Вы уверены, что хотите удалить команду "${team.name}"?\n\nЭто действие нельзя отменить.`);
+        const confirmed = await confirmDelete(`Вы уверены, что хотите удалить команду "${team.name}"?`);
         if (!confirmed) return;
 
         try {

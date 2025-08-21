@@ -764,3 +764,76 @@
         min-width: auto;
     }
 }
+
+.teams-filter-container {
+    position: relative;
+    display: inline-block;
+}
+
+.teams-filter-button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 160px;
+    padding: 12px 16px;
+    background: var(--component-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.teams-filter-button:hover {
+    border-color: var(--primary-color);
+}
+
+.teams-filter-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 200px; /* фиксированная ширина */
+    background: var(--component-background);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+    margin-top: 4px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.teams-filter-dropdown.show {
+    display: block;
+}
+
+.filter-option {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.filter-option:hover {
+    background: var(--background-color);
+}
+
+.filter-option label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    margin: 0;
+}
+
+.filter-option input[type="checkbox"] {
+    margin: 0;
+}
+
+.filter-divider {
+    height: 1px;
+    background: var(--border-color-split);
+    margin: 4px 0;
+}
