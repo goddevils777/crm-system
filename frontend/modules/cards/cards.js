@@ -22,7 +22,7 @@ if (typeof window.CardsModule === 'undefined') {
 
         this.setupViewToggle();
 
-        // ДОБАВЬ: Проверяем нужно ли восстановить детальную страницу
+        // Проверяем нужно ли восстановить детальную страницу
         this.checkRestoreCardDetail();
 
         this.renderCards();
@@ -54,7 +54,7 @@ if (typeof window.CardsModule === 'undefined') {
     }
 
     checkRestoreCardDetail() {
-      // ДОБАВЬ: Проверяем действительно ли нужно восстанавливать детальную страницу
+      // Проверяем действительно ли нужно восстанавливать детальную страницу
       const hash = window.location.hash;
       const currentCardId = localStorage.getItem('current_card_detail');
 

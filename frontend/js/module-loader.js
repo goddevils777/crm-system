@@ -32,60 +32,64 @@ class ModuleLoader {
     }
 
     async reinitModule(moduleName) {
-    console.log('Reinitializing module:', moduleName);
+        console.log('Reinitializing module:', moduleName);
 
-    const contentArea = document.getElementById('content-area');
-    if (!contentArea) {
-        throw new Error('Content area not found');
-    }
-
-    // Скрываем контент перед обновлением
-    contentArea.style.opacity = '0';
-
-    // Получаем сохраненный HTML
-    const moduleAssets = this.moduleAssets.get(moduleName);
-    if (moduleAssets && moduleAssets.html) {
-        contentArea.innerHTML = moduleAssets.html;
-    } else {
-        // Если HTML потерялся, перезагружаем модуль полностью
-        console.log('HTML assets lost, reloading module completely');
-        this.loadedModules.delete(moduleName);
-        this.moduleAssets.delete(moduleName);
-        return this.loadModule(moduleName);
-    }
-
-    // Показываем контент с плавным появлением
-    setTimeout(() => {
-        contentArea.style.opacity = '1';
-    }, 50);
-
-    // Даем время DOM обновиться
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    // УЛУЧШЕННАЯ ИНИЦИАЛИЗАЦИЯ - проверяем что класс существует
-    let moduleInstance = null;
-    try {
-        if (moduleName === 'cards' && window.CardsModule) {
-            console.log('Creating new CardsModule instance...');
-            moduleInstance = new window.CardsModule();
-            window.cardsModule = moduleInstance;
-        } else if (moduleName === 'expenses' && window.ExpensesModule) {
-            console.log('Creating new ExpensesModule instance...');
-            moduleInstance = new window.ExpensesModule();
-            window.expensesModule = moduleInstance;
-        } else {
-            console.warn(`Module class not found for: ${moduleName}`);
+        const contentArea = document.getElementById('content-area');
+        if (!contentArea) {
+            throw new Error('Content area not found');
         }
-    } catch (error) {
-        console.error('Error creating module instance:', error);
-        // Если ошибка создания - перезагружаем модуль
-        this.loadedModules.delete(moduleName);
-        this.moduleAssets.delete(moduleName);
-        return this.loadModule(moduleName);
-    }
 
-    return moduleInstance;
-}
+        // Скрываем контент перед обновлением
+        contentArea.style.opacity = '0';
+
+        // Получаем сохраненный HTML
+        const moduleAssets = this.moduleAssets.get(moduleName);
+        if (moduleAssets && moduleAssets.html) {
+            contentArea.innerHTML = moduleAssets.html;
+        } else {
+            // Если HTML потерялся, перезагружаем модуль полностью
+            console.log('HTML assets lost, reloading module completely');
+            this.loadedModules.delete(moduleName);
+            this.moduleAssets.delete(moduleName);
+            return this.loadModule(moduleName);
+        }
+
+        // Показываем контент с плавным появлением
+        setTimeout(() => {
+            contentArea.style.opacity = '1';
+        }, 50);
+
+        // Даем время DOM обновиться
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        // УЛУЧШЕННАЯ ИНИЦИАЛИЗАЦИЯ - проверяем что класс существует
+        let moduleInstance = null;
+        try {
+            if (moduleName === 'cards' && window.CardsModule) {
+                console.log('Creating new CardsModule instance...');
+                moduleInstance = new window.CardsModule();
+                window.cardsModule = moduleInstance;
+            } else if (moduleName === 'expenses' && window.ExpensesModule) {
+                console.log('Creating new ExpensesModule instance...');
+                moduleInstance = new window.ExpensesModule();
+                window.expensesModule = moduleInstance;
+            } else if (moduleName === 'teams' && window.TeamsModule) {
+                console.log('Creating new TeamsModule instance...');
+                moduleInstance = new window.TeamsModule();
+                window.teamsModule = moduleInstance;
+            } else {
+                console.warn(`Module class not found for: ${moduleName}`);
+            }
+        } catch (error) {
+            console.error('Error creating module instance:', error);
+            // Если ошибка создания - перезагружаем модуль
+            this.loadedModules.delete(moduleName);
+            this.moduleAssets.delete(moduleName);
+            return this.loadModule(moduleName);
+        }
+
+        return moduleInstance;
+    }
 
     getModuleAssets(moduleName) {
         return this.moduleAssets.get(moduleName) || null;
@@ -107,7 +111,7 @@ class ModuleLoader {
 
             // Скрываем область перед вставкой нового контента
             contentArea.style.opacity = '0';
-            
+
             // Ждем завершения CSS загрузки перед вставкой HTML
             await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -141,15 +145,19 @@ class ModuleLoader {
             // Инициализируем модуль и сохраняем экземпляр
             let moduleInstance = null;
             if (moduleName === 'cards' && window.CardsModule) {
-                console.log('Creating CardsModule instance...');
+                console.log('Creating new CardsModule instance...');
                 moduleInstance = new window.CardsModule();
                 window.cardsModule = moduleInstance;
-                console.log('CardsModule instance created and saved globally');
             } else if (moduleName === 'expenses' && window.ExpensesModule) {
-                console.log('Creating ExpensesModule instance...');
+                console.log('Creating new ExpensesModule instance...');
                 moduleInstance = new window.ExpensesModule();
                 window.expensesModule = moduleInstance;
-                console.log('ExpensesModule instance created and saved globally');
+            } else if (moduleName === 'teams' && window.TeamsModule) {
+                console.log('Creating new TeamsModule instance...');
+                moduleInstance = new window.TeamsModule();
+                window.teamsModule = moduleInstance;
+            } else {
+                console.warn(`Module class not found for: ${moduleName}`);
             }
 
             // Сохраняем ресурсы модуля
@@ -160,7 +168,7 @@ class ModuleLoader {
                 this.moduleAssets = new Map();
                 this.moduleAssets.set(moduleName, moduleAssets);
             }
-            
+
             this.loadedModules.add(moduleName);
             this.loadingModules.delete(moduleName);
             this.hideLoader();
@@ -171,7 +179,7 @@ class ModuleLoader {
             console.error('=== ERROR in loadAndInitModule:', error, '===');
             this.loadingModules.delete(moduleName);
             this.hideLoader();
-            
+
             const contentArea = document.getElementById('content-area');
             if (contentArea) {
                 contentArea.style.opacity = '1';
@@ -221,7 +229,7 @@ class ModuleLoader {
             const link = document.createElement('link');
             link.rel = 'stylesheet';
             link.href = `modules/${moduleName}/${moduleName}.css?v=${Date.now()}`;
-            
+
             // Ждем полной загрузки CSS
             link.onload = () => {
                 // Даем время браузеру применить стили
@@ -248,13 +256,19 @@ class ModuleLoader {
 
     loadJS(moduleName) {
         return new Promise((resolve, reject) => {
-            const existingScript = document.querySelector(`script[src*="${moduleName}.js"]`);
-            if (existingScript) {
-                console.log('JS already loaded for', moduleName);
+            // Для confirm-modal не перезагружаем
+            if (moduleName === 'confirm-modal' && window.ConfirmModal) {
+                console.log('ConfirmModal already loaded');
                 resolve(true);
                 return;
             }
 
+            const existingScript = document.querySelector(`script[src*="${moduleName}.js"]`);
+            if (existingScript && moduleName !== 'confirm-modal') {
+                console.log('JS already loaded for', moduleName);
+                resolve(true);
+                return;
+            }
             const script = document.createElement('script');
             script.src = `modules/${moduleName}/${moduleName}.js?v=${Date.now()}`;
             script.setAttribute('data-module', moduleName);
@@ -269,11 +283,11 @@ class ModuleLoader {
 
     showLoader() {
         const contentArea = document.getElementById('content-area');
-        
+
         // Устанавливаем переход для плавности
         contentArea.style.transition = 'opacity 0.2s ease';
         contentArea.style.opacity = '0';
-        
+
         // Вставляем лоадер
         contentArea.innerHTML = `
             <div class="module-loader">
@@ -281,7 +295,7 @@ class ModuleLoader {
                 <p>Загрузка модуля...</p>
             </div>
         `;
-        
+
         // Показываем лоадер плавно
         setTimeout(() => {
             contentArea.style.opacity = '1';

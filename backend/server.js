@@ -76,11 +76,13 @@ app.use(express.urlencoded({ extended: true }));
 const authRoutes = require('./routes/auth');
 const cardRoutes = require('./routes/cards');
 const expenseRoutes = require('./routes/expenses');
+const teamRoutes = require('./routes/teams');
 
 // Использование роутов
 app.use('/api/auth', authRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/teams', teamRoutes);
 
 // Тестовый роут
 app.get('/api/test', (req, res) => {

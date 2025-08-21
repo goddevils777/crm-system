@@ -4,6 +4,7 @@ class App {
    this.header = null;
    this.sidebar = null;
    this.currentModule = null;
+   this.initConfirmModal();
    this.init();
  }
 
