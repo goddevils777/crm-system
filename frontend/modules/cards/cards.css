@@ -318,6 +318,8 @@
     box-shadow: 0 4px 12px rgba(245, 34, 45, 0.3);
 }
 
+
+
 /* Financial Stats */
 .card-stats {
     display: grid;
@@ -775,7 +777,7 @@
     align-items: center;
     justify-content: space-between;
     width: 160px;
-    padding: 12px 16px;
+    padding: 9px 16px;
     background: var(--component-background);
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -837,3 +839,4 @@
     background: var(--border-color-split);
     margin: 4px 0;
 }
+

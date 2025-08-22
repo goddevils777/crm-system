@@ -1,10 +1,9 @@
 // API клиент для работы с backend
 class API {
     constructor() {
-        this.baseURL = 'http://localhost:3000/api';
+        this.baseURL = window.APP_CONFIG.API_URL;
         this.token = localStorage.getItem('authToken');
     }
-
     // Установка токена
     setToken(token) {
         this.token = token;
@@ -22,6 +21,7 @@ class API {
         const url = `${this.baseURL}${endpoint}`;
         const headers = {
             'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true',  // ДОБАВЬ ЭТУ СТРОКУ
             ...options.headers
         };
 
@@ -96,6 +96,19 @@ class API {
             body: JSON.stringify(buyerData)
         });
     }
+
+    // Методы для назначения карт баерам
+    async assignCardToBuyer(cardId, buyerId) {
+        return this.request(`/cards/${cardId}/assign`, {
+            method: 'PUT',
+            body: JSON.stringify({ buyer_id: buyerId })
+        });
+    }
+
+    async getAvailableCards(teamId) {
+        return this.request(`/cards?team_id=${teamId}&unassigned=true`);
+    }
+
 
     // Методы для назначения карт баерам
     async assignCardToBuyer(cardId, buyerId) {

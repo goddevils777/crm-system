@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
 require('dotenv').config();
 const db = require('./models/database');
 const { validateJWTSecret } = require('./middleware/security');
@@ -10,6 +11,9 @@ const { securityLogger } = require('./middleware/logger');
 validateJWTSecret(); // ДОБАВЬ ЭТУ СТРОКУ
 
 const app = express();
+
+// app.set('trust proxy', true);
+
 const PORT = process.env.PORT || 3000;
 
 // Безопасность - ЗАМЕНИ СУЩЕСТВУЮЩУЮ СТРОКУ app.use(helmet());
@@ -18,7 +22,8 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"], // ДОБАВЬ 'unsafe-inline'
+      scriptSrcAttr: ["'unsafe-inline'"], // ДОБАВЬ эту строку
       imgSrc: ["'self'", "data:", "https:"],
       connectSrc: ["'self'"],
       fontSrc: ["'self'"],
@@ -62,11 +67,12 @@ app.use(cors({
 app.use(securityLogger);
 
 // Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 минут
-  max: 100 // максимум 100 запросов с одного IP
-});
-app.use(limiter);
+
+// const limiter = rateLimit({
+//  windowMs: 15 * 60 * 1000, // 15 минут
+//  max: 500 // УВЕЛИЧЬ с 100 до 500 запросов
+// });
+// app.use(limiter);
 
 // Парсинг JSON
 app.use(express.json({ limit: '10mb' }));
@@ -77,6 +83,10 @@ const authRoutes = require('./routes/auth');
 const cardRoutes = require('./routes/cards');
 const expenseRoutes = require('./routes/expenses');
 const teamRoutes = require('./routes/teams');
+const { createAdminUser } = require('./utils/createAdmin');
+
+app.use(express.static(path.join(__dirname, '../frontend')));
+
 
 // Использование роутов
 app.use('/api/auth', authRoutes);
@@ -88,6 +98,12 @@ app.use('/api/teams', teamRoutes);
 app.get('/api/test', (req, res) => {
   res.json({ message: 'CRM Server работает!' });
 });
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/index.html'));
+});
+
+createAdminUser();
 
 app.listen(PORT, () => {
   console.log(`Сервер запущен на порту ${PORT}`);

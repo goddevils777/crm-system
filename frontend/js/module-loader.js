@@ -6,20 +6,9 @@ class ModuleLoader {
         this.moduleAssets = new Map();
     }
 
-    // Добавь эту функцию
-    cleanupPreviousModuleStyles() {
-        // Удаляем CSS файлы предыдущих модулей
-        const moduleStyles = document.querySelectorAll('link[href*="/modules/"]');
-        moduleStyles.forEach(link => {
-            if (link.href.includes('.css')) {
-                link.remove();
-            }
-        });
-    }
+    
 
     async loadModule(moduleName) {
-
-        this.cleanupPreviousModuleStyles();
         console.log('=== LOADING MODULE:', moduleName, '===');
 
         // Если модуль уже загружен

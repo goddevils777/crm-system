@@ -8,7 +8,7 @@ const router = express.Router();
 const CARD_STATUSES = {
   'active': 'Активна',
   'blocked': 'Заблокирована',
-  'reissue': 'Перевыпуск', 
+  'reissue': 'Перевыпуск',
   'error': 'Ошибка',
   'rebind': 'Переподвязать',
   'not_issued': 'Не выдана',
@@ -20,20 +20,20 @@ function checkCardActivity(card) {
   const lastActivity = new Date(card.last_transaction_date || card.created_at);
   const now = new Date();
   const daysDiff = Math.floor((now - lastActivity) / (1000 * 60 * 60 * 24));
-  
+
   // Если нет активности 3 дня и статус "активна" - меняем на "не крутит"
   if (daysDiff >= 3 && card.status === 'active') {
     return 'not_spinning';
   }
-  
+
   return card.status;
 }
 
 // Получение доступных статусов карт
 router.get('/statuses', authenticateToken, async (req, res) => {
   try {
-    res.json({ 
-      statuses: CARD_STATUSES 
+    res.json({
+      statuses: CARD_STATUSES
     });
   } catch (error) {
     console.error('Ошибка получения статусов:', error);
@@ -82,10 +82,13 @@ router.put('/:id/status', authenticateToken, checkRole(['admin', 'manager']), as
   }
 });
 
-// Получение всех карт (с учетом роли)
+
+
 // Получение всех карт (с учетом роли)
 router.get('/', authenticateToken, async (req, res) => {
   try {
+    const { team_id, unassigned } = req.query;
+
     let query = `
       SELECT 
         c.*,
@@ -109,13 +112,26 @@ router.get('/', authenticateToken, async (req, res) => {
     let params = ['deleted'];
     let paramIndex = 2;
 
-    // Безопасная фильтрация по команде
+    // Фильтрация для менеджеров и баеров - только их команда
     if (req.user.role === 'manager' || req.user.role === 'buyer') {
       if (!req.user.team_id || typeof req.user.team_id !== 'number') {
         return res.status(403).json({ error: 'Некорректный ID команды' });
       }
       query += ` AND c.team_id = $${paramIndex}`;
       params.push(req.user.team_id);
+      paramIndex++;
+    }
+
+    // Фильтр по команде для админов
+    if (team_id && req.user.role === 'admin') {
+      query += ` AND c.team_id = $${paramIndex}`;
+      params.push(parseInt(team_id));
+      paramIndex++;
+    }
+
+    // Фильтр неназначенных карт
+    if (unassigned === 'true') {
+      query += ' AND c.buyer_id IS NULL';
     }
 
     query += ' ORDER BY c.created_at DESC';
@@ -137,6 +153,7 @@ router.get('/', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
+
 
 router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCardData, async (req, res) => {
   try {
@@ -907,6 +924,59 @@ router.put('/:id/limits', authenticateToken, checkRole(['admin', 'manager']), as
     });
   } catch (error) {
     console.error('Ошибка обновления лимита:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Назначение карты баеру
+router.put('/:id/assign', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const cardId = req.params.id;
+    const { buyer_id } = req.body;
+
+    if (!buyer_id) {
+      return res.status(400).json({ error: 'ID баера обязателен' });
+    }
+
+    // Проверяем существование карты
+    const cardResult = await db.query('SELECT * FROM cards WHERE id = $1 AND status != $2', [cardId, 'deleted']);
+    if (cardResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Карта не найдена' });
+    }
+
+    const card = cardResult.rows[0];
+
+    // Проверяем права доступа (менеджер может назначать только карты своей команды)
+    if (req.user.role === 'manager' && card.team_id !== req.user.team_id) {
+      return res.status(403).json({ error: 'Недостаточно прав для назначения этой карты' });
+    }
+
+    // Проверяем существование баера
+    const buyerResult = await db.query('SELECT * FROM team_buyers WHERE id = $1', [buyer_id]);
+    if (buyerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Баер не найден' });
+    }
+
+    const buyer = buyerResult.rows[0];
+
+    // Проверяем что баер из той же команды что и карта
+    if (buyer.team_id !== card.team_id) {
+      return res.status(400).json({ error: 'Баер и карта должны быть из одной команды' });
+    }
+
+    // Назначаем карту
+    const result = await db.query(
+      'UPDATE cards SET buyer_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      [buyer_id, cardId]
+    );
+
+    res.json({
+      message: 'Карта успешно назначена баеру',
+      card: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('Ошибка назначения карты:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });

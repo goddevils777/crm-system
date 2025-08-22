@@ -113,8 +113,16 @@ if (typeof window.CardsModule === 'undefined') {
       const dateTo = document.getElementById('date-to');
       dateTo?.addEventListener('change', () => this.filterCardsByPeriod());
 
+      // Период фильтр
+      const periodFilter = document.getElementById('period-filter');
+      periodFilter?.addEventListener('change', (e) => {
+        this.applyPeriodFilter(e.target.value);
+      });
+
       this.setupModalEvents();
     }
+
+
     setupViewToggle() {
       console.log('Setting up view toggle, current view:', this.currentView);
 
@@ -327,22 +335,28 @@ if (typeof window.CardsModule === 'undefined') {
                 </div>
                 <div class="card-currency">💳 ${card.currency}</div>
             </div>
-            <div class="card-stats">
-                <div class="stat-item">
-                    <div class="stat-label">Баланс</div>
-                    <div class="stat-value ${balance > 0 ? 'positive' : ''}">${balance} ${card.currency}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Скручено</div>
-                    <div class="stat-value ${totalSpent > 0 ? 'warning' : ''}">${totalSpent} ${card.currency}</div>
-                </div>
-                <div class="stat-item">
-                    <div class="stat-label">Комиссия</div>
-                    <div class="stat-value ${commissionPaid > 0 ? 'warning' : ''}">${commissionPaid} ${card.currency}</div>
-                </div>
-            </div>
+              <div class="card-stats">
+                  <div class="stat-item">
+                      <div class="stat-label">Баланс</div>
+                      <div class="stat-value ${balance > 0 ? 'positive' : ''}">${balance} ${card.currency}</div>
+                  </div>
+                  <div class="stat-item">
+                      <div class="stat-label">Скручено</div>
+                      <div class="stat-value ${totalSpent > 0 ? 'warning' : ''}">${totalSpent} ${card.currency}</div>
+                  </div>
+                  <div class="stat-item">
+                      <div class="stat-label">Пополнено</div>
+                      <div class="stat-value">${totalTopUp} ${card.currency}</div>
+                  </div>
+              </div>
             <div class="card-body">
                 <div class="card-info">
+                    ${card.team_name ? `
+                    <div class="card-info-item">
+                        <span class="card-info-label">Команда</span>
+                        <span class="card-info-value">${card.team_name}</span>
+                    </div>
+                    ` : ''}
                     ${card.full_name ? `
                     <div class="card-info-item">
                         <span class="card-info-label">Владелец</span>
@@ -356,8 +370,8 @@ if (typeof window.CardsModule === 'undefined') {
                     </div>
                     ` : ''}
                     <div class="card-info-item">
-                        <span class="card-info-label">Всего пополнено</span>
-                        <span class="card-info-value">${totalTopUp} ${card.currency}</span>
+                        <span class="card-info-label">Комиссия</span>
+                        <span class="card-info-value">${commissionPaid} ${card.currency}</span>
                     </div>
                     ${daysSinceTransaction >= 3 ? `
                     <div class="card-info-item warning">
@@ -985,6 +999,55 @@ if (typeof window.CardsModule === 'undefined') {
       });
 
       return { teamIds, includeNoTeam };
+    }
+
+    applyPeriodFilter(period) {
+      if (!period) {
+        // Очищаем поля дат если период не выбран
+        document.getElementById('date-from').value = '';
+        document.getElementById('date-to').value = '';
+        this.filterCardsByPeriod();
+        return;
+      }
+
+      const today = new Date();
+      let fromDate, toDate;
+
+      switch (period) {
+        case 'today':
+          fromDate = toDate = today.toISOString().split('T')[0];
+          break;
+        case 'yesterday':
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          fromDate = toDate = yesterday.toISOString().split('T')[0];
+          break;
+        case '3days':
+          const threeDaysAgo = new Date(today);
+          threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+          fromDate = threeDaysAgo.toISOString().split('T')[0];
+          toDate = today.toISOString().split('T')[0];
+          break;
+        case 'week':
+          const weekAgo = new Date(today);
+          weekAgo.setDate(weekAgo.getDate() - 7);
+          fromDate = weekAgo.toISOString().split('T')[0];
+          toDate = today.toISOString().split('T')[0];
+          break;
+        case 'month':
+          const monthAgo = new Date(today);
+          monthAgo.setDate(monthAgo.getDate() - 30);
+          fromDate = monthAgo.toISOString().split('T')[0];
+          toDate = today.toISOString().split('T')[0];
+          break;
+      }
+
+      // Устанавливаем даты в поля
+      document.getElementById('date-from').value = fromDate;
+      document.getElementById('date-to').value = toDate;
+
+      // Применяем фильтр
+      this.filterCardsByPeriod();
     }
   }
 

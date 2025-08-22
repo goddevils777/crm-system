@@ -7,16 +7,16 @@ const { authenticateToken, checkRole } = require('../middleware/auth');
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const query = `
-      SELECT 
-        t.*,
-        COUNT(DISTINCT u.id) as buyers_count,
-        COUNT(DISTINCT c.id) as cards_count
-      FROM teams t
-      LEFT JOIN users u ON t.id = u.team_id AND u.role = 'buyer'
-      LEFT JOIN cards c ON t.id = c.team_id AND c.status != 'deleted'
-      GROUP BY t.id
-      ORDER BY t.created_at DESC
-    `;
+  SELECT 
+    t.*,
+    COUNT(DISTINCT tb.id) as buyers_count,
+    COUNT(DISTINCT c.id) as cards_count
+  FROM teams t
+  LEFT JOIN team_buyers tb ON t.id = tb.team_id
+  LEFT JOIN cards c ON t.id = c.team_id AND c.status != 'deleted'
+  GROUP BY t.id
+  ORDER BY t.created_at DESC
+`;
 
     const result = await db.query(query);
     res.json({ teams: result.rows });
@@ -64,19 +64,19 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req,
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const teamId = req.params.id;
-    
-    const query = `
-      SELECT 
-        t.*,
-        COUNT(DISTINCT u.id) as buyers_count,
-        COUNT(DISTINCT c.id) as cards_count,
-        COALESCE(SUM(CASE WHEN c.status != 'deleted' THEN c.balance ELSE 0 END), 0) as total_balance
-      FROM teams t
-      LEFT JOIN users u ON t.id = u.team_id AND u.role = 'buyer'
-      LEFT JOIN cards c ON t.id = c.team_id AND c.status != 'deleted'
-      WHERE t.id = $1
-      GROUP BY t.id
-    `;
+
+const query = `
+  SELECT 
+    t.*,
+    COUNT(DISTINCT tb.id) as buyers_count,
+    COUNT(DISTINCT c.id) as cards_count,
+    COALESCE(SUM(CASE WHEN c.status != 'deleted' THEN c.balance ELSE 0 END), 0) as total_balance
+  FROM teams t
+  LEFT JOIN team_buyers tb ON t.id = tb.team_id
+  LEFT JOIN cards c ON t.id = c.team_id AND c.status != 'deleted'
+  WHERE t.id = $1
+  GROUP BY t.id
+`;
 
     const result = await db.query(query, [teamId]);
 
@@ -178,25 +178,25 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
 router.get('/:id/buyers', authenticateToken, async (req, res) => {
   try {
     const teamId = req.params.id;
-    
+
     const query = `
-      SELECT 
-        tb.id,
-        tb.name as username,
-        tb.telegram,
-        tb.is_registered,
-        tb.invitation_token,
-        tb.created_at,
-        u.email,
-        COUNT(c.id) as cards_count,
-        COALESCE(SUM(CASE WHEN c.status != 'deleted' THEN c.balance ELSE 0 END), 0) as total_balance
-      FROM team_buyers tb
-      LEFT JOIN users u ON tb.user_id = u.id
-      LEFT JOIN cards c ON u.id = c.buyer_id AND c.status != 'deleted'
-      WHERE tb.team_id = $1
-      GROUP BY tb.id, tb.name, tb.telegram, tb.is_registered, tb.invitation_token, tb.created_at, u.email
-      ORDER BY tb.created_at DESC
-    `;
+  SELECT 
+    tb.id,
+    tb.name as username,
+    tb.telegram,
+    tb.is_registered,
+    tb.invitation_token,
+    tb.created_at,
+    u.email,
+    COUNT(c.id) as cards_count,
+    COALESCE(SUM(CASE WHEN c.status != 'deleted' THEN c.balance ELSE 0 END), 0) as total_balance
+  FROM team_buyers tb
+  LEFT JOIN users u ON tb.user_id = u.id
+  LEFT JOIN cards c ON tb.id = c.buyer_id AND c.status != 'deleted'
+  WHERE tb.team_id = $1
+  GROUP BY tb.id, tb.name, tb.telegram, tb.is_registered, tb.invitation_token, tb.created_at, u.email
+  ORDER BY tb.created_at DESC
+`;
 
     const result = await db.query(query, [teamId]);
     res.json({ buyers: result.rows });
@@ -264,7 +264,7 @@ router.delete('/buyers/:buyerId', authenticateToken, checkRole(['admin', 'manage
     // Удаляем баера
     await db.query('DELETE FROM team_buyers WHERE id = $1', [buyerId]);
 
-    res.json({ 
+    res.json({
       message: 'Баер успешно удален',
       deletedBuyer: buyerCheck.rows[0]
     });

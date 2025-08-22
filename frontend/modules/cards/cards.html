@@ -56,6 +56,16 @@
         </div>
     </div>
 
+    <div class="filter-group">
+        <select id="period-filter" class="form-select">
+            <option value="">Выберите период</option>
+            <option value="today">Сегодня</option>
+            <option value="yesterday">Вчера</option>
+            <option value="3days">Последние 3 дня</option>
+            <option value="week">Последние 7 дней</option>
+            <option value="month">Последние 30 дней</option>
+        </select>
+    </div>
 
     <div class="filter-group">
         <select id="sort-cards" class="form-select">
@@ -69,6 +79,8 @@
             <option value="spent_asc">По скрученному (меньше)</option>
         </select>
     </div>
+
+
     <div class="teams-filter-container">
         <button type="button" class="teams-filter-button" id="teams-filter-button">
             <span class="filter-text">Все команды</span>
@@ -81,12 +93,12 @@
                     Все команды
                 </label>
             </div>
-                  <div class="filter-option" data-value="no-team">
-            <label>
-                <input type="checkbox" name="team-filter" value="no-team">
-                Без команды
-            </label>
-        </div>
+            <div class="filter-option" data-value="no-team">
+                <label>
+                    <input type="checkbox" name="team-filter" value="no-team">
+                    Без команды
+                </label>
+            </div>
             <div class="filter-divider"></div>
             <div id="teams-filter-list">
                 <!-- Команды загружаются JS -->

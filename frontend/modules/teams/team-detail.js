@@ -276,8 +276,121 @@ class TeamDetailModule {
         }
     }
 
-    assignCards(buyerId) {
-        notifications.info('В разработке', 'Назначение карт баеру будет в следующем шаге');
+    async assignCards(buyerId) {
+        const buyer = this.buyers.find(b => b.id === buyerId);
+        if (!buyer) return;
+
+        // Устанавливаем заголовок модального окна
+        document.getElementById('assign-modal-title').textContent = `Назначить карты баеру ${buyer.username}`;
+
+        try {
+            // Загружаем доступные карты команды
+            const response = await api.request(`/cards?team_id=${this.teamId}&unassigned=true`);
+            const availableCards = response.cards || [];
+
+            this.renderCardsForAssignment(availableCards);
+            this.showAssignCardsModal(buyerId);
+
+        } catch (error) {
+            console.error('Ошибка загрузки карт:', error);
+            notifications.error('Ошибка', 'Не удалось загрузить список карт');
+        }
+    }
+
+    renderCardsForAssignment(cards) {
+        const container = document.getElementById('available-cards-list');
+
+        if (cards.length === 0) {
+            container.innerHTML = `
+            <div class="cards-empty-state">
+                <h4>Нет доступных карт</h4>
+                <p>Все карты команды уже назначены или нет карт в команде</p>
+            </div>
+        `;
+            return;
+        }
+
+        const cardsHtml = cards.map(card => `
+        <label class="card-item-checkbox">
+            <input type="checkbox" value="${card.id}" name="selected-cards">
+            <div class="card-info">
+                <div class="card-name">${card.name}</div>
+                <div class="card-details">
+                    ${card.currency} • Баланс: ${card.balance || 0} ${card.currency} • 
+                    Статус: ${this.getStatusText(card.status)}
+                </div>
+            </div>
+        </label>
+    `).join('');
+
+        container.innerHTML = cardsHtml;
+    }
+
+    getStatusText(status) {
+        const statusMap = {
+            'active': 'Активна',
+            'blocked': 'Заблокирована',
+            'reissue': 'Перевыпуск',
+            'error': 'Ошибка',
+            'rebind': 'Переподвязать',
+            'not_issued': 'Не выдана',
+            'not_spinning': 'Не крутит'
+        };
+        return statusMap[status] || status;
+    }
+
+    showAssignCardsModal(buyerId) {
+        const modal = document.getElementById('assign-cards-modal');
+        modal.classList.add('show');
+
+        this.setupAssignModalEvents(buyerId);
+    }
+
+    setupAssignModalEvents(buyerId) {
+        const modal = document.getElementById('assign-cards-modal');
+        const assignBtn = document.getElementById('assign-selected-cards');
+        const closeBtn = modal.querySelector('.modal-close');
+        const cancelBtn = modal.querySelector('.modal-cancel');
+
+        const closeModal = () => {
+            modal.classList.remove('show');
+        };
+
+        closeBtn.onclick = closeModal;
+        cancelBtn.onclick = closeModal;
+        modal.onclick = (e) => {
+            if (e.target === modal) closeModal();
+        };
+
+        assignBtn.onclick = () => this.handleAssignCards(buyerId, closeModal);
+    }
+
+    async handleAssignCards(buyerId, closeModal) {
+        const checkboxes = document.querySelectorAll('input[name="selected-cards"]:checked');
+        const selectedCardIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+
+        if (selectedCardIds.length === 0) {
+            notifications.warning('Внимание', 'Выберите хотя бы одну карту');
+            return;
+        }
+
+        try {
+            // Назначаем каждую выбранную карту
+            for (const cardId of selectedCardIds) {
+                await api.assignCardToBuyer(cardId, buyerId);
+            }
+
+            notifications.success('Успех', `Назначено ${selectedCardIds.length} карт`);
+            closeModal();
+
+            // Обновляем данные
+            await this.loadBuyers();
+            await this.loadTeam();
+
+        } catch (error) {
+            console.error('Ошибка назначения карт:', error);
+            notifications.error('Ошибка', 'Не удалось назначить карты');
+        }
     }
 
     async deleteBuyer(buyerId) {
