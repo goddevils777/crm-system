@@ -65,17 +65,19 @@ router.get('/:id', authenticateToken, async (req, res) => {
   try {
     const teamId = req.params.id;
 
-const query = `
-  SELECT 
-    t.*,
-    COUNT(DISTINCT tb.id) as buyers_count,
-    COUNT(DISTINCT c.id) as cards_count,
-    COALESCE(SUM(CASE WHEN c.status != 'deleted' THEN c.balance ELSE 0 END), 0) as total_balance
-  FROM teams t
-  LEFT JOIN team_buyers tb ON t.id = tb.team_id
-  LEFT JOIN cards c ON t.id = c.team_id AND c.status != 'deleted'
-  WHERE t.id = $1
-  GROUP BY t.id
+    const query = `
+SELECT 
+  t.*,
+  COUNT(DISTINCT tb.id) as buyers_count,
+  COUNT(DISTINCT c.id) as cards_count,
+  COALESCE(SUM(DISTINCT c.balance), 0) as total_balance,
+  COALESCE(SUM(DISTINCT c.total_spent_calculated), 0) as total_spent,
+  COALESCE(SUM(DISTINCT c.total_top_up), 0) as total_topup
+FROM teams t
+LEFT JOIN team_buyers tb ON t.id = tb.team_id
+LEFT JOIN cards c ON t.id = c.team_id AND c.status != 'deleted'
+WHERE t.id = $1
+GROUP BY t.id
 `;
 
     const result = await db.query(query, [teamId]);
@@ -83,6 +85,18 @@ const query = `
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Команда не найдена' });
     }
+
+    console.log('Team balance calculation for team', teamId);
+    console.log('Team data:', result.rows[0]);
+
+    // Дополнительная проверка - прямой запрос балансов карт
+    const cardsCheck = await db.query(
+      'SELECT id, name, balance FROM cards WHERE team_id = $1 AND status != $2',
+      [teamId, 'deleted']
+    );
+    console.log('Individual cards:', cardsCheck.rows);
+    const manualTotal = cardsCheck.rows.reduce((sum, card) => sum + parseFloat(card.balance || 0), 0);
+    console.log('Manual total calculation:', manualTotal);
 
     res.json({ team: result.rows[0] });
   } catch (error) {

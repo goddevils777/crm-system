@@ -9,8 +9,18 @@ class CardEditModal {
             const response = await api.request(`/cards/${cardId}`);
             const card = response.card;
 
+            console.log('Loaded card data for editing:', card);
+            console.log('Card team_id:', card.team_id, '(type:', typeof card.team_id, ')');
+
+            // Сохраняем оригинальные данные для сравнения
+            this.originalCard = card;
+
+            // Загружаем список команд
+            const teamsResponse = await api.request('/teams');
+            const teams = teamsResponse.teams;
+
             // Создаем модальное окно
-            this.create(card);
+            this.create(card, teams);
             this.setupEvents(cardId);
 
         } catch (error) {
@@ -19,7 +29,7 @@ class CardEditModal {
         }
     }
 
-    create(card) {
+    create(card, teams = []) {
         // Удаляем существующее модальное окно
         const existing = document.getElementById(this.modalId);
         if (existing) existing.remove();
@@ -37,7 +47,6 @@ class CardEditModal {
                         <button type="button" class="tab-btn" data-tab="personal">Личные данные</button>
                         <button type="button" class="tab-btn" data-tab="second-bank">Второй банк</button>
                         <button type="button" class="tab-btn" data-tab="contractor">Подрядчик</button>
-                        <button type="button" class="tab-btn" data-tab="finance">Финансы</button>
                     </div>
 
                     <!-- Основные данные -->
@@ -51,6 +60,15 @@ class CardEditModal {
                             <select name="currency" class="form-select">
                                 <option value="USD" ${card.currency === 'USD' ? 'selected' : ''}>USD - Доллары США</option>
                                 <option value="EUR" ${card.currency === 'EUR' ? 'selected' : ''}>EUR - Евро</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Команда</label>
+                            <select name="team_id" class="form-select">
+                                <option value="">Без команды</option>
+                                ${teams.map(team =>
+            `<option value="${team.id}" ${card.team_id == team.id ? 'selected' : ''}>${team.name}</option>`
+        ).join('')}
                             </select>
                         </div>
                     </div>
@@ -135,19 +153,7 @@ class CardEditModal {
                         </div>
                     </div>
 
-                    <!-- Финансы -->
-                    <div class="tab-content" data-tab="finance">
-                        <div class="form-group">
-                            <label class="form-label">Текущий остаток по этой карте (баланс)</label>
-                            <input type="number" step="0.01" name="remaining_balance" class="form-input" value="${card.balance || 0}">
-                            <small class="form-help">Сколько денег находится на карте сейчас</small>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Комиссия за обслуживание карты</label>
-                            <input type="number" step="0.01" name="commission_amount" class="form-input" value="${card.commission_paid || 15}">
-                            <small class="form-help">Размер комиссии (по умолчанию 15 USD)</small>
-                        </div>
-                    </div>
+                    
 
                     <div class="modal-actions">
                         <button type="button" class="btn btn-secondary modal-cancel">Отмена</button>
@@ -208,6 +214,7 @@ class CardEditModal {
             const updateData = {
                 name: formData.get('name'),
                 currency: formData.get('currency'),
+                team_id: formData.get('team_id') || null,
                 full_name: formData.get('full_name'),
                 bank_password: formData.get('bank_password'),
                 card_password: formData.get('card_password'),
@@ -229,10 +236,36 @@ class CardEditModal {
                 commission_amount: formData.get('commission_amount')
             };
 
-            await api.request(`/cards/${cardId}`, {
+            // Проверяем изменилась ли команда
+            const currentTeamId = this.originalCard.team_id;
+            const newTeamId = updateData.team_id;
+
+            // Приводим к одному типу для сравнения
+            const normalizedCurrent = currentTeamId ? String(currentTeamId) : null;
+            const normalizedNew = newTeamId ? String(newTeamId) : null;
+
+            console.log('Team comparison:');
+            console.log('- Current team ID:', currentTeamId, '(type:', typeof currentTeamId, ')');
+            console.log('- New team ID:', newTeamId, '(type:', typeof newTeamId, ')');
+            console.log('- Normalized current:', normalizedCurrent);
+            console.log('- Normalized new:', normalizedNew);
+
+            if (normalizedCurrent !== normalizedNew) {
+                console.log('Team changed, calling change-team API');
+                // Сначала меняем команду (это снимет назначение с баера)
+                const changeTeamResponse = await api.request(`/cards/${cardId}/change-team`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ team_id: newTeamId })
+                });
+                console.log('Change team API response:', changeTeamResponse);
+            }
+
+            // Обновляем все данные карты (включая team_id)
+            const updateResponse = await api.request(`/cards/${cardId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updateData)
             });
+            console.log('Card update API response:', updateResponse);
 
             notifications.success('Карта обновлена', 'Изменения успешно сохранены');
             this.close();

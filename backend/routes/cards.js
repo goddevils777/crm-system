@@ -329,7 +329,7 @@ router.get('/period', authenticateToken, async (req, res) => {
       LEFT JOIN (
         SELECT 
           card_id,
-          SUM(CASE WHEN transaction_type = 'expense' AND is_cancelled = FALSE THEN ABS(amount) ELSE 0 END) as spent_in_period,
+          SUM(CASE WHEN transaction_type = 'expense' AND is_cancelled = FALSE AND description NOT LIKE '%омиссия%' THEN ABS(amount) ELSE 0 END) as spent_in_period,
           SUM(CASE WHEN transaction_type = 'topup' AND is_cancelled = FALSE THEN amount ELSE 0 END) as topup_in_period
         FROM card_transactions 
         WHERE transaction_date >= $1 AND transaction_date <= $2
@@ -977,6 +977,43 @@ router.put('/:id/assign', authenticateToken, checkRole(['admin', 'manager']), as
 
   } catch (error) {
     console.error('Ошибка назначения карты:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Изменение команды карты (снимает назначение с баера)
+router.put('/:id/change-team', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const cardId = req.params.id;
+    const { team_id } = req.body;
+
+    // Получаем текущие данные карты
+    const cardResult = await db.query('SELECT * FROM cards WHERE id = $1', [cardId]);
+    if (cardResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Карта не найдена' });
+    }
+
+    const card = cardResult.rows[0];
+
+    // Проверяем права доступа
+    if (req.user.role === 'manager' && card.team_id !== req.user.team_id) {
+      return res.status(403).json({ error: 'Недостаточно прав для изменения команды карты' });
+    }
+
+    // Обновляем команду карты и снимаем назначение с баера
+    await db.query(
+      'UPDATE cards SET team_id = $1, buyer_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $2',
+      [team_id || null, cardId]
+    );
+
+    res.json({ 
+      message: 'Команда карты изменена, назначение с баера снято',
+      card_id: cardId,
+      new_team_id: team_id 
+    });
+
+  } catch (error) {
+    console.error('Ошибка изменения команды карты:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });

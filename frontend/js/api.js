@@ -1,9 +1,12 @@
 // API клиент для работы с backend
 class API {
-    constructor() {
-        this.baseURL = window.APP_CONFIG.API_URL;
-        this.token = localStorage.getItem('authToken');
-    }
+constructor() {
+    // Принудительно перечитываем конфигурацию
+    this.baseURL = window.APP_CONFIG?.API_URL || 'http://localhost:3000/api';
+    this.token = localStorage.getItem('authToken');
+    console.log('🔌 API Client initialized with URL:', this.baseURL);
+}
+
     // Установка токена
     setToken(token) {
         this.token = token;

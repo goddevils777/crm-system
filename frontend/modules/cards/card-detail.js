@@ -137,19 +137,19 @@ if (typeof CardDetailModule === 'undefined') {
     `;
         }
 
-       fillFinanceSummary() {
-    const financeSummary = document.getElementById('finance-summary');
-    const daysSince = this.calculateDaysSinceTransaction(this.card.last_transaction_date);
+        fillFinanceSummary() {
+            const financeSummary = document.getElementById('finance-summary');
+            const daysSince = this.calculateDaysSinceTransaction(this.card.last_transaction_date);
 
-    // Сохраняем оригинальные значения
-    this.originalStats = {
-        spent: this.card.total_spent_calculated || 0,
-        topup: this.card.total_top_up || 0,
-        commission: this.card.commission_paid || 0,
-        balance: this.card.balance || 0
-    };
+            // Сохраняем оригинальные значения
+            this.originalStats = {
+                spent: this.card.total_spent_calculated || 0,
+                topup: this.card.total_top_up || 0,
+                commission: this.card.commission_paid || 0,
+                balance: this.card.balance || 0
+            };
 
-    financeSummary.innerHTML = `
+            financeSummary.innerHTML = `
         <div class="finance-item">
             <div class="finance-label">Баланс</div>
             <div class="finance-value" id="display-balance">${this.card.balance || 0} ${this.card.currency}</div>
@@ -201,8 +201,8 @@ if (typeof CardDetailModule === 'undefined') {
         ` : ''}
     `;
 
-    this.setupPeriodFilter();
-}
+            this.setupPeriodFilter();
+        }
 
 
         setupEventListeners() {
@@ -226,6 +226,14 @@ if (typeof CardDetailModule === 'undefined') {
             if (topupField) {
                 topupField.addEventListener('input', () => {
                     this.checkTopupLimit();
+                });
+            }
+
+            // Валидация текущего остатка
+            const currentBalanceField = document.getElementById('current-balance');
+            if (currentBalanceField) {
+                currentBalanceField.addEventListener('input', (e) => {
+                    this.validateCurrentBalance(e.target);
                 });
             }
 
@@ -263,6 +271,21 @@ if (typeof CardDetailModule === 'undefined') {
                 this.showTopupWarning(newTotal, limit);
             } else {
                 this.hideTopupWarning();
+            }
+        }
+
+        validateCurrentBalance(input) {
+            const currentBalance = parseFloat(this.card.balance) || 0;
+            const enteredValue = parseFloat(input.value) || 0;
+
+            if (enteredValue > currentBalance) {
+                input.value = currentBalance;
+                notifications.warning('Ограничение', `Остаток не может быть больше текущего баланса (${currentBalance} ${this.card.currency})`);
+            }
+
+            if (enteredValue < 0) {
+                input.value = 0;
+                notifications.warning('Ограничение', 'Остаток не может быть отрицательным');
             }
         }
 

@@ -61,10 +61,14 @@ class TeamDetailModule {
     updateTeamHeader() {
         if (!this.team) return;
 
-        document.getElementById('team-name').textContent = this.team.name;
+        // Обновляем название команды
+        document.getElementById('team-name').textContent = this.team.name || 'Загрузка...';
+
         document.getElementById('buyers-count').textContent = this.team.buyers_count || 0;
         document.getElementById('cards-count').textContent = this.team.cards_count || 0;
         document.getElementById('total-balance').textContent = `${this.team.total_balance || 0} USD`;
+        document.getElementById('total-spent').textContent = `${this.team.total_spent || 0} USD`;
+        document.getElementById('total-topup').textContent = `${this.team.total_topup || 0} USD`;
     }
 
     renderBuyers() {
@@ -119,7 +123,15 @@ class TeamDetailModule {
                 </div>
                 <div class="buyer-stat">
                     <div class="buyer-stat-value">${buyer.total_balance || 0}</div>
-                    <div class="buyer-stat-label">USD</div>
+                    <div class="buyer-stat-label">Баланс</div>
+                </div>
+                <div class="buyer-stat">
+                    <div class="buyer-stat-value">${buyer.total_spent || 0}</div>
+                    <div class="buyer-stat-label">Скручено</div>
+                </div>
+                <div class="buyer-stat">
+                    <div class="buyer-stat-value">${buyer.total_topup || 0}</div>
+                    <div class="buyer-stat-label">Пополнено</div>
                 </div>
             </div>
         </div>
@@ -155,6 +167,8 @@ class TeamDetailModule {
             </td>
             <td>${buyer.cards_count || 0}</td>
             <td>${buyer.total_balance || 0} USD</td>
+            <td>${buyer.total_spent || 0} USD</td>
+            <td>${buyer.total_topup || 0} USD</td>
             <td>${new Date(buyer.created_at).toLocaleDateString('ru-RU')}</td>
             <td>
                 <div class="buyer-table-actions">
