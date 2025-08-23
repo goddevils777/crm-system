@@ -90,23 +90,25 @@ router.get('/', authenticateToken, async (req, res) => {
     const { team_id, unassigned } = req.query;
 
     let query = `
-      SELECT 
-        c.*,
-        t.name as team_name,
-        COALESCE(commission_sum.total_commission, 0) as calculated_commission
-      FROM cards c
-      LEFT JOIN teams t ON c.team_id = t.id
-      LEFT JOIN (
         SELECT 
-          card_id,
-          SUM(ABS(amount)) as total_commission
-        FROM card_transactions 
-        WHERE transaction_type = 'expense' 
-          AND description LIKE '%омиссия%' 
-          AND is_cancelled = FALSE
-        GROUP BY card_id
-      ) commission_sum ON c.id = commission_sum.card_id
-      WHERE c.status != $1
+          c.*,
+          t.name as team_name,
+          tb.name as buyer_name,
+          COALESCE(commission_sum.total_commission, 0) as calculated_commission
+        FROM cards c
+        LEFT JOIN teams t ON c.team_id = t.id
+        LEFT JOIN team_buyers tb ON c.buyer_id = tb.id
+        LEFT JOIN (
+          SELECT 
+            card_id,
+            SUM(ABS(amount)) as total_commission
+          FROM card_transactions 
+          WHERE transaction_type = 'expense' 
+            AND description LIKE '%омиссия%' 
+            AND is_cancelled = FALSE
+          GROUP BY card_id
+        ) commission_sum ON c.id = commission_sum.card_id
+        WHERE c.status != $1
     `;
 
     let params = ['deleted'];
@@ -246,22 +248,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
         ]
       );
 
-      // Сохраняем комиссию как отдельную транзакцию
-      await db.query(
-        `INSERT INTO card_transactions (card_id, transaction_type, amount, currency, balance_before, balance_after, description, created_by, transaction_date)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-        [
-          result.rows[0].id,
-          'expense',
-          -customCommission,
-          currency,
-          initialBalance,
-          finalBalance,
-          'Комиссия за пополнение',
-          req.user.id,
-          new Date().toISOString().split('T')[0]
-        ]
-      );
+
 
       console.log('Initial topup and commission transactions recorded');
     }
@@ -420,9 +407,11 @@ router.get('/:id', authenticateToken, async (req, res) => {
       `SELECT 
         c.*,
         t.name as team_name,
+        tb.name as buyer_name,
         COALESCE(commission_sum.total_commission, 0) as calculated_commission
        FROM cards c
        LEFT JOIN teams t ON c.team_id = t.id
+       LEFT JOIN team_buyers tb ON c.buyer_id = tb.id
        LEFT JOIN (
          SELECT 
            card_id,
@@ -538,13 +527,15 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
         // Проверяем была ли уже списана комиссия (ищем транзакцию с описанием комиссии)
         const commissionResult = await db.query(
           `SELECT COUNT(*) as commission_count 
-           FROM card_transactions 
-           WHERE card_id = $1 AND description LIKE '%омиссия%' AND is_cancelled = FALSE`,
+   FROM card_transactions 
+   WHERE card_id = $1 AND description LIKE '%омиссия%' AND is_cancelled = FALSE`,
           [cardId]
         );
 
         const hasCommission = parseInt(commissionResult.rows[0].commission_count) > 0;
-        const commission = hasCommission ? 0 : (parseFloat(card.commission_paid) || 15);
+        // ИСПРАВИЛИ: Если есть комиссия в транзакциях ИЛИ карта создана с балансом > 0
+        const wasCommissionTaken = hasCommission || (parseFloat(card.commission_paid) > 0);
+        const commission = wasCommissionTaken ? 0 : 15;
 
         console.log('Commission check:');
         console.log('- Commission already taken:', hasCommission);
@@ -934,10 +925,6 @@ router.put('/:id/assign', authenticateToken, checkRole(['admin', 'manager']), as
     const cardId = req.params.id;
     const { buyer_id } = req.body;
 
-    if (!buyer_id) {
-      return res.status(400).json({ error: 'ID баера обязателен' });
-    }
-
     // Проверяем существование карты
     const cardResult = await db.query('SELECT * FROM cards WHERE id = $1 AND status != $2', [cardId, 'deleted']);
     if (cardResult.rows.length === 0) {
@@ -949,6 +936,19 @@ router.put('/:id/assign', authenticateToken, checkRole(['admin', 'manager']), as
     // Проверяем права доступа (менеджер может назначать только карты своей команды)
     if (req.user.role === 'manager' && card.team_id !== req.user.team_id) {
       return res.status(403).json({ error: 'Недостаточно прав для назначения этой карты' });
+    }
+
+    // Если buyer_id === null, снимаем назначение
+    if (buyer_id === null) {
+      const result = await db.query(
+        'UPDATE cards SET buyer_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        [cardId]
+      );
+
+      return res.json({
+        message: 'Назначение карты снято',
+        card: result.rows[0]
+      });
     }
 
     // Проверяем существование баера
@@ -1006,10 +1006,10 @@ router.put('/:id/change-team', authenticateToken, checkRole(['admin', 'manager']
       [team_id || null, cardId]
     );
 
-    res.json({ 
+    res.json({
       message: 'Команда карты изменена, назначение с баера снято',
       card_id: cardId,
-      new_team_id: team_id 
+      new_team_id: team_id
     });
 
   } catch (error) {

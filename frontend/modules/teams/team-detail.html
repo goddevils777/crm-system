@@ -37,22 +37,39 @@
     </div>
 
     <!-- Контент баеров -->
+    <!-- Контент баеров -->
     <div class="buyers-section">
         <div class="section-header">
-            <h3>Баеры команды</h3>
-            <div class="view-toggle">
-                <button class="view-btn active" data-view="grid">
-                    <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
-                        <path
-                            d="M384 384h256v256H384zm0 512h256v256H384zm512-512h256v256H896zm-512-512h256v256H384zm512 0h256v256H896zm0 512h256v256H896z" />
-                    </svg>
-                </button>
-                <button class="view-btn" data-view="table">
-                    <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
-                        <path
-                            d="M120 120v784h784V120H120zm752 72v140H152V192h720zm0 212v140H152V404h720zm0 212v140H152V616h720z" />
-                    </svg>
-                </button>
+            <div class="buyers-title-group">
+                <h3>Баеры команды</h3>
+                <div class="view-toggle" style="margin-left: 16px;">
+                    <button class="view-btn active" data-view="grid">
+                        <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
+                            <path
+                                d="M384 384h256v256H384zm0 512h256v256H384zm512-512h256v256H896zm-512-512h256v256H384zm512 0h256v256H896zm0 512h256v256H896z" />
+                        </svg>
+                    </button>
+                    <button class="view-btn" data-view="table">
+                        <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
+                            <path
+                                d="M120 120v784h784V120H120zm752 72v140H152V192h720zm0 212v140H152V404h720zm0 212v140H152V616h720z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="date-filter-container">
+                <select id="date-period-select" class="form-select">
+                    <option value="">Все время</option>
+                    <option value="today">Сегодня</option>
+                    <option value="yesterday">Вчера</option>
+                    <option value="week">7 дней</option>
+                    <option value="month">30 дней</option>
+                    <option value="custom" style="display: none;">Выбрать даты</option>
+                </select>
+
+                <input type="date" id="date-from" class="form-input" placeholder="от">
+                <input type="date" id="date-to" class="form-input" placeholder="до">
             </div>
         </div>
 

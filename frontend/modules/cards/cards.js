@@ -283,9 +283,9 @@ if (typeof window.CardsModule === 'undefined') {
             <td>${card.currency}</td>
             <td>${card.balance || 0} ${card.currency}</td>
             <td>${totalSpent} ${card.currency}</td>
-            <td>${commissionPaid} ${card.currency}</td>
             <td>${totalTopUp} ${card.currency}</td>
             <td title="${card.team_name || ''}">${card.team_name || '—'}</td>
+            <td title="${card.buyer_name || ''}">${card.buyer_name || '—'}</td>
             <td>${new Date(card.created_at).toLocaleDateString()}</td>
             <td>
                 <div class="table-actions">
@@ -331,9 +331,8 @@ if (typeof window.CardsModule === 'undefined') {
                             ${card.name}
                         </a>
                     </h3>
-                    <span class="card-status ${statusClass}">${statusText}</span>
                 </div>
-                <div class="card-currency">💳 ${card.currency}</div>
+                <div class="card-currency-status">💳 ${card.currency} • • • <span class="card-status ${statusClass}">${statusText}</span></div>
             </div>
               <div class="card-stats">
                   <div class="stat-item">
@@ -357,6 +356,12 @@ if (typeof window.CardsModule === 'undefined') {
                         <span class="card-info-value">${card.team_name}</span>
                     </div>
                     ` : ''}
+                    ${card.buyer_name ? `
+                    <div class="card-info-item">
+                        <span class="card-info-label">Баер</span>
+                        <span class="card-info-value">${card.buyer_name}</span>
+                    </div>
+                    ` : ''}
                     ${card.full_name ? `
                     <div class="card-info-item">
                         <span class="card-info-label">Владелец</span>
@@ -369,10 +374,6 @@ if (typeof window.CardsModule === 'undefined') {
                         <span class="card-info-value">${card.contractor_name}</span>
                     </div>
                     ` : ''}
-                    <div class="card-info-item">
-                        <span class="card-info-label">Комиссия</span>
-                        <span class="card-info-value">${commissionPaid} ${card.currency}</span>
-                    </div>
                     ${daysSinceTransaction >= 3 ? `
                     <div class="card-info-item warning">
                         <span class="card-info-label">⚠️ Без транзакций</span>

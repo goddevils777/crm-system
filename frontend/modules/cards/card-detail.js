@@ -131,6 +131,7 @@ if (typeof CardDetailModule === 'undefined') {
         <div class="info-item"><strong>Email:</strong> ${this.card.email || '—'}</div>
         <div class="info-item"><strong>Валюта:</strong> ${this.card.currency}</div>
         <div class="info-item"><strong>Команда:</strong> ${this.card.team_name || '—'}</div>
+        <div class="info-item"><strong>Баер:</strong> ${this.card.buyer_name || '—'}</div>
         <div class="info-item"><strong>Подрядчик:</strong> ${this.card.contractor_name || '—'}</div>
         <div class="info-item"><strong>Дата запуска:</strong> ${this.card.launch_date ? new Date(this.card.launch_date).toLocaleDateString() : '—'}</div>
         <div class="info-item"><strong>Дата создания:</strong> ${createdDate}</div>

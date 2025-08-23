@@ -1,11 +1,11 @@
 // API клиент для работы с backend
 class API {
-constructor() {
-    // Принудительно перечитываем конфигурацию
-    this.baseURL = window.APP_CONFIG?.API_URL || 'http://localhost:3000/api';
-    this.token = localStorage.getItem('authToken');
-    console.log('🔌 API Client initialized with URL:', this.baseURL);
-}
+    constructor() {
+        // Принудительно перечитываем конфигурацию
+        this.baseURL = window.APP_CONFIG?.API_URL || 'http://localhost:3000/api';
+        this.token = localStorage.getItem('authToken');
+        console.log('🔌 API Client initialized with URL:', this.baseURL);
+    }
 
     // Установка токена
     setToken(token) {
@@ -123,6 +123,15 @@ constructor() {
 
     async getAvailableCards(teamId) {
         return this.request(`/cards?team_id=${teamId}&unassigned=true`);
+    }
+    
+    // Методы для статистики команды
+    async getTeamStats(teamId, startDate = null, endDate = null) {
+        let url = `/teams/${teamId}/stats`;
+        if (startDate && endDate) {
+            url += `?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+        }
+        return this.request(url);
     }
 }
 

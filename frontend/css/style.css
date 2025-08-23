@@ -537,3 +537,80 @@ body {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
 }
+
+.card-item-checkbox.assigned-current {
+    border: 2px solid #52c41a;
+    background: #f6ffed;
+}
+
+.card-item-checkbox.assigned-other {
+    opacity: 0.6;
+    background: #f5f5f5;
+}
+
+.card-item-checkbox.assigned-other input[type="checkbox"] {
+    cursor: not-allowed;
+}
+
+.assigned-badge {
+    color: #52c41a;
+    font-weight: 500;
+}
+
+.other-badge {
+    color: #999;
+}
+
+.buyers-title-group {
+    display: flex;
+    align-items: center;
+}
+
+.date-filter-container {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-filter-container .form-select,
+.date-filter-container .form-input {
+    min-width: 120px;
+    height: 32px;
+    padding: 4px 8px;
+    font-size: 14px;
+}
+
+.date-filter-group .form-select {
+    min-width: 140px;
+}
+
+.custom-date-inputs {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.custom-date-inputs .form-input {
+    width: 140px;
+}
+
+.custom-date-inputs span {
+    color: var(--text-secondary);
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.buyers-title-group {
+    display: flex;
+    align-items: center;
+}

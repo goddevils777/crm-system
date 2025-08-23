@@ -21,7 +21,6 @@ class TeamDetailModule {
         this.setupEventListeners();
         await this.loadTeam();
         await this.loadBuyers();
-        this.render();
     }
 
     setupEventListeners() {
@@ -34,8 +33,157 @@ class TeamDetailModule {
                 }
             });
         });
+
+        // ДОБАВИЛИ: Обработчики фильтра дат
+        this.setupDateFilter();
     }
 
+    setupDateFilter() {
+        const periodSelect = document.getElementById('date-period-select');
+        const dateFrom = document.getElementById('date-from');
+        const dateTo = document.getElementById('date-to');
+
+        // Обработчик выпадающего списка
+        periodSelect.addEventListener('change', (e) => {
+            const period = e.target.value;
+
+            if (period && period !== 'custom') {
+                // Очищаем поля дат при выборе периода
+                dateFrom.value = '';
+                dateTo.value = '';
+                this.applyDateFilter(period);
+            } else if (!period) {
+                // Очищаем все при выборе "Все время"
+                dateFrom.value = '';
+                dateTo.value = '';
+                this.clearDateFilter();
+            }
+        });
+
+        // Автоматическое применение при изменении дат
+        dateFrom.addEventListener('change', () => {
+            if (dateFrom.value) {
+                periodSelect.value = 'custom'; // Переключаем на "Выбрать даты"
+                this.applyCustomDateFilter();
+            }
+        });
+
+        dateTo.addEventListener('change', () => {
+            if (dateTo.value) {
+                periodSelect.value = 'custom'; // Переключаем на "Выбрать даты"
+                this.applyCustomDateFilter();
+            }
+        });
+    }
+
+    applyDateFilter(period) {
+        const { startDate, endDate } = this.getPeriodDates(period);
+        this.currentDateFilter = { startDate, endDate, period };
+        this.filterAndUpdateData();
+    }
+
+    applyCustomDateFilter() {
+        const dateFrom = document.getElementById('date-from').value;
+        const dateTo = document.getElementById('date-to').value;
+
+        if (dateFrom && dateTo) {
+            this.currentDateFilter = {
+                startDate: new Date(dateFrom),
+                endDate: new Date(dateTo + 'T23:59:59'),
+                period: 'custom'
+            };
+            this.filterAndUpdateData();
+        }
+    }
+
+    clearDateFilter() {
+        this.currentDateFilter = null;
+        this.filterAndUpdateData();
+    }
+
+    getPeriodDates(period) {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+        switch (period) {
+            case 'today':
+                const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1);
+                return { startDate: today, endDate: todayEnd }; // ТОЛЬКО сегодня
+            case 'yesterday':
+                const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+                const yesterdayEnd = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1);
+                return { startDate: yesterday, endDate: yesterdayEnd };
+            case 'week':
+                const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+                return { startDate: weekAgo, endDate: new Date() };
+            case 'month':
+                const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+                return { startDate: monthAgo, endDate: new Date() };
+            default:
+                return { startDate: null, endDate: null };
+        }
+    }
+
+async filterAndUpdateData() {
+    if (!this.currentDateFilter) {
+        // Без фильтра используем оригинальные данные
+        this.filteredBuyers = [...this.buyers];
+    } else {
+        // С фильтром запрашиваем статистику с сервера  
+        try {
+            const startDate = this.currentDateFilter.startDate.toISOString();
+            const endDate = this.currentDateFilter.endDate.toISOString();
+            
+            const response = await api.request(`/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
+            
+            // Объединяем оригинальные статичные данные с новой статистикой
+            this.filteredBuyers = this.buyers.map(originalBuyer => {
+                const filteredBuyer = response.buyers.find(b => b.buyer_id === originalBuyer.id);
+                
+                return {
+                    ...originalBuyer,  // Берем ВСЕ оригинальные данные
+                    filtered_spent: filteredBuyer ? filteredBuyer.filtered_spent : 0,
+                    filtered_topups: filteredBuyer ? filteredBuyer.filtered_topups : 0
+                };
+            });
+            
+        } catch (error) {
+            console.error('Ошибка загрузки статистики:', error);
+            this.filteredBuyers = [...this.buyers];
+        }
+    }
+
+    this.updateTeamStats();
+    this.renderBuyers();
+}
+
+
+
+updateTeamStats() {
+    if (!this.filteredBuyers) return;
+
+    const totalSpent = this.filteredBuyers.reduce((sum, buyer) => {
+        // Приоритет: filtered_spent > total_spent > 0
+        const spentValue = buyer.filtered_spent !== undefined ? 
+            buyer.filtered_spent : 
+            (parseFloat(buyer.total_spent) || 0);
+        return sum + spentValue;
+    }, 0);
+    
+    const totalTopups = this.filteredBuyers.reduce((sum, buyer) => {
+        // Приоритет: filtered_topups > total_topup > 0  
+        const topupValue = buyer.filtered_topups !== undefined ? 
+            buyer.filtered_topups : 
+            (parseFloat(buyer.total_topup) || 0);
+        return sum + topupValue;
+    }, 0);
+
+    const spentValue = typeof totalSpent === 'number' ? totalSpent : 0;
+    const topupsValue = typeof totalTopups === 'number' ? totalTopups : 0;
+
+    document.getElementById('total-spent').textContent = `${spentValue.toFixed(2)} USD`;
+    document.getElementById('total-topup').textContent = `${topupsValue.toFixed(2)} USD`;
+}
     async loadTeam() {
         try {
             const response = await api.request(`/teams/${this.teamId}`);
@@ -47,16 +195,19 @@ class TeamDetailModule {
         }
     }
 
-    async loadBuyers() {
-        try {
-            const response = await api.request(`/teams/${this.teamId}/buyers`);
-            this.buyers = response.buyers;
-            this.renderBuyers();
-        } catch (error) {
-            console.error('Ошибка загрузки баеров:', error);
-            notifications.error('Ошибка', 'Не удалось загрузить список баеров');
-        }
+async loadBuyers() {
+    try {
+        const response = await api.request(`/teams/${this.teamId}/buyers`);
+        this.buyers = response.buyers;
+        
+        console.log('Original buyers data:', JSON.stringify(this.buyers[0], null, 2));
+        
+        this.filteredBuyers = this.buyers;
+        this.renderBuyers();
+    } catch (error) {
+        console.error('Ошибка загрузки баеров:', error);
     }
+}
 
     updateTeamHeader() {
         if (!this.team) return;
@@ -81,13 +232,14 @@ class TeamDetailModule {
 
     renderBuyersGrid() {
         const container = document.getElementById('buyers-grid');
+        const buyersToRender = this.filteredBuyers || this.buyers;
 
-        if (this.buyers.length === 0) {
+        if (buyersToRender.length === 0) {
             container.innerHTML = '<p style="text-align: center; color: var(--text-secondary); padding: 40px;">В команде пока нет баеров</p>';
             return;
         }
 
-        const buyersHtml = this.buyers.map(buyer => {
+        const buyersHtml = buyersToRender.map(buyer => {
             // Добавляем @ если его нет
             const telegramHandle = buyer.telegram.startsWith('@') ? buyer.telegram : `@${buyer.telegram}`;
 
@@ -98,7 +250,10 @@ class TeamDetailModule {
                     <h4 class="buyer-name">${buyer.username}</h4>
                     <div class="buyer-telegram">
                         <a href="https://t.me/${telegramHandle.replace('@', '')}" target="_blank" onclick="event.stopPropagation();" class="telegram-link">
-                            📱 ${telegramHandle}
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 4px;">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.13-.31-1.09-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                            </svg>
+                            ${telegramHandle}
                         </a>
                     </div>
                 </div>
@@ -122,17 +277,17 @@ class TeamDetailModule {
                     <div class="buyer-stat-label">Карт</div>
                 </div>
                 <div class="buyer-stat">
-                    <div class="buyer-stat-value">${buyer.total_balance || 0}</div>
+                    <div class="buyer-stat-value">${parseFloat(buyer.total_balance || 0).toFixed(2)}</div>
                     <div class="buyer-stat-label">Баланс</div>
                 </div>
-                <div class="buyer-stat">
-                    <div class="buyer-stat-value">${buyer.total_spent || 0}</div>
-                    <div class="buyer-stat-label">Скручено</div>
-                </div>
-                <div class="buyer-stat">
-                    <div class="buyer-stat-value">${buyer.total_topup || 0}</div>
-                    <div class="buyer-stat-label">Пополнено</div>
-                </div>
+                    <div class="buyer-stat">
+                        <div class="buyer-stat-value">${buyer.filtered_spent !== undefined ? buyer.filtered_spent.toFixed(2) : (buyer.total_spent || 0)}</div>
+                        <div class="buyer-stat-label">Скручено</div>
+                    </div>
+                    <div class="buyer-stat">
+                        <div class="buyer-stat-value">${buyer.filtered_topups !== undefined ? buyer.filtered_topups.toFixed(2) : (buyer.total_topup || 0)}</div>
+                        <div class="buyer-stat-label">Пополнено</div>
+                    </div>
             </div>
         </div>
     `;
@@ -143,13 +298,14 @@ class TeamDetailModule {
 
     renderBuyersTable() {
         const tbody = document.getElementById('buyers-table-body');
+        const buyersToRender = this.filteredBuyers || this.buyers;
 
-        if (this.buyers.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: var(--text-secondary);">В команде пока нет баеров</td></tr>';
+        if (buyersToRender.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">В команде пока нет баеров</td></tr>';
             return;
         }
 
-        const buyersHtml = this.buyers.map(buyer => {
+        const buyersHtml = buyersToRender.map(buyer => {
             // Добавляем @ если его нет
             const telegramHandle = buyer.telegram.startsWith('@') ? buyer.telegram : `@${buyer.telegram}`;
 
@@ -161,14 +317,17 @@ class TeamDetailModule {
                 </a>
             </td>
             <td>
-                <a href="https://t.me/${telegramHandle.replace('@', '')}" target="_blank" class="telegram-link">
-                    ${telegramHandle}
-                </a>
+             <a href="https://t.me/${telegramHandle.replace('@', '')}" target="_blank" class="telegram-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="margin-right: 4px;">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.13-.31-1.09-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+                </svg>
+                ${telegramHandle}
+            </a>
             </td>
             <td>${buyer.cards_count || 0}</td>
-            <td>${buyer.total_balance || 0} USD</td>
-            <td>${buyer.total_spent || 0} USD</td>
-            <td>${buyer.total_topup || 0} USD</td>
+            <td>${parseFloat(buyer.total_balance || 0).toFixed(2)} USD</td>
+            <td>${buyer.filtered_spent !== undefined ? buyer.filtered_spent.toFixed(2) : (buyer.total_spent || 0)}</td>
+            <td>${buyer.filtered_topups !== undefined ? buyer.filtered_topups.toFixed(2) : (buyer.total_topup || 0)}</td>
             <td>${new Date(buyer.created_at).toLocaleDateString('ru-RU')}</td>
             <td>
                 <div class="buyer-table-actions">
@@ -294,15 +453,20 @@ class TeamDetailModule {
         const buyer = this.buyers.find(b => b.id === buyerId);
         if (!buyer) return;
 
-        // Устанавливаем заголовок модального окна
-        document.getElementById('assign-modal-title').textContent = `Назначить карты баеру ${buyer.username}`;
+        document.getElementById('assign-modal-title').textContent = `Управление картами баера ${buyer.username}`;
 
         try {
-            // Загружаем доступные карты команды
-            const response = await api.request(`/cards?team_id=${this.teamId}&unassigned=true`);
-            const availableCards = response.cards || [];
+            // Загружаем ВСЕ карты команды
+            const response = await api.request(`/cards?team_id=${this.teamId}`);
+            const allCards = response.cards || [];
 
-            this.renderCardsForAssignment(availableCards);
+            // ДОБАВИЛИ: Сохраняем данные карт для использования в других функциях
+            this.currentCardsData = allCards;
+
+            // Карты этого баера
+            const buyerCards = allCards.filter(card => card.buyer_id === buyerId);
+
+            this.renderCardsForAssignment(allCards, buyerCards, buyerId);
             this.showAssignCardsModal(buyerId);
 
         } catch (error) {
@@ -311,31 +475,42 @@ class TeamDetailModule {
         }
     }
 
-    renderCardsForAssignment(cards) {
+    renderCardsForAssignment(allCards, buyerCards, buyerId) {
         const container = document.getElementById('available-cards-list');
 
-        if (cards.length === 0) {
+        if (allCards.length === 0) {
             container.innerHTML = `
             <div class="cards-empty-state">
-                <h4>Нет доступных карт</h4>
-                <p>Все карты команды уже назначены или нет карт в команде</p>
+                <h4>Нет карт в команде</h4>
+                <p>В этой команде еще нет созданных карт</p>
             </div>
         `;
             return;
         }
 
-        const cardsHtml = cards.map(card => `
-        <label class="card-item-checkbox">
-            <input type="checkbox" value="${card.id}" name="selected-cards">
+        const cardsHtml = allCards.map(card => {
+            const isAssignedToBuyer = card.buyer_id === buyerId;
+            const isAssignedToOther = card.buyer_id && card.buyer_id !== buyerId;
+
+            return `
+        <label class="card-item-checkbox ${isAssignedToBuyer ? 'assigned-current' : ''} ${isAssignedToOther ? 'assigned-other' : ''}">
+            <input type="checkbox" value="${card.id}" name="selected-cards" 
+                   ${isAssignedToBuyer ? 'checked' : ''} 
+                   ${isAssignedToOther ? 'disabled' : ''}>
             <div class="card-info">
                 <div class="card-name">${card.name}</div>
                 <div class="card-details">
                     ${card.currency} • Баланс: ${card.balance || 0} ${card.currency} • 
+                    Скручено: ${card.spent_amount || 0} ${card.currency} • 
+                    Пополнено: ${card.total_topups || 0} ${card.currency} • 
                     Статус: ${this.getStatusText(card.status)}
+                    ${isAssignedToBuyer ? ' • <span class="assigned-badge">Назначена</span>' : ''}
+                    ${isAssignedToOther ? ' • <span class="other-badge">Занята</span>' : ''}
                 </div>
             </div>
         </label>
-    `).join('');
+        `;
+        }).join('');
 
         container.innerHTML = cardsHtml;
     }
@@ -380,21 +555,25 @@ class TeamDetailModule {
     }
 
     async handleAssignCards(buyerId, closeModal) {
-        const checkboxes = document.querySelectorAll('input[name="selected-cards"]:checked');
-        const selectedCardIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
-
-        if (selectedCardIds.length === 0) {
-            notifications.warning('Внимание', 'Выберите хотя бы одну карту');
-            return;
-        }
+        const allCards = this.currentCardsData || [];
+        const selectedCardIds = this.getSelectedCardIds();
 
         try {
-            // Назначаем каждую выбранную карту
-            for (const cardId of selectedCardIds) {
-                await api.assignCardToBuyer(cardId, buyerId);
+            // Проходим по всем картам команды
+            for (const card of allCards) {
+                const isSelected = selectedCardIds.includes(card.id);
+                const wasAssigned = card.buyer_id === buyerId;
+
+                if (isSelected && !wasAssigned) {
+                    // Назначить карту баеру
+                    await api.assignCardToBuyer(card.id, buyerId);
+                } else if (!isSelected && wasAssigned) {
+                    // Снять назначение (передаем null)
+                    await api.assignCardToBuyer(card.id, null);
+                }
             }
 
-            notifications.success('Успех', `Назначено ${selectedCardIds.length} карт`);
+            notifications.success('Успех', 'Изменения сохранены');
             closeModal();
 
             // Обновляем данные
@@ -403,9 +582,11 @@ class TeamDetailModule {
 
         } catch (error) {
             console.error('Ошибка назначения карт:', error);
-            notifications.error('Ошибка', 'Не удалось назначить карты');
+            notifications.error('Ошибка', 'Не удалось сохранить изменения');
         }
     }
+
+
 
     async deleteBuyer(buyerId) {
         const buyer = this.buyers.find(b => b.id === buyerId);
@@ -438,8 +619,14 @@ class TeamDetailModule {
         }
     }
 
-    render() {
-        // Метод уже не нужен, так как HTML уже загружен
+    getAllCardsFromModal() {
+        const response = this.currentCardsData || []; // Сохраняем данные карт при загрузке
+        return response;
+    }
+
+    getSelectedCardIds() {
+        const checkboxes = document.querySelectorAll('input[name="selected-cards"]:checked');
+        return Array.from(checkboxes).map(cb => parseInt(cb.value));
     }
 }
 
