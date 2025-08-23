@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models/database');
 const { authenticateToken, checkRole } = require('../middleware/auth');
+const { getKyivDate, convertUtcToKyivDate } = require('../utils/timezone');
 
 // Получение всех команд
 router.get('/', authenticateToken, async (req, res) => {
@@ -352,67 +353,70 @@ router.get('/:teamId/stats', authenticateToken, async (req, res) => {
      let spentQuery, topupQuery, params;
      
      if (startDate && endDate) {
-       const startUTC = new Date(startDate);
-       const endUTC = new Date(endDate);
-       
-       const dateStart = startUTC.toISOString().split('T')[0];
-       const dateEnd = endUTC.toISOString().split('T')[0];
+        const dateStart = convertUtcToKyivDate(startDate);
+        const dateEnd = convertUtcToKyivDate(endDate);
        
        console.log('UTC dates:', { startDate, endDate });
        console.log('Date range for SQL:', { dateStart, dateEnd });
        
        // Проверяем разницу в часах
-       const hoursDiff = (endUTC - startUTC) / (1000 * 60 * 60);
+      const startUTC = new Date(startDate);
+      const endUTC = new Date(endDate);
+      const hoursDiff = (endUTC - startUTC) / (1000 * 60 * 60);
        
        if (hoursDiff < 25) { // Если меньше 25 часов - это один день
          params = [buyer.buyer_id, dateEnd];
          
-         spentQuery = `
-           SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent
-           FROM card_transactions ct
-           JOIN cards c ON ct.card_id = c.id
-           WHERE c.buyer_id = $1 
-             AND ct.transaction_type = 'expense'
-             AND ct.transaction_date = $2::date
-             AND ct.is_cancelled = false
-         `;
+spentQuery = `
+  SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent
+  FROM card_transactions ct
+  JOIN cards c ON ct.card_id = c.id
+  WHERE c.buyer_id = $1 
+    AND c.status != 'deleted'
+    AND ct.transaction_type = 'expense'
+    AND ct.transaction_date = $2::date
+    AND ct.is_cancelled = false
+    AND ct.description NOT LIKE '%омиссия%'
+`;
          
-         topupQuery = `
-           SELECT COALESCE(SUM(ct.amount), 0) as topup
-           FROM card_transactions ct
-           JOIN cards c ON ct.card_id = c.id
-           WHERE c.buyer_id = $1 
-             AND ct.transaction_type = 'topup'
-             AND ct.transaction_date = $2::date
-             AND ct.is_cancelled = false
-         `;
+topupQuery = `
+  SELECT COALESCE(SUM(ct.amount), 0) as topup
+  FROM card_transactions ct
+  JOIN cards c ON ct.card_id = c.id
+  WHERE c.buyer_id = $1 
+    AND c.status != 'deleted'
+    AND ct.transaction_type = 'topup'
+    AND ct.transaction_date = $2::date
+    AND ct.is_cancelled = false
+`;
          
          console.log('Single day query for buyer:', buyer.buyer_id, 'date:', dateEnd);
        } else {
          // Диапазон дат
          params = [buyer.buyer_id, dateStart, dateEnd];
+                  
+spentQuery = `
+  SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent
+  FROM card_transactions ct
+  JOIN cards c ON ct.card_id = c.id
+  WHERE c.buyer_id = $1 
+    AND c.status != 'deleted'
+    AND ct.transaction_type = 'expense'
+    AND ct.transaction_date = $2::date
+    AND ct.is_cancelled = false
+    AND ct.description NOT LIKE '%омиссия%'
+`;
          
-         spentQuery = `
-           SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent
-           FROM card_transactions ct
-           JOIN cards c ON ct.card_id = c.id
-           WHERE c.buyer_id = $1 
-             AND ct.transaction_type = 'expense'
-             AND ct.transaction_date >= $2::date 
-             AND ct.transaction_date <= $3::date
-             AND ct.is_cancelled = false
-         `;
-         
-         topupQuery = `
-           SELECT COALESCE(SUM(ct.amount), 0) as topup
-           FROM card_transactions ct
-           JOIN cards c ON ct.card_id = c.id
-           WHERE c.buyer_id = $1 
-             AND ct.transaction_type = 'topup'
-             AND ct.transaction_date >= $2::date 
-             AND ct.transaction_date <= $3::date
-             AND ct.is_cancelled = false
-         `;
+topupQuery = `
+  SELECT COALESCE(SUM(ct.amount), 0) as topup
+  FROM card_transactions ct
+  JOIN cards c ON ct.card_id = c.id
+  WHERE c.buyer_id = $1 
+    AND c.status != 'deleted'
+    AND ct.transaction_type = 'topup'
+    AND ct.transaction_date = $2::date
+    AND ct.is_cancelled = false
+`;
          
          console.log('Date range query for buyer:', buyer.buyer_id, 'with params:', params);
        }
@@ -430,6 +434,15 @@ router.get('/:teamId/stats', authenticateToken, async (req, res) => {
          FROM cards WHERE cards.buyer_id = $1 AND cards.status != 'deleted'
        `;
      }
+
+     // ОТЛАДКА: смотрим какие транзакции попадают в выборку  
+console.log('Executing spent query:', spentQuery);
+console.log('With params:', params);
+
+const debugQuery = spentQuery.replace('SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent', 
+  'SELECT ct.id, ct.amount, ct.description, ct.transaction_date, ct.transaction_type, c.name as card_name');
+const debugResult = await db.query(debugQuery, params);
+console.log('ОТЛАДКА - транзакции за период:', debugResult.rows);
      
      const spentResult = await db.query(spentQuery, params);
      const topupResult = await db.query(topupQuery, params);

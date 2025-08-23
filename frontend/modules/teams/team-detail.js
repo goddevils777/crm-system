@@ -124,104 +124,128 @@ class TeamDetailModule {
         }
     }
 
-async filterAndUpdateData() {
-    if (!this.currentDateFilter) {
-        // Без фильтра используем оригинальные данные
-        this.filteredBuyers = [...this.buyers];
-    } else {
-        // С фильтром запрашиваем статистику с сервера  
-        try {
-            const startDate = this.currentDateFilter.startDate.toISOString();
-            const endDate = this.currentDateFilter.endDate.toISOString();
-            
-            const response = await api.request(`/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
-            
-            // Объединяем оригинальные статичные данные с новой статистикой
-            this.filteredBuyers = this.buyers.map(originalBuyer => {
-                const filteredBuyer = response.buyers.find(b => b.buyer_id === originalBuyer.id);
-                
-                return {
-                    ...originalBuyer,  // Берем ВСЕ оригинальные данные
-                    filtered_spent: filteredBuyer ? filteredBuyer.filtered_spent : 0,
-                    filtered_topups: filteredBuyer ? filteredBuyer.filtered_topups : 0
-                };
-            });
-            
-        } catch (error) {
-            console.error('Ошибка загрузки статистики:', error);
+    async filterAndUpdateData() {
+        if (!this.currentDateFilter) {
+            // Без фильтра используем оригинальные данные
             this.filteredBuyers = [...this.buyers];
+        } else {
+            // С фильтром запрашиваем статистику с сервера  
+            try {
+                const startDate = this.currentDateFilter.startDate.toISOString();
+                const endDate = this.currentDateFilter.endDate.toISOString();
+
+                const response = await api.request(`/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
+
+                // Объединяем оригинальные статичные данные с новой статистикой
+                this.filteredBuyers = this.buyers.map(originalBuyer => {
+                    const filteredBuyer = response.buyers.find(b => b.buyer_id === originalBuyer.id);
+
+                    return {
+                        ...originalBuyer,  // Берем ВСЕ оригинальные данные
+                        filtered_spent: filteredBuyer ? filteredBuyer.filtered_spent : 0,
+                        filtered_topups: filteredBuyer ? filteredBuyer.filtered_topups : 0
+                    };
+                });
+
+            } catch (error) {
+                console.error('Ошибка загрузки статистики:', error);
+                this.filteredBuyers = [...this.buyers];
+            }
         }
+
+        this.updateTeamStats();
+        this.renderBuyers();
     }
 
-    this.updateTeamStats();
-    this.renderBuyers();
-}
 
+    updateTeamStats() {
+        if (!this.filteredBuyers) return;
 
+        console.log('this.currentDateFilter:', this.currentDateFilter);
+        const isFiltered = !!this.currentDateFilter;
+        console.log('isFiltered result:', isFiltered);
 
-updateTeamStats() {
-    if (!this.filteredBuyers) return;
+        let totalSpent = 0;
+        let totalTopups = 0;
+        let totalBalance = 0;
 
-    const totalSpent = this.filteredBuyers.reduce((sum, buyer) => {
-        // Приоритет: filtered_spent > total_spent > 0
-        const spentValue = buyer.filtered_spent !== undefined ? 
-            buyer.filtered_spent : 
-            (parseFloat(buyer.total_spent) || 0);
-        return sum + spentValue;
-    }, 0);
-    
-    const totalTopups = this.filteredBuyers.reduce((sum, buyer) => {
-        // Приоритет: filtered_topups > total_topup > 0  
-        const topupValue = buyer.filtered_topups !== undefined ? 
-            buyer.filtered_topups : 
-            (parseFloat(buyer.total_topup) || 0);
-        return sum + topupValue;
-    }, 0);
+        this.filteredBuyers.forEach((buyer, index) => {
+            console.log(`Баер ${index + 1}:`, buyer.username);
+            console.log('- total_spent:', buyer.total_spent);
+            console.log('- total_topup:', buyer.total_topup);
+            console.log('- total_balance:', buyer.total_balance);
+            console.log('- filtered_spent:', buyer.filtered_spent);
+            console.log('- filtered_topups:', buyer.filtered_topups);
 
-    const spentValue = typeof totalSpent === 'number' ? totalSpent : 0;
-    const topupsValue = typeof totalTopups === 'number' ? totalTopups : 0;
+            const spentValue = isFiltered ?
+                (buyer.filtered_spent || 0) :
+                parseFloat(buyer.total_spent || 0);
 
-    document.getElementById('total-spent').textContent = `${spentValue.toFixed(2)} USD`;
-    document.getElementById('total-topup').textContent = `${topupsValue.toFixed(2)} USD`;
-}
+            console.log('- isFiltered:', isFiltered);
+            console.log('- buyer.total_spent || 0:', buyer.total_spent || 0);
+            console.log('- parseFloat result:', parseFloat(buyer.total_spent || 0));
+
+            const topupValue = isFiltered ?
+                (buyer.filtered_topups || 0) :
+                parseFloat(buyer.total_topup || 0);
+
+            const balanceValue = parseFloat(buyer.total_balance || 0);
+
+            console.log('- calculated spent:', spentValue);
+            console.log('- calculated topup:', topupValue);
+
+            totalSpent += spentValue;
+            totalTopups += topupValue;
+            totalBalance += balanceValue;
+        });
+
+        console.log('FINAL TOTALS:', { totalSpent, totalTopups, totalBalance });
+
+        document.getElementById('total-balance').textContent = `${totalBalance.toFixed(2)} USD`;
+        document.getElementById('total-spent').textContent = `${totalSpent.toFixed(2)} USD`;
+        document.getElementById('total-topup').textContent = `${totalTopups.toFixed(2)} USD`;
+    }
+
     async loadTeam() {
         try {
             const response = await api.request(`/teams/${this.teamId}`);
             this.team = response.team;
             this.updateTeamHeader();
+            this.updateTeamStats(); // Добавить эту строку
         } catch (error) {
             console.error('Ошибка загрузки команды:', error);
             notifications.error('Ошибка', 'Не удалось загрузить данные команды');
         }
     }
 
-async loadBuyers() {
-    try {
-        const response = await api.request(`/teams/${this.teamId}/buyers`);
-        this.buyers = response.buyers;
-        
-        console.log('Original buyers data:', JSON.stringify(this.buyers[0], null, 2));
-        
-        this.filteredBuyers = this.buyers;
-        this.renderBuyers();
-    } catch (error) {
-        console.error('Ошибка загрузки баеров:', error);
-    }
-}
+    async loadBuyers() {
+        try {
+            const response = await api.request(`/teams/${this.teamId}/buyers`);
+            this.buyers = response.buyers;
+
+            console.log('Original buyers data:', JSON.stringify(this.buyers[0], null, 2));
+
+            this.filteredBuyers = this.buyers;
+            this.renderBuyers();
+
+            // ДОБАВЬ эту строку
+            this.updateTeamStats();
+
+        } catch (error) {
+            console.error('Ошибка загрузки баеров:', error);
+        }
+    } а
 
     updateTeamHeader() {
         if (!this.team) return;
 
-        // Обновляем название команды
-        document.getElementById('team-name').textContent = this.team.name || 'Загрузка...';
 
+
+        // Обновляем только название команды и счетчики
+        document.getElementById('team-name').textContent = this.team.name || 'Загрузка...';
         document.getElementById('buyers-count').textContent = this.team.buyers_count || 0;
         document.getElementById('cards-count').textContent = this.team.cards_count || 0;
-        document.getElementById('total-balance').textContent = `${this.team.total_balance || 0} USD`;
-        document.getElementById('total-spent').textContent = `${this.team.total_spent || 0} USD`;
-        document.getElementById('total-topup').textContent = `${this.team.total_topup || 0} USD`;
     }
-
     renderBuyers() {
         if (this.currentView === 'grid') {
             this.renderBuyersGrid();
@@ -606,8 +630,44 @@ async loadBuyers() {
         }
     }
 
-    openBuyerDetail(buyerId) {
-        notifications.info('В разработке', 'Детальная страница баера будет позже');
+    async openBuyerDetail(buyerId) {
+        try {
+            // Загружаем HTML
+            const htmlResponse = await fetch('modules/teams/buyer-detail.html');
+            const html = await htmlResponse.text();
+
+            // Загружаем CSS если не загружен
+            if (!document.querySelector('link[href*="buyer-detail.css"]')) {
+                const link = document.createElement('link');
+                link.rel = 'stylesheet';
+                link.href = 'modules/teams/buyer-detail.css';
+                document.head.appendChild(link);
+            }
+
+            // Загружаем JS модуль
+            if (!window.BuyerDetailModule) {
+                const script = document.createElement('script');
+                script.src = 'modules/teams/buyer-detail.js';
+                document.head.appendChild(script);
+
+                await new Promise((resolve) => {
+                    script.onload = resolve;
+                });
+            }
+
+            // Заменяем содержимое
+            const contentArea = document.getElementById('content-area');
+            contentArea.innerHTML = html;
+
+            // Инициализируем модуль детальной страницы баера
+            setTimeout(() => {
+                window.buyerDetailModule = new window.BuyerDetailModule(buyerId, this.teamId);
+            }, 100);
+
+        } catch (error) {
+            console.error('Ошибка загрузки детальной страницы баера:', error);
+            notifications.error('Ошибка', 'Не удалось загрузить страницу баера');
+        }
     }
 
     goBackToTeams() {

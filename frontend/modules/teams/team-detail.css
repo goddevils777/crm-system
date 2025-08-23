@@ -601,3 +601,17 @@
     margin-bottom: 8px;
     color: var(--text-primary);
 }
+
+@media (max-width: 768px) {
+    .date-filter-container {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+    }
+    
+    .date-filter-container .form-select,
+    .date-filter-container .form-input {
+        width: 100%;
+        margin: 0;
+    }
+}

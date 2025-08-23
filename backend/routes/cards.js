@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../models/database');
 const { authenticateToken, checkRole } = require('../middleware/auth');
 const { validateCardData, validateFinancialData } = require('../middleware/validation');
+const { getKyivDate } = require('../utils/timezone');
 
 const router = express.Router();
 
@@ -240,11 +241,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
           initialBalance,
           'Первоначальное пополнение при создании карты',
           req.user.id,
-          (() => {
-            const now = new Date();
-            const ukraineTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
-            return ukraineTime.toISOString().split('T')[0];
-          })()
+          getKyivDate()
         ]
       );
 
@@ -542,18 +539,7 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
         console.log('- Commission amount:', commission);
 
         // Получаем текущую сумму пополнений за сегодня
-        const today = update_date || (() => {
-          const now = new Date();
-          console.log('Server UTC time:', now.toISOString());
-
-          // Киев/Львов = UTC+3 (летом UTC+3, зимой UTC+2, но сейчас лето)
-          const kyivTime = new Date(now.getTime() + (3 * 60 * 60 * 1000));
-          console.log('Kyiv time calculated:', kyivTime.toISOString());
-
-          const result = kyivTime.toISOString().split('T')[0];
-          console.log('Final date used:', result);
-          return result;
-        })();
+        const today = update_date || getKyivDate();
         const todayTopupsResult = await db.query(
           `SELECT COALESCE(SUM(amount), 0) as today_topups 
            FROM card_transactions 
@@ -647,7 +633,7 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
             Math.max(0, newCardBalance),
             newRemainingBalance,
             newTotalSpent,
-            update_date || new Date().toISOString().split('T')[0],
+            update_date || getKyivDate(),
             cardId
           ]
         );

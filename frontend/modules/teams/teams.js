@@ -30,9 +30,17 @@ class TeamsModule {
             });
         });
 
+        // Сортировка команд
+        const sortSelect = document.getElementById('sort-teams');
+        sortSelect?.addEventListener('change', (e) => {
+            this.sortTeams(e.target.value);
+        });
+
         // Модальное окно
         this.setupModalEvents();
     }
+
+
 
     setupModalEvents() {
         const modal = document.getElementById('team-modal');
@@ -128,6 +136,36 @@ class TeamsModule {
         } else {
             this.renderTable();
         }
+    }
+
+    sortTeams(sortBy) {
+        if (!this.teams || this.teams.length === 0) return;
+
+        const sorted = [...this.teams].sort((a, b) => {
+            switch (sortBy) {
+                case 'created_desc':
+                    return new Date(b.created_at) - new Date(a.created_at);
+                case 'created_asc':
+                    return new Date(a.created_at) - new Date(b.created_at);
+                case 'name_asc':
+                    return a.name.localeCompare(b.name);
+                case 'name_desc':
+                    return b.name.localeCompare(a.name);
+                case 'cards_desc':
+                    return (parseInt(b.cards_count) || 0) - (parseInt(a.cards_count) || 0);
+                case 'cards_asc':
+                    return (parseInt(a.cards_count) || 0) - (parseInt(b.cards_count) || 0);
+                case 'buyers_desc':
+                    return (parseInt(b.buyers_count) || 0) - (parseInt(a.buyers_count) || 0);
+                case 'buyers_asc':
+                    return (parseInt(a.buyers_count) || 0) - (parseInt(b.buyers_count) || 0);
+                default:
+                    return 0;
+            }
+        });
+
+        this.teams = sorted;
+        this.renderTeams();
     }
 
 

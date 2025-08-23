@@ -1,0 +1,95 @@
+<!-- Детальная страница баера -->
+<div class="buyer-detail-page">
+    <!-- Шапка с информацией о баере -->
+    <div class="buyer-detail-header">
+        <div class="buyer-detail-header-content">
+            <button class="buyer-detail-back-btn" onclick="window.buyerDetailModule?.goBack()">
+                ← Назад к команде
+            </button>
+            <div class="buyer-detail-info">
+                <h2 class="buyer-detail-name" id="buyer-name">Загрузка...</h2>
+                <div class="buyer-detail-telegram" id="buyer-telegram">
+                    <!-- Заполняется JS -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Фильтр по датам -->
+    <div class="buyer-detail-filters">
+        <div class="buyer-detail-date-container">
+            <select id="buyer-date-period-select" class="form-select">
+                <option value="">Все время</option>
+                <option value="today">Сегодня</option>
+                <option value="yesterday">Вчера</option>
+                <option value="week">7 дней</option>
+                <option value="month">30 дней</option>
+                <option value="custom" style="display: none;">Выбрать даты</option>
+            </select>
+            <input type="date" id="buyer-date-from" class="form-input" placeholder="от">
+            <input type="date" id="buyer-date-to" class="form-input" placeholder="до">
+        </div>
+    </div>
+
+    <!-- Аналитика баера -->
+    <div class="buyer-detail-analytics">
+        <div class="buyer-detail-analytics-grid">
+            <div class="buyer-detail-analytics-card">
+                <div class="buyer-detail-analytics-value" id="buyer-cards-count">0</div>
+                <div class="buyer-detail-analytics-label">Карт</div>
+            </div>
+            <div class="buyer-detail-analytics-card">
+                <div class="buyer-detail-analytics-value" id="buyer-total-balance">0.00 USD</div>
+                <div class="buyer-detail-analytics-label">Баланс</div>
+            </div>
+            <div class="buyer-detail-analytics-card">
+                <div class="buyer-detail-analytics-value" id="buyer-total-spent">0.00 USD</div>
+                <div class="buyer-detail-analytics-label">Скручено</div>
+            </div>
+            <div class="buyer-detail-analytics-card">
+                <div class="buyer-detail-analytics-value" id="buyer-total-topup">0.00 USD</div>
+                <div class="buyer-detail-analytics-label">Пополнено</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Список карт -->
+    <div class="buyer-detail-cards">
+        <div class="buyer-detail-cards-header">
+            <h3 class="buyer-detail-cards-title">Карты баера</h3>
+            <div class="cards-actions">
+                <button class="btn btn-primary" onclick="window.buyerDetailModule?.openAssignModal()">
+                    Управление картами
+                </button>
+            </div>
+        </div>
+        
+        <div class="buyer-detail-cards-grid" id="buyer-cards-list">
+            <!-- Заполняется JS -->
+        </div>
+    </div>
+
+    <!-- Модальное окно управления картами -->
+    <div id="buyer-cards-modal" class="buyer-detail-modal">
+        <div class="buyer-detail-modal-content">
+            <div class="buyer-detail-modal-header">
+                <h3 class="buyer-detail-modal-title">Управление картами</h3>
+                <button class="buyer-detail-modal-close">&times;</button>
+            </div>
+            <div class="buyer-detail-modal-body">
+                <div class="cards-assign-container">
+                    <div class="cards-assign-header">
+                        <p>Выберите карты для назначения баеру:</p>
+                    </div>
+                    <div class="buyer-detail-cards-assign-list" id="buyer-available-cards-list">
+                        <!-- Заполняется JS -->
+                    </div>
+                </div>
+            </div>
+            <div class="buyer-detail-modal-footer">
+                <button class="btn btn-secondary modal-cancel">Отмена</button>
+                <button class="btn btn-primary" id="buyer-assign-selected-cards">Сохранить</button>
+            </div>
+        </div>
+    </div>
+</div>

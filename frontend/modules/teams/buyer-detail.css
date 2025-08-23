@@ -1,0 +1,398 @@
+/* Стили для детальной страницы баера в стиле остального сайта */
+
+.buyer-detail-page {
+    padding: 0;
+}
+
+/* Шапка баера */
+.buyer-detail-header {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.buyer-detail-header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.buyer-detail-back-btn {
+    background: var(--accent-color);
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.buyer-detail-back-btn:hover {
+    background: #2563eb;
+}
+
+.buyer-detail-info {
+    flex: 1;
+}
+
+.buyer-detail-name {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.buyer-detail-telegram {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.buyer-detail-telegram-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.buyer-detail-telegram-link:hover {
+    text-decoration: underline;
+}
+
+/* Фильтры - в стиле других модулей */
+.buyer-detail-filters {
+    margin-bottom: 20px;
+}
+
+.buyer-detail-date-container {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.buyer-detail-date-container .form-select {
+    min-width: 140px;
+    width: auto;
+}
+
+.buyer-detail-date-container .form-input {
+    min-width: 140px;
+    width: auto;
+}
+
+/* Аналитические карточки - в стиле карт */
+.buyer-detail-analytics {
+    margin-bottom: 20px;
+}
+
+.buyer-detail-analytics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.buyer-detail-analytics-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+}
+
+.buyer-detail-analytics-value {
+    font-size: 24px;
+    font-weight: 600;
+    color: var(--accent-color);
+    margin-bottom: 8px;
+}
+
+.buyer-detail-analytics-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 500;
+}
+
+/* Карты баера - в стиле grid карточек */
+.buyer-detail-cards {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+}
+
+.buyer-detail-cards-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.buyer-detail-cards-title {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.buyer-detail-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.buyer-detail-card-item {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 16px;
+    transition: all 0.2s ease;
+}
+
+.buyer-detail-card-item:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.buyer-detail-card-item.assigned {
+    border-color: var(--success-color);
+}
+
+.buyer-detail-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.buyer-detail-card-info {
+    flex: 1;
+}
+
+.buyer-detail-card-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    font-size: 16px;
+}
+
+.buyer-detail-card-currency {
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.buyer-detail-card-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.buyer-detail-card-stat {
+    text-align: center;
+}
+
+.buyer-detail-card-stat-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.buyer-detail-card-stat-label {
+    font-size: 11px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    margin-top: 2px;
+}
+
+.buyer-detail-card-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.buyer-detail-card-status.assigned {
+    background: var(--success-color);
+    color: white;
+}
+
+/* Модальное окно - в стиле существующих модальных окон */
+.buyer-detail-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.buyer-detail-modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.buyer-detail-modal-content {
+    background: var(--card-bg);
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.buyer-detail-modal-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.buyer-detail-modal-title {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-primary);
+}
+
+.buyer-detail-modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+}
+
+.buyer-detail-modal-close:hover {
+    color: var(--text-primary);
+}
+
+.buyer-detail-modal-body {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.buyer-detail-modal-footer {
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.buyer-detail-cards-assign-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.buyer-detail-card-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.buyer-detail-card-checkbox:hover {
+    border-color: var(--accent-color);
+    background: var(--bg-secondary);
+}
+
+.buyer-detail-card-checkbox.assigned-current {
+    border-color: var(--success-color);
+    background: rgba(34, 197, 94, 0.1);
+}
+
+.buyer-detail-card-checkbox.assigned-other {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.buyer-detail-card-checkbox input[type="checkbox"] {
+    margin: 0;
+}
+
+.buyer-detail-assigned-badge {
+    color: var(--success-color);
+    font-weight: 500;
+}
+
+.buyer-detail-other-badge {
+    color: var(--warning-color);
+    font-weight: 500;
+}
+
+/* Мобильная адаптация */
+@media (max-width: 768px) {
+    .buyer-detail-header-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+    }
+    
+    .buyer-detail-filters {
+        justify-content: stretch;
+    }
+    
+    .buyer-detail-date-container {
+        flex-direction: column;
+        gap: 10px;
+        align-items: stretch;
+        width: 100%;
+    }
+    
+    .buyer-detail-date-container .form-select,
+    .buyer-detail-date-container .form-input {
+        width: 100%;
+        min-width: auto;
+    }
+    
+    .buyer-detail-analytics-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+    
+    .buyer-detail-cards-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .buyer-detail-cards-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .buyer-detail-modal-content {
+        width: 95%;
+        margin: 20px;
+    }
+}
