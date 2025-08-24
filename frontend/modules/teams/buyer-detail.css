@@ -1,398 +1,653 @@
-/* Стили для детальной страницы баера в стиле остального сайта */
-
-.buyer-detail-page {
+/* Детальная страница баера */
+.buyer-detail-container {
     padding: 0;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-/* Шапка баера */
-.buyer-detail-header {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 20px;
+/* Шапка с информацией о баере */
+.buyer-detail-container .buyer-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px;
+    background: var(--component-background);
+    border-radius: 12px;
+    border: 1px solid var(--border-color-split);
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.buyer-detail-header-content {
+.buyer-detail-container .buyer-header-main {
     display: flex;
     align-items: center;
     gap: 20px;
 }
 
-.buyer-detail-back-btn {
-    background: var(--accent-color);
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s;
-    display: flex;
+.buyer-detail-container .back-btn {
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
+    padding: 4px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-base);
+    font-size: var(--font-size-base);
+    font-weight: 400;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.645, 0.045, 0.355, 1);
+    min-height: var(--height-base);
+    background: var(--component-background);
+    color: var(--text-primary);
+    user-select: none;
+    touch-action: manipulation;
 }
 
-.buyer-detail-back-btn:hover {
-    background: #2563eb;
+.buyer-detail-container .back-btn:hover {
+    color: var(--primary-hover);
+    border-color: var(--primary-hover);
 }
 
-.buyer-detail-info {
+.buyer-detail-container .back-btn:active {
+    color: var(--primary-active);
+    border-color: var(--primary-active);
+}
+
+.buyer-detail-container .buyer-info {
     flex: 1;
 }
 
-.buyer-detail-name {
-    margin: 0 0 8px 0;
+.buyer-detail-container .buyer-title {
+    margin: 0 0 4px 0;
     font-size: 24px;
     font-weight: 600;
     color: var(--text-primary);
 }
 
-.buyer-detail-telegram {
+.buyer-detail-container .buyer-telegram {
+    margin: 0;
     color: var(--text-secondary);
     font-size: 14px;
 }
 
-.buyer-detail-telegram-link {
-    color: var(--accent-color);
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.buyer-detail-telegram-link:hover {
-    text-decoration: underline;
-}
-
-/* Фильтры - в стиле других модулей */
-.buyer-detail-filters {
-    margin-bottom: 20px;
-}
-
-.buyer-detail-date-container {
+.buyer-detail-container .buyer-actions {
     display: flex;
     gap: 12px;
-    align-items: center;
-    flex-wrap: wrap;
 }
 
-.buyer-detail-date-container .form-select {
-    min-width: 140px;
-    width: auto;
+/* Статистика баера */
+.buyer-detail-container .buyer-stats-section {
+    margin-bottom: 24px;
 }
 
-.buyer-detail-date-container .form-input {
-    min-width: 140px;
-    width: auto;
-}
-
-/* Аналитические карточки - в стиле карт */
-.buyer-detail-analytics {
-    margin-bottom: 20px;
-}
-
-.buyer-detail-analytics-grid {
+.buyer-detail-container .stats-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.buyer-detail-container .stat-card {
+    display: flex;
+    align-items: center;
     gap: 16px;
-}
-
-.buyer-detail-analytics-card {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
     padding: 20px;
-    text-align: center;
+    background: var(--component-background);
+    border-radius: 12px;
+    border: 1px solid var(--border-color-split);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    transition: transform 0.2s ease;
 }
 
-.buyer-detail-analytics-value {
+.buyer-detail-container .stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.buyer-detail-container .stat-icon {
+    font-size: 28px;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--background-color);
+}
+
+.buyer-detail-container .stat-card.balance .stat-icon {
+    background: rgba(82, 196, 26, 0.1);
+}
+
+.buyer-detail-container .stat-card.spent .stat-icon {
+    background: rgba(245, 34, 45, 0.1);
+}
+
+.buyer-detail-container .stat-card.topup .stat-icon {
+    background: rgba(24, 144, 255, 0.1);
+}
+
+.buyer-detail-container .stat-card.cards .stat-icon {
+    background: rgba(114, 46, 209, 0.1);
+}
+
+.buyer-detail-container .stat-content {
+    flex: 1;
+}
+
+.buyer-detail-container .stat-value {
     font-size: 24px;
     font-weight: 600;
-    color: var(--accent-color);
-    margin-bottom: 8px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
 }
 
-.buyer-detail-analytics-label {
-    font-size: 12px;
+.buyer-detail-container .stat-label {
+    font-size: 13px;
     color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     font-weight: 500;
 }
 
-/* Карты баера - в стиле grid карточек */
-.buyer-detail-cards {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+/* Фильтр по датам */
+.buyer-detail-container .date-filter-section {
+    background: var(--component-background);
+    border-radius: 12px;
+    border: 1px solid var(--border-color-split);
     padding: 20px;
+    margin-bottom: 24px;
 }
 
-.buyer-detail-cards-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.buyer-detail-container .date-filter-header {
     margin-bottom: 16px;
-    flex-wrap: wrap;
-    gap: 12px;
 }
 
-.buyer-detail-cards-title {
+.buyer-detail-container .date-filter-header h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px;
+    font-weight: 600;
     color: var(--text-primary);
 }
 
-.buyer-detail-cards-grid {
+.buyer-detail-container .date-filter-controls {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: 150px 140px 140px;
+    gap: 12px;
+    align-items: center;
+}
+.buyer-detail-container .custom-date-inputs {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-left: 16px;
+}
+
+.buyer-detail-container .form-select,
+.buyer-detail-container .form-input {
+    padding: 8px 12px;
+    border: 1px solid var(--border-color-split);
+    border-radius: 6px;
+    background: var(--background-color);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.buyer-detail-container .form-select:focus,
+.buyer-detail-container .form-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.buyer-detail-container .form-select {
+    min-width: 150px;
+}
+
+.buyer-detail-container .form-input[type="date"] {
+    min-width: 140px;
+}
+
+/* Секция карт баера */
+.buyer-detail-container .buyer-cards-section {
+    background: var(--component-background);
+    border-radius: 12px;
+    border: 1px solid var(--border-color-split);
+    padding: 24px;
+}
+
+.buyer-detail-container .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
     gap: 16px;
 }
 
-.buyer-detail-card-item {
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
+.buyer-detail-container .section-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.buyer-detail-container .cards-summary {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.buyer-detail-container .assigned-count {
+    font-weight: 500;
+}
+
+.buyer-detail-container .assigned-count span {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.buyer-detail-container .section-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.buyer-detail-container .add-cards-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* Сетка карт баера */
+.buyer-detail-container .buyer-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.buyer-detail-container .buyer-card-item {
     padding: 16px;
+    background: var(--background-color);
+    border: 1px solid var(--border-color-split);
+    border-radius: 8px;
     transition: all 0.2s ease;
 }
 
-.buyer-detail-card-item:hover {
-    border-color: var(--accent-color);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.buyer-detail-container .buyer-card-item:hover {
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.buyer-detail-card-item.assigned {
+.buyer-detail-container .buyer-card-item.assigned {
     border-color: var(--success-color);
+    background: rgba(82, 196, 26, 0.02);
 }
 
-.buyer-detail-card-header {
+/* Заголовок карточки с кнопкой удаления */
+.buyer-detail-container .card-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: 12px;
 }
 
-.buyer-detail-card-info {
-    flex: 1;
-}
-
-.buyer-detail-card-name {
-    font-weight: 600;
-    color: var(--text-primary);
-    margin-bottom: 4px;
-    font-size: 16px;
-}
-
-.buyer-detail-card-currency {
-    font-size: 12px;
-    color: var(--text-secondary);
-    background: var(--bg-secondary);
-    padding: 2px 6px;
-    border-radius: 4px;
-}
-
-.buyer-detail-card-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-top: 12px;
-}
-
-.buyer-detail-card-stat {
-    text-align: center;
-}
-
-.buyer-detail-card-stat-value {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-primary);
-}
-
-.buyer-detail-card-stat-label {
-    font-size: 11px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    margin-top: 2px;
-}
-
-.buyer-detail-card-status {
-    padding: 4px 8px;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 500;
-    white-space: nowrap;
-}
-
-.buyer-detail-card-status.assigned {
-    background: var(--success-color);
-    color: white;
-}
-
-/* Модальное окно - в стиле существующих модальных окон */
-.buyer-detail-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
+.buyer-detail-container .card-remove-btn {
+    background: rgba(245, 34, 45, 0.1);
+    border: none;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-    z-index: 1000;
+    color: var(--error-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
 }
 
-.buyer-detail-modal.show {
-    opacity: 1;
-    visibility: visible;
+.buyer-detail-container .card-remove-btn:hover {
+    background: var(--error-color);
+    color: white;
+    transform: scale(1.1);
 }
 
-.buyer-detail-modal-content {
-    background: var(--card-bg);
-    border-radius: 8px;
-    width: 90%;
-    max-width: 600px;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
+.buyer-detail-container .card-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 8px;
 }
 
-.buyer-detail-modal-header {
-    padding: 20px;
-    border-bottom: 1px solid var(--border-color);
+.buyer-detail-container .card-details {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    font-size: 13px;
+}
+
+.buyer-detail-container .card-detail {
     display: flex;
     justify-content: space-between;
-    align-items: center;
 }
 
-.buyer-detail-modal-title {
-    margin: 0;
+.buyer-detail-container .card-detail-label {
+    color: var(--text-secondary);
+}
+
+.buyer-detail-container .card-detail-value {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Статусы карт - более специфичные селекторы */
+.buyer-detail-container .card-status {
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.buyer-detail-container .card-status.active {
+    background: rgba(82, 196, 26, 0.1);
+    color: var(--success-color);
+}
+
+.buyer-detail-container .card-status.blocked {
+    background: rgba(245, 34, 45, 0.1);
+    color: var(--error-color);
+}
+
+.buyer-detail-container .card-status.limit_exceeded {
+    background: rgba(255, 193, 7, 0.1);
+    color: #fa8c16;
+}
+
+/* Пустое состояние */
+.buyer-detail-container .empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--text-secondary);
+}
+
+.buyer-detail-container .empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.buyer-detail-container .empty-state h4 {
+    margin: 0 0 8px 0;
     font-size: 18px;
     color: var(--text-primary);
 }
 
-.buyer-detail-modal-close {
-    background: none;
-    border: none;
-    font-size: 24px;
-    color: var(--text-secondary);
-    cursor: pointer;
-    padding: 4px;
-    line-height: 1;
+.buyer-detail-container .empty-state p {
+    margin: 0;
+    font-size: 14px;
 }
 
-.buyer-detail-modal-close:hover {
+/* Модальные окна специфично для buyer-detail */
+.buyer-detail-container .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.buyer-detail-container .modal-overlay.show {
+    display: flex;
+    opacity: 1;
+}
+
+.buyer-detail-container .modal-content {
+    background: var(--component-background);
+    border-radius: 12px;
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.24);
+    width: 800px;
+    max-width: 90vw;
+    max-height: 80vh;
+    overflow: hidden;
+    transform: scale(0.9);
+    transition: transform 0.3s;
+    border: 1px solid var(--border-color-split);
+}
+
+.buyer-detail-container .modal-overlay.show .modal-content {
+    transform: scale(1);
+}
+
+.buyer-detail-container .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color-split);
+}
+
+.buyer-detail-container .modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
     color: var(--text-primary);
 }
 
-.buyer-detail-modal-body {
-    padding: 20px;
-    flex: 1;
+.buyer-detail-container .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.buyer-detail-container .modal-close:hover {
+    background: var(--background-color);
+    color: var(--text-primary);
+}
+
+.buyer-detail-container .modal-body {
+    padding: 20px 24px;
+    max-height: 400px;
     overflow-y: auto;
 }
 
-.buyer-detail-modal-footer {
-    padding: 20px;
-    border-top: 1px solid var(--border-color);
-    display: flex;
-    justify-content: flex-end;
+.buyer-detail-container .modal-body .cards-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 12px;
 }
 
-.buyer-detail-cards-assign-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.buyer-detail-card-checkbox {
+.buyer-detail-container .card-item {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 12px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
+    background: var(--background-color);
+    border: 1px solid var(--border-color-split);
+    border-radius: 8px;
     cursor: pointer;
+    transition: all 0.2s;
+}
+
+.buyer-detail-container .card-item:hover {
+    border-color: var(--primary-color);
+}
+
+.buyer-detail-container .card-item.assigned {
+    background: rgba(24, 144, 255, 0.1);
+    border-color: var(--primary-color);
+}
+
+.buyer-detail-container .card-checkbox {
+    margin: 0;
+}
+
+.buyer-detail-container .card-info {
+    flex: 1;
+}
+
+.buyer-detail-container .card-info-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.buyer-detail-container .card-info-details {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.buyer-detail-container .modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color-split);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .buyer-detail-container .buyer-detail-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 16px;
+    }
+    
+    .buyer-detail-container .buyer-header-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .buyer-detail-container .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .buyer-detail-container .date-filter-controls {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .buyer-detail-container .custom-date-inputs {
+        margin-left: 0;
+        margin-top: 12px;
+    }
+    
+    .buyer-detail-container .buyer-cards-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .buyer-detail-container .section-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .buyer-detail-container .section-actions {
+        justify-content: space-between;
+    }
+    
+    .buyer-detail-container .card-details {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+}
+
+.buyer-detail-container .buyer-telegram-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.buyer-detail-container .telegram-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: #0088cc;
+    font-size: 14px;
+    font-weight: 500;
     transition: all 0.2s ease;
 }
 
-.buyer-detail-card-checkbox:hover {
-    border-color: var(--accent-color);
-    background: var(--bg-secondary);
+.buyer-detail-container .telegram-link:hover {
+    color: #006aa3;
+    text-decoration: underline;
 }
 
-.buyer-detail-card-checkbox.assigned-current {
+.buyer-detail-container .telegram-link svg {
+    margin-right: 4px;
+    flex-shrink: 0;
+}
+
+.buyer-detail-container .cards-list {
+    max-height: 500px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color-split);
+    border-radius: 8px;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.buyer-detail-container .card-item-checkbox {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 16px;
+    border: 1px solid var(--border-color-split);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--component-background);
+    min-height: 120px;
+}
+
+.buyer-detail-container .card-item-checkbox:hover {
+    background: var(--background-color);
+    border-color: var(--primary-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.buyer-detail-container .card-item-checkbox.assigned-current {
     border-color: var(--success-color);
-    background: rgba(34, 197, 94, 0.1);
+    background: rgba(82, 196, 26, 0.05);
 }
 
-.buyer-detail-card-checkbox.assigned-other {
+.buyer-detail-container .card-item-checkbox.assigned-other {
     opacity: 0.6;
     cursor: not-allowed;
 }
 
-.buyer-detail-card-checkbox input[type="checkbox"] {
-    margin: 0;
+.buyer-detail-container .card-item-checkbox input[type="checkbox"] {
+    margin-bottom: 12px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    align-self: flex-end;
 }
 
-.buyer-detail-assigned-badge {
+.buyer-detail-container .assigned-badge {
     color: var(--success-color);
-    font-weight: 500;
+    font-weight: 600;
 }
 
-.buyer-detail-other-badge {
-    color: var(--warning-color);
-    font-weight: 500;
-}
-
-/* Мобильная адаптация */
-@media (max-width: 768px) {
-    .buyer-detail-header-content {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 16px;
-    }
-    
-    .buyer-detail-filters {
-        justify-content: stretch;
-    }
-    
-    .buyer-detail-date-container {
-        flex-direction: column;
-        gap: 10px;
-        align-items: stretch;
-        width: 100%;
-    }
-    
-    .buyer-detail-date-container .form-select,
-    .buyer-detail-date-container .form-input {
-        width: 100%;
-        min-width: auto;
-    }
-    
-    .buyer-detail-analytics-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 12px;
-    }
-    
-    .buyer-detail-cards-grid {
-        grid-template-columns: 1fr;
-        gap: 12px;
-    }
-    
-    .buyer-detail-cards-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-    }
-    
-    .buyer-detail-modal-content {
-        width: 95%;
-        margin: 20px;
-    }
+.buyer-detail-container .other-badge {
+    color: var(--error-color);
+    font-weight: 600;
 }

@@ -6,7 +6,7 @@ class ModuleLoader {
         this.moduleAssets = new Map();
     }
 
-    
+
 
     async loadModule(moduleName) {
         console.log('=== LOADING MODULE:', moduleName, '===');
@@ -65,6 +65,7 @@ class ModuleLoader {
         await new Promise(resolve => setTimeout(resolve, 100));
 
         // УЛУЧШЕННАЯ ИНИЦИАЛИЗАЦИЯ - проверяем что класс существует
+        // УЛУЧШЕННАЯ ИНИЦИАЛИЗАЦИЯ - проверяем что класс существует
         let moduleInstance = null;
         try {
             if (moduleName === 'cards' && window.CardsModule) {
@@ -79,6 +80,25 @@ class ModuleLoader {
                 console.log('Creating new TeamsModule instance...');
                 moduleInstance = new window.TeamsModule();
                 window.teamsModule = moduleInstance;
+            } else if (moduleName === 'team-detail' && window.TeamDetailModule) {
+                console.log('Creating new TeamDetailModule instance...');
+                const teamId = localStorage.getItem('current_team_detail');
+                if (teamId) {
+                    moduleInstance = new window.TeamDetailModule(teamId);
+                    window.teamDetailModule = moduleInstance;
+                } else {
+                    console.error('Team ID not found for team detail module');
+                }
+            } else if (moduleName === 'buyer-detail' && window.BuyerDetailModule) {
+                console.log('Creating new BuyerDetailModule instance...');
+                const buyerId = localStorage.getItem('current_buyer_detail');
+                const teamId = localStorage.getItem('current_team_detail');
+                if (buyerId && teamId) {
+                    moduleInstance = new window.BuyerDetailModule(buyerId, teamId);
+                    window.buyerDetailModule = moduleInstance;
+                } else {
+                    console.error('Buyer ID or Team ID not found for buyer detail module');
+                }
             } else {
                 console.warn(`Module class not found for: ${moduleName}`);
             }
@@ -145,6 +165,7 @@ class ModuleLoader {
             console.log('- Table container:', !!tableContainer);
 
             // Инициализируем модуль и сохраняем экземпляр
+            // Инициализируем модуль и сохраняем экземпляр
             let moduleInstance = null;
             if (moduleName === 'cards' && window.CardsModule) {
                 console.log('Creating new CardsModule instance...');
@@ -158,6 +179,25 @@ class ModuleLoader {
                 console.log('Creating new TeamsModule instance...');
                 moduleInstance = new window.TeamsModule();
                 window.teamsModule = moduleInstance;
+            } else if (moduleName === 'team-detail' && window.TeamDetailModule) {
+                console.log('Creating new TeamDetailModule instance...');
+                const teamId = localStorage.getItem('current_team_detail');
+                if (teamId) {
+                    moduleInstance = new window.TeamDetailModule(teamId);
+                    window.teamDetailModule = moduleInstance;
+                } else {
+                    throw new Error('Team ID not found for team detail module');
+                }
+            } else if (moduleName === 'buyer-detail' && window.BuyerDetailModule) {
+                console.log('Creating new BuyerDetailModule instance...');
+                const buyerId = localStorage.getItem('current_buyer_detail');
+                const teamId = localStorage.getItem('current_team_detail');
+                if (buyerId && teamId) {
+                    moduleInstance = new window.BuyerDetailModule(buyerId, teamId);
+                    window.buyerDetailModule = moduleInstance;
+                } else {
+                    throw new Error('Buyer ID or Team ID not found for buyer detail module');
+                }
             } else {
                 console.warn(`Module class not found for: ${moduleName}`);
             }

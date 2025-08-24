@@ -430,7 +430,7 @@
     padding: 0;
 }
 
-.team-detail-header {
+.team-detail-container .team-detail-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -442,24 +442,24 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.team-stats-summary {
+.team-detail-container .team-stats-summary {
     display: flex;
     gap: 24px;
     flex-wrap: wrap;
 }
 
-.stat-item {
+.team-detail-container .stat-item {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 14px;
 }
 
-.stat-label {
+.team-detail-container .stat-label {
     color: var(--text-secondary);
 }
 
-.stat-value {
+.team-detail-container .stat-value {
     font-weight: 600;
     color: var(--text-primary);
 }

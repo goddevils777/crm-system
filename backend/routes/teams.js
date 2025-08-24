@@ -148,6 +148,8 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
   }
 });
 
+
+
 // Удаление команды (только админ)
 router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
@@ -170,13 +172,32 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
       return res.status(400).json({ error: `Нельзя удалить команду "${team.name}". У неё есть ${cardsCount} активных карт.` });
     }
 
-    // Проверяем есть ли связанные пользователи
-    const usersResult = await db.query('SELECT COUNT(*) as count FROM users WHERE team_id = $1', [teamId]);
-    const usersCount = parseInt(usersResult.rows[0].count);
+    // Проверяем есть ли связанные пользователи  
+    const usersResult = await db.query('SELECT id, username, role FROM users WHERE team_id = $1', [teamId]);
+    const usersCount = usersResult.rows.length;
 
     if (usersCount > 0) {
-      return res.status(400).json({ error: `Нельзя удалить команду "${team.name}". В ней есть ${usersCount} пользователей.` });
+      const usersList = usersResult.rows.map(u => `${u.username} (${u.role})`).join(', ');
+      return res.status(400).json({
+        error: `Нельзя удалить команду "${team.name}". В ней есть ${usersCount} пользователей: ${usersList}. Сначала переместите их в другие команды.`
+      });
     }
+
+    // Проверяем есть ли баеры в команде
+    const buyersResult = await db.query('SELECT COUNT(*) as count FROM team_buyers WHERE team_id = $1', [teamId]);
+    const buyersCount = parseInt(buyersResult.rows[0].count);
+
+    if (buyersCount > 0) {
+      return res.status(400).json({
+        error: `Нельзя удалить команду "${team.name}". В ней есть ${buyersCount} баеров. Сначала удалите всех баеров.`
+      });
+    }
+
+    // Очищаем ссылки на команду у всех deleted карт
+    await db.query('UPDATE cards SET team_id = NULL WHERE team_id = $1 AND status = $2', [teamId, 'deleted']);
+
+    // Удаляем команду
+    await db.query('DELETE FROM teams WHERE id = $1', [teamId]);
 
     // Удаляем команду
     await db.query('DELETE FROM teams WHERE id = $1', [teamId]);
@@ -187,6 +208,8 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
+
+
 
 // Получение баеров команды
 router.get('/:id/buyers', authenticateToken, async (req, res) => {
@@ -319,17 +342,19 @@ router.delete('/buyers/:buyerId', authenticateToken, checkRole(['admin', 'manage
   }
 });
 
+
+
 // Получение статистики команды и баеров по периоду
 router.get('/:teamId/stats', authenticateToken, async (req, res) => {
- try {
-   const teamId = req.params.teamId;
-   const { startDate, endDate } = req.query;
+  try {
+    const teamId = req.params.teamId;
+    const { startDate, endDate } = req.query;
 
-   console.log('Stats request for team:', teamId);
-   console.log('Date filter:', { startDate, endDate });
+    console.log('Stats request for team:', teamId);
+    console.log('Date filter:', { startDate, endDate });
 
-   // Получаем статичные данные баеров (баланс, количество карт)
-   const buyersQuery = `
+    // Получаем статичные данные баеров (баланс, количество карт)
+    const buyersQuery = `
      SELECT 
        tb.id as buyer_id,
        tb.name as username,
@@ -341,132 +366,120 @@ router.get('/:teamId/stats', authenticateToken, async (req, res) => {
      WHERE tb.team_id = $1
      GROUP BY tb.id, tb.name, tb.telegram
    `;
-   
-   const buyersResult = await db.query(buyersQuery, [teamId]);
-   
-   // Для каждого баера считаем ТОЛЬКО spent_amount и topup_amount
-   for (let buyer of buyersResult.rows) {
-     // Сохраняем оригинальные статичные значения
-     const originalBalance = buyer.total_balance;
-     const originalCardsCount = buyer.cards_count;
-     
-     let spentQuery, topupQuery, params;
-     
-     if (startDate && endDate) {
+
+    const buyersResult = await db.query(buyersQuery, [teamId]);
+
+    // Для каждого баера считаем spent_amount и topup_amount
+    for (let buyer of buyersResult.rows) {
+      const originalBalance = buyer.total_balance;
+      const originalCardsCount = buyer.cards_count;
+
+      let spentQuery, topupQuery, params;
+
+      if (startDate && endDate) {
         const dateStart = convertUtcToKyivDate(startDate);
         const dateEnd = convertUtcToKyivDate(endDate);
-       
-       console.log('UTC dates:', { startDate, endDate });
-       console.log('Date range for SQL:', { dateStart, dateEnd });
-       
-       // Проверяем разницу в часах
-      const startUTC = new Date(startDate);
-      const endUTC = new Date(endDate);
-      const hoursDiff = (endUTC - startUTC) / (1000 * 60 * 60);
-       
-       if (hoursDiff < 25) { // Если меньше 25 часов - это один день
-         params = [buyer.buyer_id, dateEnd];
-         
-spentQuery = `
-  SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent
-  FROM card_transactions ct
-  JOIN cards c ON ct.card_id = c.id
-  WHERE c.buyer_id = $1 
-    AND c.status != 'deleted'
-    AND ct.transaction_type = 'expense'
-    AND ct.transaction_date = $2::date
-    AND ct.is_cancelled = false
-    AND ct.description NOT LIKE '%омиссия%'
-`;
-         
-topupQuery = `
-  SELECT COALESCE(SUM(ct.amount), 0) as topup
-  FROM card_transactions ct
-  JOIN cards c ON ct.card_id = c.id
-  WHERE c.buyer_id = $1 
-    AND c.status != 'deleted'
-    AND ct.transaction_type = 'topup'
-    AND ct.transaction_date = $2::date
-    AND ct.is_cancelled = false
-`;
-         
-         console.log('Single day query for buyer:', buyer.buyer_id, 'date:', dateEnd);
-       } else {
-         // Диапазон дат
-         params = [buyer.buyer_id, dateStart, dateEnd];
-                  
-spentQuery = `
-  SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent
-  FROM card_transactions ct
-  JOIN cards c ON ct.card_id = c.id
-  WHERE c.buyer_id = $1 
-    AND c.status != 'deleted'
-    AND ct.transaction_type = 'expense'
-    AND ct.transaction_date = $2::date
-    AND ct.is_cancelled = false
-    AND ct.description NOT LIKE '%омиссия%'
-`;
-         
-topupQuery = `
-  SELECT COALESCE(SUM(ct.amount), 0) as topup
-  FROM card_transactions ct
-  JOIN cards c ON ct.card_id = c.id
-  WHERE c.buyer_id = $1 
-    AND c.status != 'deleted'
-    AND ct.transaction_type = 'topup'
-    AND ct.transaction_date = $2::date
-    AND ct.is_cancelled = false
-`;
-         
-         console.log('Date range query for buyer:', buyer.buyer_id, 'with params:', params);
-       }
-     } else {
-       // Без фильтра - общие суммы
-       params = [buyer.buyer_id];
-       
-       spentQuery = `
+
+        console.log('Date range for SQL:', { dateStart, dateEnd });
+
+        // Проверяем разницу в часах
+        const startUTC = new Date(startDate);
+        const endUTC = new Date(endDate);
+        const hoursDiff = (endUTC - startUTC) / (1000 * 60 * 60);
+
+        if (hoursDiff < 25) { // Если меньше 25 часов - это один день
+          params = [buyer.buyer_id, dateEnd];
+
+          spentQuery = `
+            SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent
+            FROM card_transactions ct
+            JOIN cards c ON ct.card_id = c.id
+            WHERE c.buyer_id = $1 
+              AND c.status != 'deleted'
+              AND ct.transaction_type = 'expense'
+              AND ct.transaction_date = $2::date
+              AND ct.is_cancelled = false
+              AND ct.description NOT LIKE '%омиссия%'
+          `;
+
+          topupQuery = `
+            SELECT COALESCE(SUM(ct.amount), 0) as topup
+            FROM card_transactions ct
+            JOIN cards c ON ct.card_id = c.id
+            WHERE c.buyer_id = $1 
+              AND c.status != 'deleted'
+              AND ct.transaction_type = 'topup'
+              AND ct.transaction_date = $2::date
+              AND ct.is_cancelled = false
+          `;
+
+          console.log('Single day query for buyer:', buyer.buyer_id, 'date:', dateEnd);
+        } else {
+          // ИСПРАВЛЕНИЕ: используем BETWEEN для диапазона дат
+          params = [buyer.buyer_id, dateStart, dateEnd];
+
+          spentQuery = `
+            SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent
+            FROM card_transactions ct
+            JOIN cards c ON ct.card_id = c.id
+            WHERE c.buyer_id = $1 
+              AND c.status != 'deleted'
+              AND ct.transaction_type = 'expense'
+              AND ct.transaction_date BETWEEN $2::date AND $3::date
+              AND ct.is_cancelled = false
+              AND ct.description NOT LIKE '%омиссия%'
+          `;
+
+          topupQuery = `
+            SELECT COALESCE(SUM(ct.amount), 0) as topup
+            FROM card_transactions ct
+            JOIN cards c ON ct.card_id = c.id
+            WHERE c.buyer_id = $1 
+              AND c.status != 'deleted'
+              AND ct.transaction_type = 'topup'
+              AND ct.transaction_date BETWEEN $2::date AND $3::date
+              AND ct.is_cancelled = false
+          `;
+
+          console.log('Date range query for buyer:', buyer.buyer_id, 'with params:', params);
+        }
+      } else {
+        // Без фильтра - общие суммы
+        params = [buyer.buyer_id];
+
+        spentQuery = `
          SELECT COALESCE(SUM(cards.total_spent_calculated), 0) as spent
          FROM cards WHERE cards.buyer_id = $1 AND cards.status != 'deleted'
        `;
-       
-       topupQuery = `
+
+        topupQuery = `
          SELECT COALESCE(SUM(cards.total_top_up), 0) as topup
          FROM cards WHERE cards.buyer_id = $1 AND cards.status != 'deleted'
        `;
-     }
+      }
 
-     // ОТЛАДКА: смотрим какие транзакции попадают в выборку  
-console.log('Executing spent query:', spentQuery);
-console.log('With params:', params);
+      const spentResult = await db.query(spentQuery, params);
+      const topupResult = await db.query(topupQuery, params);
 
-const debugQuery = spentQuery.replace('SELECT COALESCE(SUM(ABS(ct.amount)), 0) as spent', 
-  'SELECT ct.id, ct.amount, ct.description, ct.transaction_date, ct.transaction_type, c.name as card_name');
-const debugResult = await db.query(debugQuery, params);
-console.log('ОТЛАДКА - транзакции за период:', debugResult.rows);
-     
-     const spentResult = await db.query(spentQuery, params);
-     const topupResult = await db.query(topupQuery, params);
-     
-     // Устанавливаем только spent/topup, сохраняя оригинальные статичные данные
-     buyer.spent_amount = spentResult.rows[0].spent;
-     buyer.topup_amount = topupResult.rows[0].topup;
-     buyer.total_balance = originalBalance;
-     buyer.cards_count = originalCardsCount;
-   }
-   
-   const buyers = buyersResult.rows.map(buyer => ({
-     ...buyer,
-     filtered_spent: parseFloat(buyer.spent_amount || 0),
-     filtered_topups: parseFloat(buyer.topup_amount || 0)
-   }));
+      // Устанавливаем spent/topup, сохраняя оригинальные статичные данные
+      buyer.spent_amount = spentResult.rows[0].spent;
+      buyer.topup_amount = topupResult.rows[0].topup;
+      buyer.total_balance = originalBalance;
+      buyer.cards_count = originalCardsCount;
+    }
 
-   console.log('Final result:', buyers);
-   res.json({ buyers });
+    const buyers = buyersResult.rows.map(buyer => ({
+      ...buyer,
+      filtered_spent: parseFloat(buyer.spent_amount || 0),
+      filtered_topups: parseFloat(buyer.topup_amount || 0)
+    }));
 
- } catch (error) {
-   console.error('Ошибка получения статистики:', error);
-   res.status(500).json({ error: 'Внутренняя ошибка сервера' });
- }
+    res.json({ buyers });
+
+  } catch (error) {
+    console.error('Ошибка получения статистики:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
 });
 
 module.exports = router;

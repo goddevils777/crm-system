@@ -551,6 +551,11 @@ if (typeof window.CardsModule === 'undefined') {
       }
     }
 
+    // Псевдоним для shortcuts.js
+    showAddModal() {
+      this.showModal();
+    }
+
     generateUniqueCardId() {
       // Находим максимальный номер среди существующих карт
       let maxNumber = 0;

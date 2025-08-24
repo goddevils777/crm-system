@@ -37,44 +37,48 @@ class TeamDetailModule {
         // ДОБАВИЛИ: Обработчики фильтра дат
         this.setupDateFilter();
     }
+setupDateFilter() {
+    const periodSelect = document.getElementById('date-period-select');
+    const dateFrom = document.getElementById('date-from');
+    const dateTo = document.getElementById('date-to');
 
-    setupDateFilter() {
-        const periodSelect = document.getElementById('date-period-select');
-        const dateFrom = document.getElementById('date-from');
-        const dateTo = document.getElementById('date-to');
+    // Обработчик выпадающего списка
+    periodSelect.addEventListener('change', (e) => {
+        const period = e.target.value;
 
-        // Обработчик выпадающего списка
-        periodSelect.addEventListener('change', (e) => {
-            const period = e.target.value;
-
-            if (period && period !== 'custom') {
-                // Очищаем поля дат при выборе периода
-                dateFrom.value = '';
-                dateTo.value = '';
-                this.applyDateFilter(period);
-            } else if (!period) {
-                // Очищаем все при выборе "Все время"
-                dateFrom.value = '';
-                dateTo.value = '';
-                this.clearDateFilter();
+        if (period && period !== 'custom') {
+            // Заполняем поля датами для выбранного периода
+            const { startDate, endDate } = this.getPeriodDates(period);
+            
+            if (startDate && endDate) {
+                dateFrom.value = startDate.toISOString().split('T')[0];
+                dateTo.value = endDate.toISOString().split('T')[0];
             }
-        });
+            
+            this.applyDateFilter(period);
+        } else if (!period) {
+            // Очищаем все при выборе "Все время"
+            dateFrom.value = '';
+            dateTo.value = '';
+            this.clearDateFilter();
+        }
+    });
 
-        // Автоматическое применение при изменении дат
-        dateFrom.addEventListener('change', () => {
-            if (dateFrom.value) {
-                periodSelect.value = 'custom'; // Переключаем на "Выбрать даты"
-                this.applyCustomDateFilter();
-            }
-        });
+    // Автоматическое применение при изменении дат
+    dateFrom.addEventListener('change', () => {
+        if (dateFrom.value) {
+            periodSelect.value = 'custom';
+            this.applyCustomDateFilter();
+        }
+    });
 
-        dateTo.addEventListener('change', () => {
-            if (dateTo.value) {
-                periodSelect.value = 'custom'; // Переключаем на "Выбрать даты"
-                this.applyCustomDateFilter();
-            }
-        });
-    }
+    dateTo.addEventListener('change', () => {
+        if (dateTo.value) {
+            periodSelect.value = 'custom';
+            this.applyCustomDateFilter();
+        }
+    });
+}
 
     applyDateFilter(period) {
         const { startDate, endDate } = this.getPeriodDates(period);
@@ -124,38 +128,45 @@ class TeamDetailModule {
         }
     }
 
-    async filterAndUpdateData() {
-        if (!this.currentDateFilter) {
-            // Без фильтра используем оригинальные данные
-            this.filteredBuyers = [...this.buyers];
-        } else {
-            // С фильтром запрашиваем статистику с сервера  
-            try {
-                const startDate = this.currentDateFilter.startDate.toISOString();
-                const endDate = this.currentDateFilter.endDate.toISOString();
+async filterAndUpdateData() {
+    if (!this.currentDateFilter) {
+        this.filteredBuyers = [...this.buyers];
+    } else {
+        try {
+            const startDate = this.currentDateFilter.startDate.toISOString();
+            const endDate = this.currentDateFilter.endDate.toISOString();
 
-                const response = await api.request(`/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
+            console.log('API request:', `/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
+            const response = await api.request(`/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
+            
+            console.log('API response for period stats:', response);
+            console.log('First buyer from API:', response.buyers[0]);
 
-                // Объединяем оригинальные статичные данные с новой статистикой
-                this.filteredBuyers = this.buyers.map(originalBuyer => {
-                    const filteredBuyer = response.buyers.find(b => b.buyer_id === originalBuyer.id);
-
-                    return {
-                        ...originalBuyer,  // Берем ВСЕ оригинальные данные
-                        filtered_spent: filteredBuyer ? filteredBuyer.filtered_spent : 0,
-                        filtered_topups: filteredBuyer ? filteredBuyer.filtered_topups : 0
-                    };
+            this.filteredBuyers = this.buyers.map(originalBuyer => {
+                const filteredBuyer = response.buyers.find(b => b.buyer_id === originalBuyer.id);
+                console.log(`Buyer ${originalBuyer.username}:`, {
+                    original_spent: originalBuyer.total_spent,
+                    filtered_spent: filteredBuyer?.filtered_spent,
+                    original_topup: originalBuyer.total_topup,
+                    filtered_topups: filteredBuyer?.filtered_topups
                 });
 
-            } catch (error) {
-                console.error('Ошибка загрузки статистики:', error);
-                this.filteredBuyers = [...this.buyers];
-            }
-        }
+                return {
+                    ...originalBuyer,
+                    filtered_spent: filteredBuyer?.filtered_spent || 0,
+                    filtered_topups: filteredBuyer?.filtered_topups || 0
+                };
+            });
 
-        this.updateTeamStats();
-        this.renderBuyers();
+        } catch (error) {
+            console.error('Ошибка загрузки статистики:', error);
+            this.filteredBuyers = [...this.buyers];
+        }
     }
+
+    this.updateTeamStats();
+    this.renderBuyers();
+}
 
 
     updateTeamStats() {
@@ -171,22 +182,16 @@ class TeamDetailModule {
 
         this.filteredBuyers.forEach((buyer, index) => {
             console.log(`Баер ${index + 1}:`, buyer.username);
-            console.log('- total_spent:', buyer.total_spent);
-            console.log('- total_topup:', buyer.total_topup);
-            console.log('- total_balance:', buyer.total_balance);
             console.log('- filtered_spent:', buyer.filtered_spent);
             console.log('- filtered_topups:', buyer.filtered_topups);
 
-            const spentValue = isFiltered ?
-                (buyer.filtered_spent || 0) :
+            // ИСПРАВЛЕНИЕ: Правильная логика для отфильтрованных данных
+            const spentValue = isFiltered && buyer.filtered_spent !== undefined ?
+                buyer.filtered_spent :
                 parseFloat(buyer.total_spent || 0);
 
-            console.log('- isFiltered:', isFiltered);
-            console.log('- buyer.total_spent || 0:', buyer.total_spent || 0);
-            console.log('- parseFloat result:', parseFloat(buyer.total_spent || 0));
-
-            const topupValue = isFiltered ?
-                (buyer.filtered_topups || 0) :
+            const topupValue = isFiltered && buyer.filtered_topups !== undefined ?
+                buyer.filtered_topups :
                 parseFloat(buyer.total_topup || 0);
 
             const balanceValue = parseFloat(buyer.total_balance || 0);

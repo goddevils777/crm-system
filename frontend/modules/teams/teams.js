@@ -7,9 +7,25 @@ class TeamsModule {
     }
 
     async init() {
+        console.log('TeamsModule init started');
         this.setupEventListeners();
-        await this.loadTeams();
-        this.renderTeams();
+
+        // ДОБАВЬ: Проверяем нужно ли открыть детальную страницу команды
+        const teamDetailId = localStorage.getItem('current_team_detail');
+        if (teamDetailId) {
+            console.log('Found team detail ID in localStorage:', teamDetailId);
+            this.loadTeamDetail(teamDetailId);
+            return; // Выходим из init, не загружая список команд
+        }
+
+        try {
+            await this.loadTeams();
+            this.renderTeams();
+            console.log('TeamsModule init completed');
+        } catch (error) {
+            console.error('Error in TeamsModule init:', error);
+            notifications.error('Ошибка загрузки', 'Не удалось загрузить модуль команд');
+        }
     }
 
     setupEventListeners() {
@@ -79,6 +95,10 @@ class TeamsModule {
         delete form.dataset.editTeamId;
         title.textContent = 'Добавить команду';
         submitBtn.textContent = 'Создать';
+    }
+
+    showAddModal() {
+        this.showModal();
     }
 
     async handleTeamSubmit(e) {
@@ -408,23 +428,28 @@ class TeamsModule {
 
     async deleteTeam(teamId) {
         const team = this.teams.find(t => t.id === teamId);
-        if (!team) {
-            notifications.error('Ошибка', 'Команда не найдена');
-            return;
-        }
+        if (!team) return;
 
-        // Временно используем стандартный confirm пока не исправим showConfirm
-        const confirmed = await confirmDelete(`Вы уверены, что хотите удалить команду "${team.name}"?`);
+        const confirmed = await window.confirmDelete(
+            `Вы уверены, что хотите удалить команду "${team.name}"?`
+        );
         if (!confirmed) return;
 
         try {
             await api.request(`/teams/${teamId}`, { method: 'DELETE' });
+            notifications.success('Успех', 'Команда удалена');
             await this.loadTeams();
             this.renderTeams();
-            notifications.success('Успех', `Команда "${team.name}" удалена`);
         } catch (error) {
             console.error('Ошибка удаления команды:', error);
-            notifications.error('Ошибка удаления', error.message || 'Не удалось удалить команду');
+
+            // Показываем более понятное сообщение пользователю
+            if (error.message.includes('пользователей') || error.message.includes('баеров')) {
+                notifications.error('Невозможно удалить',
+                    'Сначала удалите всех баеров из команды, затем удалите команду');
+            } else {
+                notifications.error('Ошибка', error.message || 'Не удалось удалить команду');
+            }
         }
     }
 }
