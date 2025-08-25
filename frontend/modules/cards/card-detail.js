@@ -47,6 +47,8 @@ if (typeof CardDetailModule === 'undefined') {
 
             // Заголовок и статус
             document.getElementById('card-title').textContent = this.card.name;
+            // ДОБАВЬ ЭТУ СТРОКУ:
+            document.title = `${this.card.name} - Карты - CRM System`;
             const statusBadge = document.getElementById('card-status');
             const statusText = document.getElementById('status-text');
             if (statusText) {

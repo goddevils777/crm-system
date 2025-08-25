@@ -59,18 +59,6 @@ class KeyboardShortcuts {
                     this.showShortcutFeedback('Добавление команды');
                 }
                 break;
-            case 'team-detail':
-                if (window.teamDetailModule && typeof window.teamDetailModule.showAddBuyerModal === 'function') {
-                    window.teamDetailModule.showAddBuyerModal();
-                    this.showShortcutFeedback('Добавление баера');
-                }
-                break;
-            case 'buyer-detail':
-                if (window.buyerDetailModule && typeof window.buyerDetailModule.openManageCardsModal === 'function') {
-                    window.buyerDetailModule.openManageCardsModal();
-                    this.showShortcutFeedback('Управление картами');
-                }
-                break;
             default:
                 console.log('Пробел нажат, но нет доступных действий для модуля:', activeModule);
         }
@@ -91,18 +79,6 @@ class KeyboardShortcuts {
                 if (window.teamsModule && typeof window.teamsModule.showAddModal === 'function') {
                     window.teamsModule.showAddModal();
                     this.showShortcutFeedback('Новая команда (Ctrl+N)');
-                }
-                break;
-            case 'team-detail':
-                if (window.teamDetailModule && typeof window.teamDetailModule.showAddBuyerModal === 'function') {
-                    window.teamDetailModule.showAddBuyerModal();
-                    this.showShortcutFeedback('Новый баер (Ctrl+N)');
-                }
-                break;
-            case 'buyer-detail':
-                if (window.buyerDetailModule && typeof window.buyerDetailModule.openManageCardsModal === 'function') {
-                    window.buyerDetailModule.openManageCardsModal();
-                    this.showShortcutFeedback('Управление картами (Ctrl+N)');
                 }
                 break;
         }

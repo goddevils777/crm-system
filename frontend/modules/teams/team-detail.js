@@ -527,7 +527,12 @@ async filterAndUpdateData() {
                    ${isAssignedToBuyer ? 'checked' : ''} 
                    ${isAssignedToOther ? 'disabled' : ''}>
             <div class="card-info">
-                <div class="card-name">${card.name}</div>
+                <div class="card-name">
+                    <span onclick="event.stopPropagation(); window.open('#card/${card.id}', '_blank');" 
+                        style="color: var(--primary-color); cursor: pointer; text-decoration: underline;">
+                        ${card.name}
+                    </span>
+                </div>
                 <div class="card-details">
                     ${card.currency} • Баланс: ${card.balance || 0} ${card.currency} • 
                     Скручено: ${card.spent_amount || 0} ${card.currency} • 

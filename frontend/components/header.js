@@ -31,43 +31,121 @@ class HeaderComponent {
         this.updateUserInfo();
     }
 
-    setupEvents() {
-        const burgerBtn = document.getElementById('burger-btn');
-        const logoutBtn = document.getElementById('logout-btn');
+  setupEvents() {
+    const burgerBtn = document.getElementById('burger-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const sidebar = document.querySelector('.sidebar');
+    const mainContainer = document.querySelector('.main .container');
 
-        burgerBtn?.addEventListener('click', () => {
-            const sidebar = document.querySelector('.sidebar');
-            const mainContainer = document.querySelector('.main .container');
-            const overlay = document.querySelector('.sidebar-overlay');
+    // ДОБАВИЛИ: Состояние сайдбара с сохранением в localStorage
+    let isManuallyOpened = localStorage.getItem('sidebar_manually_opened') === 'true';
 
-            // Создаем overlay если его нет
-            if (!overlay) {
-                const newOverlay = document.createElement('div');
-                newOverlay.className = 'sidebar-overlay';
-                newOverlay.addEventListener('click', () => {
-                    sidebar?.classList.remove('show');
-                    newOverlay.classList.remove('show');
-                });
-                document.body.appendChild(newOverlay);
-            }
+    // Восстанавливаем состояние при загрузке
+    if (window.innerWidth > 768) {
+        if (isManuallyOpened) {
+            sidebar?.classList.remove('hide');
+            mainContainer?.classList.remove('sidebar-hidden');
+        } else {
+            sidebar?.classList.add('hide');
+            mainContainer?.classList.add('sidebar-hidden');
+        }
+    }
 
-            // На мобильных - показываем/скрываем сайдбар
-            if (window.innerWidth <= 768) {
-                sidebar?.classList.toggle('show');
-                document.querySelector('.sidebar-overlay')?.classList.toggle('show');
-            } else {
-                // На десктопе - скрываем/показываем как раньше
-                sidebar?.classList.toggle('hide');
-                mainContainer?.classList.toggle('sidebar-hidden');
-            }
+    // Создаем overlay для мобильных
+    let overlay = document.querySelector('.sidebar-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'sidebar-overlay';
+        overlay.addEventListener('click', () => {
+            sidebar?.classList.remove('show');
+            overlay.classList.remove('show');
         });
+        document.body.appendChild(overlay);
+    }
 
-        logoutBtn?.addEventListener('click', () => {
-            localStorage.removeItem('authToken');
-            localStorage.removeItem('userData');
-            window.location.href = 'auth/login.html';
+    if (burgerBtn) {
+        let hoverTimeout;
+
+        const showSidebar = () => {
+            if (window.innerWidth > 768 && !isManuallyOpened) {
+                sidebar?.classList.remove('hide');
+                mainContainer?.classList.remove('sidebar-hidden');
+            }
+        };
+
+        const hideSidebar = () => {
+            if (hoverTimeout) clearTimeout(hoverTimeout);
+            hoverTimeout = setTimeout(() => {
+                if (window.innerWidth > 768 && !isManuallyOpened) {
+                    sidebar?.classList.add('hide');
+                    mainContainer?.classList.add('sidebar-hidden');
+                }
+            }, 400);
+        };
+
+        const cancelHide = () => {
+            if (hoverTimeout) clearTimeout(hoverTimeout);
+        };
+
+        // Hover на бургере
+        burgerBtn.addEventListener('mouseenter', showSidebar);
+        burgerBtn.addEventListener('mouseleave', hideSidebar);
+
+        // Hover на сайдбаре (вся область sidebar)
+        const sidebarContainer = document.getElementById('sidebar-container');
+        sidebarContainer?.addEventListener('mouseenter', cancelHide);
+        sidebarContainer?.addEventListener('mouseleave', hideSidebar);
+
+        // Дополнительно на самом sidebar элементе
+        sidebar?.addEventListener('mouseenter', cancelHide);
+        sidebar?.addEventListener('mouseleave', hideSidebar);
+
+        // Клик на бургер - для мобильных и переключения постоянного состояния на десктопе
+        burgerBtn.addEventListener('click', () => {
+            if (window.innerWidth <= 768) {
+                // На мобильных - показать/скрыть сайдбар
+                const sidebarContainer = document.getElementById('sidebar-container');
+                sidebar?.classList.toggle('show');
+                sidebarContainer?.classList.toggle('show');
+                overlay.classList.toggle('show');
+            } else {
+                // На десктопе - переключить постоянное состояние
+                isManuallyOpened = !isManuallyOpened;
+                localStorage.setItem('sidebar_manually_opened', isManuallyOpened.toString());
+                
+                if (isManuallyOpened) {
+                    sidebar?.classList.remove('hide');
+                    mainContainer?.classList.remove('sidebar-hidden');
+                } else {
+                    sidebar?.classList.add('hide');
+                    mainContainer?.classList.add('sidebar-hidden');
+                }
+            }
         });
     }
+
+    // НОВОЕ: Автозакрытие на мобильных при выборе модуля
+    sidebar?.addEventListener('click', (e) => {
+        const menuItem = e.target.closest('[data-module]');
+        if (menuItem && window.innerWidth <= 768) {
+            // Закрываем сайдбар на мобильных после выбора модуля
+            setTimeout(() => {
+                const sidebarContainer = document.getElementById('sidebar-container');
+                sidebar.classList.remove('show');
+                sidebarContainer?.classList.remove('show');
+                overlay.classList.remove('show');
+            }, 150);
+        }
+    });
+
+    logoutBtn?.addEventListener('click', () => {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userData');
+        window.location.href = 'auth/login.html';
+    });
+}
+
+    
     updateUserInfo() {
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         const loginUsername = userData.loginUsername || userData.username || 'Пользователь';

@@ -97,10 +97,6 @@ class TeamsModule {
         submitBtn.textContent = 'Создать';
     }
 
-    showAddModal() {
-        this.showModal();
-    }
-
     async handleTeamSubmit(e) {
         e.preventDefault();
 

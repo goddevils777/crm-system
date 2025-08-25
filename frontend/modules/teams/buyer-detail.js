@@ -180,7 +180,12 @@ class BuyerDetailModule {
         grid.innerHTML = this.buyerCards.map(card => `
         <div class="buyer-card-item assigned">
             <div class="card-header">
-                <div class="card-name">${this.escapeHtml(card.name)}</div>
+                <div class="card-name">
+                    <span onclick="window.open('#card/${card.id}', '_blank');" 
+                        style="color: var(--primary-color); cursor: pointer; text-decoration: underline;">
+                        ${this.escapeHtml(card.name)}
+                    </span>
+                </div>
                 <button class="card-remove-btn" onclick="window.buyerDetailModule.removeCardFromBuyer(${card.id})">
                     <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
                         <path d="M563.8 512l262.5-312.9c4.4-5.2.7-13.1-6.1-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.7L511.6 449.8 295.1 191.7c-3.1-3.6-7.6-5.7-12.3-5.7H203c-6.8 0-10.5 7.9-6.1 13.1L459.4 512 196.9 824.9A7.95 7.95 0 00203 838h79.8c4.7 0 9.2-2.1 12.3-5.7l216.5-258.1 216.5 258.1c3.1 3.6 7.6 5.7 12.3 5.7h79.8c6.8 0 10.5-7.9 6.1-13.1L563.8 512z"/>
@@ -291,8 +296,14 @@ class BuyerDetailModule {
                 break;
             case '':
                 // Все время - сбрасываем фильтр
+                startDate = '';
+                endDate = '';
                 break;
         }
+
+        // ДОБАВЬ ЭТИ СТРОКИ:
+        document.getElementById('date-from').value = startDate || '';
+        document.getElementById('date-to').value = endDate || '';
 
         this.loadStats(startDate, endDate);
     }
@@ -407,64 +418,64 @@ class BuyerDetailModule {
             }
         });
     }
-async saveCardAssignments() {
-    try {
-        const checkboxes = document.querySelectorAll('#all-cards-list input[name="selected-cards"]');
-        console.log('Total checkboxes found:', checkboxes.length);
-        
-        const selectedCardIds = Array.from(checkboxes)
-            .filter(cb => cb.checked)
-            .map(cb => parseInt(cb.value));
-        
-        console.log('Selected card IDs:', selectedCardIds);
-        
-        const currentAssignedIds = this.buyerCards.map(card => card.id);
-        console.log('Currently assigned IDs:', currentAssignedIds);
-        
-        // Определяем какие карты нужно назначить, а какие снять
-        const toAssign = selectedCardIds.filter(id => !currentAssignedIds.includes(id));
-        const toUnassign = currentAssignedIds.filter(id => !selectedCardIds.includes(id));
-        
-        console.log('Cards to assign:', toAssign);
-        console.log('Cards to unassign:', toUnassign);
-        
-        // Выполняем назначения
-        for (const cardId of toAssign) {
-            console.log('Assigning card:', cardId);
-            await api.request(`/cards/${cardId}/assign`, {
-                method: 'PUT',
-                body: JSON.stringify({ buyer_id: this.buyerId })
-            });
+    async saveCardAssignments() {
+        try {
+            const checkboxes = document.querySelectorAll('#all-cards-list input[name="selected-cards"]');
+            console.log('Total checkboxes found:', checkboxes.length);
+
+            const selectedCardIds = Array.from(checkboxes)
+                .filter(cb => cb.checked)
+                .map(cb => parseInt(cb.value));
+
+            console.log('Selected card IDs:', selectedCardIds);
+
+            const currentAssignedIds = this.buyerCards.map(card => card.id);
+            console.log('Currently assigned IDs:', currentAssignedIds);
+
+            // Определяем какие карты нужно назначить, а какие снять
+            const toAssign = selectedCardIds.filter(id => !currentAssignedIds.includes(id));
+            const toUnassign = currentAssignedIds.filter(id => !selectedCardIds.includes(id));
+
+            console.log('Cards to assign:', toAssign);
+            console.log('Cards to unassign:', toUnassign);
+
+            // Выполняем назначения
+            for (const cardId of toAssign) {
+                console.log('Assigning card:', cardId);
+                await api.request(`/cards/${cardId}/assign`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ buyer_id: this.buyerId })
+                });
+            }
+
+            // Выполняем снятие назначений
+            for (const cardId of toUnassign) {
+                console.log('Unassigning card:', cardId);
+                await api.request(`/cards/${cardId}/assign`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ buyer_id: null })
+                });
+            }
+
+            // Обновляем данные
+            await this.loadCards();
+            await this.loadStats();
+            this.renderCards();
+            this.updateStatsDisplay();
+
+            // Обновляем содержимое модального окна с новыми данными
+            this.renderAllCardsInModal();
+
+            // Закрываем модальное окно
+            document.getElementById('manage-cards-modal').classList.remove('show');
+
+            notifications.success('Успех', 'Назначения карт обновлены');
+
+        } catch (error) {
+            console.error('Ошибка сохранения назначений:', error);
+            notifications.error('Ошибка', 'Не удалось сохранить изменения');
         }
-        
-        // Выполняем снятие назначений
-        for (const cardId of toUnassign) {
-            console.log('Unassigning card:', cardId);
-            await api.request(`/cards/${cardId}/assign`, {
-                method: 'PUT',
-                body: JSON.stringify({ buyer_id: null })
-            });
-        }
-        
-        // Обновляем данные
-        await this.loadCards();
-        await this.loadStats();
-        this.renderCards();
-        this.updateStatsDisplay();
-        
-        // Обновляем содержимое модального окна с новыми данными
-        this.renderAllCardsInModal();
-        
-        // Закрываем модальное окно
-        document.getElementById('manage-cards-modal').classList.remove('show');
-        
-        notifications.success('Успех', 'Назначения карт обновлены');
-        
-    } catch (error) {
-        console.error('Ошибка сохранения назначений:', error);
-        notifications.error('Ошибка', 'Не удалось сохранить изменения');
     }
-}
 
     goBackToTeam() {
         // Очищаем детали баера
