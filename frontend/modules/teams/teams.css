@@ -296,11 +296,7 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 24px;
-}
+
 
 .header-left h2 {
     margin: 0;
@@ -470,4 +466,55 @@
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(2, 1fr);
     gap: 8px;
+}
+
+@media (max-width: 768px) {
+    .module-header {
+        flex-direction: column;
+        gap: 12px;
+        padding: 16px;
+    }
+    
+
+    .header-left h2 {
+        font-size: 20px;
+        text-align: center;
+    }
+    
+    .view-toggle {
+        justify-content: center;
+    }
+    
+    .view-btn {
+        padding: 8px 12px;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    #add-team-btn {
+        width: 100%;
+        padding: 12px 16px;
+        font-size: 14px;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .module-header {
+        padding: 12px;
+    }
+    
+    .header-left h2 {
+        font-size: 18px;
+    }
+    
+    .view-toggle {
+        gap: 4px;
+    }
+    
+    .view-btn {
+        padding: 6px 10px;
+    }
 }

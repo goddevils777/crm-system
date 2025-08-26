@@ -126,8 +126,22 @@ if (typeof CardDetailModule === 'undefined') {
                 header.appendChild(editBtn);
             }
 
-            // Заполняем содержимое
+            // Заполняем содержимое с новыми полями
             basicInfo.innerHTML = `
+        ${this.card.card_number ? `<div class="info-item"><strong>Номер карты:</strong> ${this.card.card_number}</div>` : ''}
+        ${this.card.expiry_date ? `<div class="info-item"><strong>Дата завершения:</strong> ${this.card.expiry_date}</div>` : ''}
+        ${this.card.cvv_code ? `
+        <div class="info-item">
+            <strong>CVV:</strong> 
+            <span class="cvv-container">
+                <span id="cvv-hidden" class="cvv-hidden">***</span>
+                <span id="cvv-visible" class="cvv-visible" style="display: none;">${this.card.cvv_code}</span>
+                <button class="cvv-toggle-btn" onclick="window.cardDetailModule?.toggleCVV()" title="Показать CVV">
+                    👁️
+                </button>
+            </span>
+        </div>` : ''}
+        ${this.card.iban ? `<div class="info-item"><strong>IBAN:</strong> ${this.card.iban}</div>` : ''}
         <div class="info-item"><strong>ПІБ:</strong> ${this.card.full_name || '—'}</div>
         <div class="info-item"><strong>Телефон:</strong> ${this.card.phone || '—'}</div>
         <div class="info-item"><strong>Email:</strong> ${this.card.email || '—'}</div>
@@ -140,9 +154,58 @@ if (typeof CardDetailModule === 'undefined') {
     `;
         }
 
+        // Добавить новый метод для переключения CVV
+        toggleCVV() {
+            const cvvHidden = document.getElementById('cvv-hidden');
+            const cvvVisible = document.getElementById('cvv-visible');
+            const toggleBtn = document.querySelector('.cvv-toggle-btn');
+
+            if (cvvHidden && cvvVisible && toggleBtn) {
+                // Показываем CVV
+                cvvHidden.style.display = 'none';
+                cvvVisible.style.display = 'inline';
+                toggleBtn.innerHTML = '🙈';
+                toggleBtn.disabled = true;
+
+                // Скрываем через 15 секунд
+                setTimeout(() => {
+                    if (cvvHidden && cvvVisible && toggleBtn) {
+                        cvvHidden.style.display = 'inline';
+                        cvvVisible.style.display = 'none';
+                        toggleBtn.innerHTML = '👁️';
+                        toggleBtn.disabled = false;
+                    }
+                }, 15000);
+            }
+        }
+
+        calculateTimeSinceTransaction(lastTransactionDate) {
+            if (!lastTransactionDate) return { days: 0, hours: 0, text: 'Нет транзакций' };
+
+            const now = new Date();
+            const lastDate = new Date(lastTransactionDate);
+            const diffTime = now - lastDate;
+
+            const totalHours = Math.floor(diffTime / (1000 * 60 * 60));
+            const days = Math.floor(totalHours / 24);
+            const hours = totalHours % 24;
+
+            let text = '';
+            if (days > 0) {
+                text = `${days} дн. ${hours} ч.`;
+            } else if (hours > 0) {
+                text = `${hours} ч.`;
+            } else {
+                const minutes = Math.floor(diffTime / (1000 * 60));
+                text = minutes > 0 ? `${minutes} мин.` : 'Менее минуты';
+            }
+
+            return { days, hours, text };
+        }
+
         fillFinanceSummary() {
             const financeSummary = document.getElementById('finance-summary');
-            const daysSince = this.calculateDaysSinceTransaction(this.card.last_transaction_date);
+            const timeInfo = this.calculateTimeSinceTransaction(this.card.last_transaction_date);
 
             // Сохраняем оригинальные значения
             this.originalStats = {
@@ -196,10 +259,10 @@ if (typeof CardDetailModule === 'undefined') {
             </button>
         </div>
 
-        ${daysSince >= 3 ? `
+        ${timeInfo.days >= 2 ? `
         <div class="finance-item warning" style="grid-column: 1 / -1; margin-top: 8px;">
             <div class="finance-label">⚠️ Без операций</div>
-            <div class="finance-value">${daysSince} дней</div>
+            <div class="finance-value">${timeInfo.text}</div>
         </div>
         ` : ''}
     `;
@@ -440,16 +503,6 @@ if (typeof CardDetailModule === 'undefined') {
             }
         }
 
-        calculateDaysSinceTransaction(lastTransactionDate) {
-            if (!lastTransactionDate) return 0;
-
-            const today = new Date();
-            const lastDate = new Date(lastTransactionDate);
-            const diffTime = Math.abs(today - lastDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-            return diffDays;
-        }
 
         getStatusText(status) {
             const statusMap = {
@@ -736,36 +789,49 @@ if (typeof CardDetailModule === 'undefined') {
         }
 
 
-        async applyPeriodFilter(period) {
-            const today = new Date();
+        applyPeriodFilter(period) {
+            // Используем ту же логику, что и на сервере для получения киевской даты
+            const getKyivDateString = (offsetDays = 0) => {
+                const now = new Date();
+                // Создаем дату в киевском времени (UTC+3)
+                const kyivTime = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Kiev" }));
+                kyivTime.setDate(kyivTime.getDate() + offsetDays);
+
+                // Форматируем в YYYY-MM-DD
+                const year = kyivTime.getFullYear();
+                const month = String(kyivTime.getMonth() + 1).padStart(2, '0');
+                const day = String(kyivTime.getDate()).padStart(2, '0');
+
+                return `${year}-${month}-${day}`;
+            };
+
             let fromDate, toDate;
 
             switch (period) {
                 case 'today':
-                    fromDate = toDate = today.toISOString().split('T')[0];
+                    fromDate = getKyivDateString(0);
+                    toDate = fromDate;
+                    console.log('Applying today filter (Kyiv):', fromDate);
                     break;
                 case 'yesterday':
-                    const yesterday = new Date(today);
-                    yesterday.setDate(yesterday.getDate() - 1);
-                    fromDate = toDate = yesterday.toISOString().split('T')[0];
+                    fromDate = getKyivDateString(-1);
+                    toDate = fromDate;
+                    console.log('Applying yesterday filter (Kyiv):', fromDate);
                     break;
                 case 'week':
-                    const weekAgo = new Date(today);
-                    weekAgo.setDate(weekAgo.getDate() - 7);
-                    fromDate = weekAgo.toISOString().split('T')[0];
-                    toDate = today.toISOString().split('T')[0];
+                    fromDate = getKyivDateString(-7);
+                    toDate = getKyivDateString(0);
                     break;
                 case 'month':
-                    const monthAgo = new Date(today);
-                    monthAgo.setDate(monthAgo.getDate() - 30);
-                    fromDate = monthAgo.toISOString().split('T')[0];
-                    toDate = today.toISOString().split('T')[0];
+                    fromDate = getKyivDateString(-30);
+                    toDate = getKyivDateString(0);
                     break;
             }
 
-            await this.loadAndUpdateStats(fromDate, toDate);
+            if (fromDate && toDate) {
+                this.loadAndUpdateStats(fromDate, toDate);
+            }
         }
-
 
 
         async applyCustomPeriod() {
@@ -790,13 +856,12 @@ if (typeof CardDetailModule === 'undefined') {
                 response.transactions.forEach(transaction => {
                     if (transaction.is_cancelled) return;
 
-                    // Конвертируем UTC время в киевское время (UTC+3)
-                    const utcDate = new Date(transaction.transaction_date);
-                    const kyivDate = new Date(utcDate.getTime() + (3 * 60 * 60 * 1000));
-                    const transactionDate = kyivDate.toISOString().split('T')[0];
+                    // Конвертируем UTC дату обратно в киевское время
+                    const transactionDate = new Date(transaction.transaction_date);
+                    const kyivDate = new Date(transactionDate.getTime() + (3 * 60 * 60 * 1000));
+                    const transactionDateStr = kyivDate.toISOString().split('T')[0];
 
-                    // Сравниваем даты в киевском времени
-                    if (transactionDate >= fromDate && transactionDate <= toDate) {
+                    if (transactionDateStr >= fromDate && transactionDateStr <= toDate) {
                         const amount = parseFloat(transaction.amount) || 0;
 
                         if (transaction.transaction_type === 'expense') {
@@ -810,10 +875,15 @@ if (typeof CardDetailModule === 'undefined') {
                     }
                 });
 
-                this.updateDisplayValues(periodSpent, periodTopup);
+                // Обновляем отображение
+                // Обновляем отображение
+                document.getElementById('display-spent').textContent = `${periodSpent.toFixed(2)} ${this.card.currency}`;
+                document.getElementById('display-topup').textContent = `${periodTopup.toFixed(2)} ${this.card.currency}`;
+                document.getElementById('display-commission').textContent = `${parseFloat(this.originalStats.commission).toFixed(2)} ${this.card.currency}`;
+                document.getElementById('display-balance').textContent = `${parseFloat(this.card.balance).toFixed(2)} ${this.card.currency}`;
 
             } catch (error) {
-                console.error('Error loading period stats:', error);
+                console.error('Ошибка загрузки статистики:', error);
                 notifications.error('Ошибка', 'Не удалось загрузить статистику за период');
             }
         }

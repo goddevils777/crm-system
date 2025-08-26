@@ -210,7 +210,6 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
 });
 
 
-
 // Получение баеров команды
 router.get('/:id/buyers', authenticateToken, async (req, res) => {
   try {
@@ -248,25 +247,42 @@ router.get('/:id/buyers', authenticateToken, async (req, res) => {
 
     const result = await db.query(query, [teamId]);
 
-    console.log('=== BUYERS DEBUG ===');
-    console.log('Team ID:', teamId);
-    console.log('Raw buyers data:', result.rows);
+    // ДОБАВИТЬ: Получаем разбивку по валютам для каждого баера
+    const buyersWithCurrency = await Promise.all(result.rows.map(async (buyer) => {
+      const currencyQuery = `
+        SELECT 
+          currency,
+          COUNT(*) as cards_count,
+          SUM(balance) as balance,
+          SUM(total_spent_calculated) as spent,
+          SUM(total_top_up) as topup
+        FROM cards 
+        WHERE buyer_id = $1 AND status != 'deleted'
+        GROUP BY currency
+      `;
+      
+      const currencyResult = await db.query(currencyQuery, [buyer.id]);
+      
+      const currencyBreakdown = {};
+      currencyResult.rows.forEach(row => {
+        currencyBreakdown[row.currency] = {
+          cards_count: parseInt(row.cards_count),
+          balance: parseFloat(row.balance || 0),
+          spent: parseFloat(row.spent || 0),
+          topup: parseFloat(row.topup || 0)
+        };
+      });
 
-    // Проверяем все карты команды и их назначения
-    const allCardsCheck = await db.query(
-      'SELECT id, name, buyer_id, balance, total_spent_calculated, total_top_up FROM cards WHERE team_id = $1 AND status != $2',
-      [teamId, 'deleted']
-    );
-    console.log('All cards in team:', allCardsCheck.rows);
+      return {
+        ...buyer,
+        currency_breakdown: currencyBreakdown
+      };
+    }));
 
-    // Проверяем связи пользователей с team_buyers
-    const usersTeamBuyersCheck = await db.query(
-      'SELECT u.id as user_id, u.username, tb.id as team_buyer_id, tb.name FROM users u RIGHT JOIN team_buyers tb ON u.id = tb.user_id WHERE tb.team_id = $1',
-      [teamId]
-    );
-    console.log('Users-TeamBuyers relationships:', usersTeamBuyersCheck.rows);
+    console.log('=== BUYERS WITH CURRENCY DEBUG ===');
+    console.log('Sample buyer currency breakdown:', buyersWithCurrency[0]?.currency_breakdown);
 
-    res.json({ buyers: result.rows });
+    res.json({ buyers: buyersWithCurrency });
   } catch (error) {
     console.error('Ошибка получения баеров:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -478,6 +494,71 @@ router.get('/:teamId/stats', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Ошибка получения статистики:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+
+// Получение переносов карт для баера
+router.get('/buyers/:buyerId/transfers', authenticateToken, async (req, res) => {
+  try {
+    const buyerId = req.params.buyerId;
+
+    // Проверяем существование баера
+    const buyerCheck = await db.query('SELECT * FROM team_buyers WHERE id = $1', [buyerId]);
+    if (buyerCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Баер не найден' });
+    }
+
+    // Получаем все переносы карт этого баера
+    const transfersQuery = `
+      SELECT 
+        ct.*,
+        t_old.name as old_team_name,
+        t_new.name as new_team_name
+      FROM card_transfers ct
+      LEFT JOIN teams t_old ON ct.old_team_id = t_old.id
+      LEFT JOIN teams t_new ON ct.new_team_id = t_new.id
+      WHERE ct.old_buyer_id = $1
+      ORDER BY ct.transfer_date DESC
+    `;
+
+    const result = await db.query(transfersQuery, [buyerId]);
+
+    res.json({ transfers: result.rows });
+  } catch (error) {
+    console.error('Ошибка получения переносов:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Удаление записи о переносе карты
+router.delete('/buyers/:buyerId/transfers/:transferId', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const { buyerId, transferId } = req.params;
+
+    // Проверяем существование баера
+    const buyerCheck = await db.query('SELECT * FROM team_buyers WHERE id = $1', [buyerId]);
+    if (buyerCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Баер не найден' });
+    }
+
+    // Проверяем существование записи о переносе
+    const transferCheck = await db.query('SELECT * FROM card_transfers WHERE id = $1 AND old_buyer_id = $2', [transferId, buyerId]);
+    if (transferCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Запись о переносе не найдена' });
+    }
+
+    // Удаляем запись о переносе
+    await db.query('DELETE FROM card_transfers WHERE id = $1', [transferId]);
+
+    res.json({
+      message: 'Запись о переносе карты удалена',
+      transfer_id: transferId
+    });
+
+  } catch (error) {
+    console.error('Ошибка удаления записи о переносе:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });

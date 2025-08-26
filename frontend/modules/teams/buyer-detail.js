@@ -43,13 +43,30 @@ class BuyerDetailModule {
 
     async loadCards() {
         try {
-            // Загружаем все карты через основной API карт
-            const allCardsResponse = await api.getCards();
-            // Фильтруем карты по команде
-            this.allCards = allCardsResponse.cards.filter(card => card.team_id == this.teamId);
+            console.log('=== LOADING CARDS FOR BUYER ===');
+            console.log('Buyer ID:', this.buyerId, 'Type:', typeof this.buyerId);
+            console.log('Team ID:', this.teamId, 'Type:', typeof this.teamId);
 
-            // Фильтруем карты баера
-            this.buyerCards = this.allCards.filter(card => card.buyer_id == this.buyerId);
+            // Загружаем только карты конкретного баера
+            const buyerCardsResponse = await api.request(`/cards?buyer_id=${this.buyerId}`);
+            console.log('API Response for buyer cards:', buyerCardsResponse);
+            console.log('Cards returned:', buyerCardsResponse.cards?.length);
+
+            // Логируем детали каждой карты
+            buyerCardsResponse.cards?.forEach(card => {
+                console.log(`Card ID: ${card.id}, Name: ${card.name}, buyer_id: ${card.buyer_id}, team_id: ${card.team_id}`);
+            });
+
+            this.buyerCards = buyerCardsResponse.cards || [];
+
+            // Загружаем карты-призраки (переносы)  
+            const transfersResponse = await api.request(`/teams/buyers/${this.buyerId}/transfers`);
+            console.log('Transfers response:', transfersResponse);
+            this.transferredCards = transfersResponse.transfers || [];
+
+            console.log('Final result:');
+            console.log('- Active cards:', this.buyerCards.length);
+            console.log('- Transferred cards:', this.transferredCards.length);
 
         } catch (error) {
             console.error('Ошибка загрузки карт:', error);
@@ -148,7 +165,10 @@ class BuyerDetailModule {
         const grid = document.getElementById('buyer-cards-grid');
         const noCardsState = document.getElementById('no-cards-state');
 
-        if (this.buyerCards.length === 0) {
+        // Проверяем есть ли карты или переносы
+        const totalItems = (this.buyerCards?.length || 0) + (this.transferredCards?.length || 0);
+
+        if (totalItems === 0) {
             grid.style.display = 'none';
             noCardsState.style.display = 'block';
             return;
@@ -167,59 +187,80 @@ class BuyerDetailModule {
             });
         };
 
-        const getStatusText = (status) => {
-            const statuses = {
-                'active': 'Активна',
-                'blocked': 'Заблокирована',
-                'limit_exceeded': 'Превышен лимит',
-                'deleted': 'Удалена'
-            };
-            return statuses[status] || status;
-        };
-
-        grid.innerHTML = this.buyerCards.map(card => `
-        <div class="buyer-card-item assigned">
-            <div class="card-header">
-                <div class="card-name">
-                    <span onclick="window.open('#card/${card.id}', '_blank');" 
-                        style="color: var(--primary-color); cursor: pointer; text-decoration: underline;">
-                        ${this.escapeHtml(card.name)}
-                    </span>
-                </div>
-                <button class="card-remove-btn" onclick="window.buyerDetailModule.removeCardFromBuyer(${card.id})">
-                    <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
-                        <path d="M563.8 512l262.5-312.9c4.4-5.2.7-13.1-6.1-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.7L511.6 449.8 295.1 191.7c-3.1-3.6-7.6-5.7-12.3-5.7H203c-6.8 0-10.5 7.9-6.1 13.1L459.4 512 196.9 824.9A7.95 7.95 0 00203 838h79.8c4.7 0 9.2-2.1 12.3-5.7l216.5-258.1 216.5 258.1c3.1 3.6 7.6 5.7 12.3 5.7h79.8c6.8 0 10.5-7.9 6.1-13.1L563.8 512z"/>
-                    </svg>
-                </button>
+        // Рендерим обычные карты
+        const activeCardsHtml = (this.buyerCards || []).map(card => `
+    <div class="buyer-card-item assigned">
+        <div class="card-header">
+            <div class="card-name">
+                <span onclick="window.open('index.html#card/${card.id}', '_blank');" 
+                    style="color: var(--primary-color); cursor: pointer; text-decoration: underline;">
+                    ${this.escapeHtml(card.name)}
+                </span>
             </div>
-            <div class="card-details">
-                <div class="card-detail">
-                    <span class="card-detail-label">Баланс:</span>
-                    <span class="card-detail-value">${formatCurrency(card.balance)}</span>
-                </div>
-                <div class="card-detail">
-                    <span class="card-detail-label">Валюта:</span>
-                    <span class="card-detail-value">${card.currency || 'USD'}</span>
-                </div>
-                <div class="card-detail">
-                    <span class="card-detail-label">Скручено:</span>
-                    <span class="card-detail-value">${formatCurrency(card.total_spent_calculated || 0)}</span>
-                </div>
-                <div class="card-detail">
-                    <span class="card-detail-label">Пополнено:</span>
-                    <span class="card-detail-value">${formatCurrency(card.total_top_up || 0)}</span>
-                </div>
-                <div class="card-detail">
-                    <span class="card-detail-label">Статус:</span>
-                    <span class="card-status ${card.status}">${getStatusText(card.status)}</span>
-                </div>
-                <div class="card-detail">
-                    <span class="card-detail-label">Создана:</span>
-                    <span class="card-detail-value">${new Date(card.created_at).toLocaleDateString('ru-RU')}</span>
-                </div>
+            <button class="card-remove-btn" onclick="window.buyerDetailModule?.removeCardFromBuyer(${card.id})" title="Убрать карту">
+                <svg width="12" height="12" viewBox="0 0 1024 1024" fill="currentColor">
+                    <path d="M563.8 512l262.5-312.9c4.4-5.2.7-13.1-6.1-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.7L511.6 449.8 295.1 191.7c-3-3.6-7.5-5.7-12.3-5.7H203c-6.8 0-10.5 7.9-6.1 13.1L459.4 512 196.9 824.9c-4.4 5.2-.7 13.1 6.1 13.1h79.8c4.7 0 9.2-2.1 12.3 5.7l216.5-258.1 216.5 258.1c3 3.6 7.5 5.7 12.3 5.7h79.8c6.8 0 10.5-7.9 6.1-13.1L563.8 512z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="card-details">
+            <div class="card-detail">
+                <span class="card-detail-label">Статус:</span>
+                <span class="card-detail-value card-status ${card.status}">${this.getStatusText(card.status)}</span>
+            </div>
+            <div class="card-detail">
+                <span class="card-detail-label">Баланс:</span>
+                <span class="card-detail-value">${formatCurrency(card.balance)}</span>
+            </div>
+            <div class="card-detail">
+                <span class="card-detail-label">Скручено:</span>
+                <span class="card-detail-value">${formatCurrency(card.total_spent_calculated || 0)}</span>
+            </div>
+            <div class="card-detail">
+                <span class="card-detail-label">Пополнено:</span>
+                <span class="card-detail-value">${formatCurrency(card.total_top_up || 0)}</span>
             </div>
         </div>
-    `).join('');
+    </div>
+`).join('');
+
+        // ДОБАВИТЬ: Рендерим карты-призраки
+        const transferredCardsHtml = (this.transferredCards || []).map(transfer => `
+    <div class="buyer-card-item transferred">
+        <div class="card-header">
+            <div class="card-name">
+                <span style="color: var(--text-secondary); text-decoration: line-through;">
+                    ${this.escapeHtml(transfer.card_name)}
+                </span>
+                <div class="transfer-badge">Перенесено в ${transfer.new_team_name || 'другую команду'}</div>
+                <div class="transfer-date" style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">
+                    ${new Date(transfer.transfer_date).toLocaleDateString('ru-RU')}
+                </div>
+            </div>
+            <button class="card-remove-btn" onclick="window.buyerDetailModule?.removeTransfer(${transfer.id})" title="Удалить запись о переносе">
+                <svg width="12" height="12" viewBox="0 0 1024 1024" fill="currentColor">
+                    <path d="M563.8 512l262.5-312.9c4.4-5.2.7-13.1-6.1-13.1h-79.8c-4.7 0-9.2 2.1-12.3 5.7L511.6 449.8 295.1 191.7c-3-3.6-7.5-5.7-12.3-5.7H203c-6.8 0-10.5 7.9-6.1 13.1L459.4 512 196.9 824.9c-4.4 5.2-.7 13.1 6.1 13.1h79.8c4.7 0 9.2-2.1 12.3 5.7l216.5-258.1 216.5 258.1c3 3.6 7.5 5.7 12.3 5.7h79.8c6.8 0 10.5-7.9 6.1-13.1L563.8 512z"/>
+                </svg>
+            </button>
+        </div>
+        <div class="card-details">
+            <div class="card-detail">
+                <span class="card-detail-label">Баланс на момент переноса:</span>
+                <span class="card-detail-value">${formatCurrency(transfer.balance_snapshot)}</span>
+            </div>
+            <div class="card-detail">
+                <span class="card-detail-label">Было скручено:</span>
+                <span class="card-detail-value">${formatCurrency(transfer.spent_snapshot)}</span>
+            </div>
+            <div class="card-detail">
+                <span class="card-detail-label">Было пополнено:</span>
+                <span class="card-detail-value">${formatCurrency(transfer.topup_snapshot)}</span>
+            </div>
+        </div>
+    </div>
+`).join('');
+
+        grid.innerHTML = activeCardsHtml + transferredCardsHtml;
     }
 
     setupEventListeners() {
@@ -325,11 +366,20 @@ class BuyerDetailModule {
         this.loadStats(startDate, endDate);
     }
 
-    openManageCardsModal() {
+async openManageCardsModal() {
+    try {
+        // ДОБАВИТЬ: Загружаем все карты команды
+        const response = await api.request(`/cards?team_id=${this.teamId}`);
+        this.allCards = response.cards || [];
+        
         const modal = document.getElementById('manage-cards-modal');
         this.renderAllCardsInModal();
         modal.classList.add('show');
+    } catch (error) {
+        console.error('Ошибка загрузки карт для модального окна:', error);
+        notifications.error('Ошибка', 'Не удалось загрузить список карт');
     }
+}
 
     renderAllCardsInModal() {
         const cardsList = document.getElementById('all-cards-list');
@@ -532,6 +582,33 @@ class BuyerDetailModule {
         } catch (error) {
             console.error('Ошибка удаления карты у баера:', error);
             notifications.error('Ошибка', 'Не удалось убрать карту');
+        }
+    }
+
+    async removeTransfer(transferId) {
+        try {
+            const transfer = this.transferredCards.find(t => t.id === transferId);
+            if (!transfer) return;
+
+            const confirmed = await window.confirmDelete(`Удалить запись о переносе карты "${transfer.card_name}"? Это действие нельзя отменить.`);
+            if (!confirmed) return;
+
+            // Удаляем запись о переносе
+            await api.request(`/teams/buyers/${this.buyerId}/transfers/${transferId}`, {
+                method: 'DELETE'
+            });
+
+            // Обновляем данные
+            await this.loadCards();
+            await this.loadStats();
+            this.renderCards();
+            this.updateStatsDisplay();
+
+            notifications.success('Успех', 'Запись о переносе карты удалена');
+
+        } catch (error) {
+            console.error('Ошибка удаления записи о переносе:', error);
+            notifications.error('Ошибка', 'Не удалось удалить запись о переносе');
         }
     }
 }

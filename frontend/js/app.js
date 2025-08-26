@@ -92,6 +92,14 @@ class App {
   }
 
   async loadModule(moduleName) {
+    // ДОБАВИТЬ ЭТУ ПРОВЕРКУ В НАЧАЛО МЕТОДА
+    if (moduleName === 'teams') {
+      // Очищаем состояние только если текущий URL не содержит #card/
+      if (!window.location.hash.startsWith('#card/')) {
+        localStorage.removeItem('current_card_detail');
+        window.location.hash = '';
+      }
+    }
 
     // Проверяем URL для детальной страницы карты
     if (window.location.hash.startsWith('#card/')) {
@@ -99,6 +107,8 @@ class App {
       localStorage.setItem('current_card_detail', cardId);
       moduleName = 'cards'; // Принудительно загружаем модуль карт
     }
+
+
     localStorage.setItem('active_module', moduleName);
 
     console.log('=== APP LOAD MODULE ===');
@@ -157,6 +167,7 @@ class App {
       'cards': { icon: '💳', title: 'Карты' },
       'expenses': { icon: '💰', title: 'Расходы' },
       'teams': { icon: '👥', title: 'Команды' },
+      'clients': { icon: '📌', title: 'Клиенты' }, // ДОБАВИТЬ ЭТУ СТРОКУ
       'income': { icon: '📈', title: 'Доходы' },
       'analytics': { icon: '📊', title: 'Аналитика' }
     };

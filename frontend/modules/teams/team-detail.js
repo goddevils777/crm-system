@@ -4,6 +4,7 @@ class TeamDetailModule {
         this.team = null;
         this.buyers = [];
         this.currentView = 'grid';
+        this.currentCurrency = 'USD'; // ДОБАВИТЬ ЭТУ СТРОКУ
         this.init();
     }
 
@@ -34,51 +35,68 @@ class TeamDetailModule {
             });
         });
 
-        // ДОБАВИЛИ: Обработчики фильтра дат
+        // ДОБАВИТЬ: Обработчик переключения валют
+        const currencyFilter = document.getElementById('currency-filter');
+        currencyFilter?.addEventListener('change', (e) => {
+            this.currentCurrency = e.target.value;
+            console.log('Currency changed to:', this.currentCurrency);
+            this.updateTeamStats();
+            this.renderBuyers();
+        });
+
+        // Обработчик кнопки добавления баера
+        const addBuyerBtn = document.getElementById('add-buyer-btn');
+        addBuyerBtn?.addEventListener('click', () => {
+            this.showAddBuyerModal();
+        });
+
+        // Обработчики фильтра дат
         this.setupDateFilter();
     }
-setupDateFilter() {
-    const periodSelect = document.getElementById('date-period-select');
-    const dateFrom = document.getElementById('date-from');
-    const dateTo = document.getElementById('date-to');
 
-    // Обработчик выпадающего списка
-    periodSelect.addEventListener('change', (e) => {
-        const period = e.target.value;
 
-        if (period && period !== 'custom') {
-            // Заполняем поля датами для выбранного периода
-            const { startDate, endDate } = this.getPeriodDates(period);
-            
-            if (startDate && endDate) {
-                dateFrom.value = startDate.toISOString().split('T')[0];
-                dateTo.value = endDate.toISOString().split('T')[0];
+    setupDateFilter() {
+        const periodSelect = document.getElementById('date-period-select');
+        const dateFrom = document.getElementById('date-from');
+        const dateTo = document.getElementById('date-to');
+
+        // Обработчик выпадающего списка
+        periodSelect.addEventListener('change', (e) => {
+            const period = e.target.value;
+
+            if (period && period !== 'custom') {
+                // Заполняем поля датами для выбранного периода
+                const { startDate, endDate } = this.getPeriodDates(period);
+
+                if (startDate && endDate) {
+                    dateFrom.value = startDate.toISOString().split('T')[0];
+                    dateTo.value = endDate.toISOString().split('T')[0];
+                }
+
+                this.applyDateFilter(period);
+            } else if (!period) {
+                // Очищаем все при выборе "Все время"
+                dateFrom.value = '';
+                dateTo.value = '';
+                this.clearDateFilter();
             }
-            
-            this.applyDateFilter(period);
-        } else if (!period) {
-            // Очищаем все при выборе "Все время"
-            dateFrom.value = '';
-            dateTo.value = '';
-            this.clearDateFilter();
-        }
-    });
+        });
 
-    // Автоматическое применение при изменении дат
-    dateFrom.addEventListener('change', () => {
-        if (dateFrom.value) {
-            periodSelect.value = 'custom';
-            this.applyCustomDateFilter();
-        }
-    });
+        // Автоматическое применение при изменении дат
+        dateFrom.addEventListener('change', () => {
+            if (dateFrom.value) {
+                periodSelect.value = 'custom';
+                this.applyCustomDateFilter();
+            }
+        });
 
-    dateTo.addEventListener('change', () => {
-        if (dateTo.value) {
-            periodSelect.value = 'custom';
-            this.applyCustomDateFilter();
-        }
-    });
-}
+        dateTo.addEventListener('change', () => {
+            if (dateTo.value) {
+                periodSelect.value = 'custom';
+                this.applyCustomDateFilter();
+            }
+        });
+    }
 
     applyDateFilter(period) {
         const { startDate, endDate } = this.getPeriodDates(period);
@@ -128,88 +146,79 @@ setupDateFilter() {
         }
     }
 
-async filterAndUpdateData() {
-    if (!this.currentDateFilter) {
-        this.filteredBuyers = [...this.buyers];
-    } else {
-        try {
-            const startDate = this.currentDateFilter.startDate.toISOString();
-            const endDate = this.currentDateFilter.endDate.toISOString();
+    async filterAndUpdateData() {
+        if (!this.currentDateFilter) {
+            this.filteredBuyers = [...this.buyers];
+        } else {
+            try {
+                const startDate = this.currentDateFilter.startDate.toISOString();
+                const endDate = this.currentDateFilter.endDate.toISOString();
 
-            console.log('API request:', `/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
-            const response = await api.request(`/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
-            
-            console.log('API response for period stats:', response);
-            console.log('First buyer from API:', response.buyers[0]);
+                console.log('API request:', `/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
+                const response = await api.request(`/teams/${this.teamId}/stats?startDate=${startDate}&endDate=${endDate}`);
 
-            this.filteredBuyers = this.buyers.map(originalBuyer => {
-                const filteredBuyer = response.buyers.find(b => b.buyer_id === originalBuyer.id);
-                console.log(`Buyer ${originalBuyer.username}:`, {
-                    original_spent: originalBuyer.total_spent,
-                    filtered_spent: filteredBuyer?.filtered_spent,
-                    original_topup: originalBuyer.total_topup,
-                    filtered_topups: filteredBuyer?.filtered_topups
+                console.log('API response for period stats:', response);
+                console.log('First buyer from API:', response.buyers[0]);
+
+                this.filteredBuyers = this.buyers.map(originalBuyer => {
+                    const filteredBuyer = response.buyers.find(b => b.buyer_id === originalBuyer.id);
+                    console.log(`Buyer ${originalBuyer.username}:`, {
+                        original_spent: originalBuyer.total_spent,
+                        filtered_spent: filteredBuyer?.filtered_spent,
+                        original_topup: originalBuyer.total_topup,
+                        filtered_topups: filteredBuyer?.filtered_topups
+                    });
+
+                    return {
+                        ...originalBuyer,
+                        filtered_spent: filteredBuyer?.filtered_spent || 0,
+                        filtered_topups: filteredBuyer?.filtered_topups || 0
+                    };
                 });
 
-                return {
-                    ...originalBuyer,
-                    filtered_spent: filteredBuyer?.filtered_spent || 0,
-                    filtered_topups: filteredBuyer?.filtered_topups || 0
-                };
-            });
-
-        } catch (error) {
-            console.error('Ошибка загрузки статистики:', error);
-            this.filteredBuyers = [...this.buyers];
+            } catch (error) {
+                console.error('Ошибка загрузки статистики:', error);
+                this.filteredBuyers = [...this.buyers];
+            }
         }
-    }
 
-    this.updateTeamStats();
-    this.renderBuyers();
-}
+        this.updateTeamStats();
+        this.renderBuyers();
+    }
 
 
     updateTeamStats() {
-        if (!this.filteredBuyers) return;
+    if (!this.filteredBuyers) return;
 
-        console.log('this.currentDateFilter:', this.currentDateFilter);
-        const isFiltered = !!this.currentDateFilter;
-        console.log('isFiltered result:', isFiltered);
+    console.log('this.currentDateFilter:', this.currentDateFilter);
+    const isFiltered = !!this.currentDateFilter;
+    console.log('isFiltered result:', isFiltered);
+    console.log('Current currency:', this.currentCurrency);
 
-        let totalSpent = 0;
-        let totalTopups = 0;
-        let totalBalance = 0;
+    let totalSpent = 0;
+    let totalTopups = 0;
+    let totalBalance = 0;
 
-        this.filteredBuyers.forEach((buyer, index) => {
-            console.log(`Баер ${index + 1}:`, buyer.username);
-            console.log('- filtered_spent:', buyer.filtered_spent);
-            console.log('- filtered_topups:', buyer.filtered_topups);
+    this.filteredBuyers.forEach((buyer, index) => {
+        console.log(`Баер ${index + 1}:`, buyer.username);
+        
+        // Используем тот же метод что и для отображения баеров
+        const currencyData = this.getBuyerCurrencyData(buyer);
+        
+        totalSpent += currencyData.spent;
+        totalTopups += currencyData.topup;
+        totalBalance += currencyData.balance;
+        
+        console.log(`- ${this.currentCurrency} данные:`, currencyData);
+    });
 
-            // ИСПРАВЛЕНИЕ: Правильная логика для отфильтрованных данных
-            const spentValue = isFiltered && buyer.filtered_spent !== undefined ?
-                buyer.filtered_spent :
-                parseFloat(buyer.total_spent || 0);
+    console.log('FINAL TOTALS for', this.currentCurrency, ':', { totalSpent, totalTopups, totalBalance });
 
-            const topupValue = isFiltered && buyer.filtered_topups !== undefined ?
-                buyer.filtered_topups :
-                parseFloat(buyer.total_topup || 0);
+    document.getElementById('total-balance').textContent = `${totalBalance.toFixed(2)} ${this.currentCurrency}`;
+    document.getElementById('total-spent').textContent = `${totalSpent.toFixed(2)} ${this.currentCurrency}`;
+    document.getElementById('total-topup').textContent = `${totalTopups.toFixed(2)} ${this.currentCurrency}`;
+}
 
-            const balanceValue = parseFloat(buyer.total_balance || 0);
-
-            console.log('- calculated spent:', spentValue);
-            console.log('- calculated topup:', topupValue);
-
-            totalSpent += spentValue;
-            totalTopups += topupValue;
-            totalBalance += balanceValue;
-        });
-
-        console.log('FINAL TOTALS:', { totalSpent, totalTopups, totalBalance });
-
-        document.getElementById('total-balance').textContent = `${totalBalance.toFixed(2)} USD`;
-        document.getElementById('total-spent').textContent = `${totalSpent.toFixed(2)} USD`;
-        document.getElementById('total-topup').textContent = `${totalTopups.toFixed(2)} USD`;
-    }
 
     async loadTeam() {
         try {
@@ -239,7 +248,7 @@ async filterAndUpdateData() {
         } catch (error) {
             console.error('Ошибка загрузки баеров:', error);
         }
-    } а
+    } 
 
     updateTeamHeader() {
         if (!this.team) return;
@@ -272,6 +281,9 @@ async filterAndUpdateData() {
             // Добавляем @ если его нет
             const telegramHandle = buyer.telegram.startsWith('@') ? buyer.telegram : `@${buyer.telegram}`;
 
+            // ДОБАВИТЬ: Получаем данные для выбранной валюты
+            const currencyData = this.getBuyerCurrencyData(buyer);
+
             return `
         <div class="buyer-card" onclick="window.teamDetailModule?.openBuyerDetail(${buyer.id})">
             <div class="buyer-card-header">
@@ -302,21 +314,21 @@ async filterAndUpdateData() {
             </div>
             <div class="buyer-stats">
                 <div class="buyer-stat">
-                    <div class="buyer-stat-value">${buyer.cards_count || 0}</div>
+                    <div class="buyer-stat-value">${currencyData.cardsCount}</div>
                     <div class="buyer-stat-label">Карт</div>
                 </div>
                 <div class="buyer-stat">
-                    <div class="buyer-stat-value">${parseFloat(buyer.total_balance || 0).toFixed(2)}</div>
+                    <div class="buyer-stat-value">${currencyData.balance.toFixed(2)}</div>
                     <div class="buyer-stat-label">Баланс</div>
                 </div>
-                    <div class="buyer-stat">
-                        <div class="buyer-stat-value">${buyer.filtered_spent !== undefined ? buyer.filtered_spent.toFixed(2) : (buyer.total_spent || 0)}</div>
-                        <div class="buyer-stat-label">Скручено</div>
-                    </div>
-                    <div class="buyer-stat">
-                        <div class="buyer-stat-value">${buyer.filtered_topups !== undefined ? buyer.filtered_topups.toFixed(2) : (buyer.total_topup || 0)}</div>
-                        <div class="buyer-stat-label">Пополнено</div>
-                    </div>
+                <div class="buyer-stat">
+                    <div class="buyer-stat-value">${currencyData.spent.toFixed(2)}</div>
+                    <div class="buyer-stat-label">Скручено</div>
+                </div>
+                <div class="buyer-stat">
+                    <div class="buyer-stat-value">${currencyData.topup.toFixed(2)}</div>
+                    <div class="buyer-stat-label">Пополнено</div>
+                </div>
             </div>
         </div>
     `;
@@ -325,20 +337,53 @@ async filterAndUpdateData() {
         container.innerHTML = buyersHtml;
     }
 
-    renderBuyersTable() {
-        const tbody = document.getElementById('buyers-table-body');
-        const buyersToRender = this.filteredBuyers || this.buyers;
+    // ДОБАВИТЬ: Вспомогательный метод для получения данных баера по валюте
+// Вспомогательный метод для получения данных баера по валюте
+getBuyerCurrencyData(buyer) {
+    const currencyBreakdown = buyer.currency_breakdown || {};
+    const selectedCurrencyData = currencyBreakdown[this.currentCurrency];
+    
+    if (selectedCurrencyData) {
+        // Если у баера есть карты в выбранной валюте
+        const isFiltered = !!this.currentDateFilter;
+        
+        return {
+            cardsCount: selectedCurrencyData.cards_count || 0,
+            balance: parseFloat(selectedCurrencyData.balance || 0),
+            spent: isFiltered ? 
+                (buyer.filtered_spent || 0) * (selectedCurrencyData.balance / (buyer.total_balance || 1)) :
+                parseFloat(selectedCurrencyData.spent || 0),
+            topup: isFiltered ? 
+                (buyer.filtered_topups || 0) * (selectedCurrencyData.balance / (buyer.total_balance || 1)) :
+                parseFloat(selectedCurrencyData.topup || 0)
+        };
+    } else {
+        // Если у баера нет карт в выбранной валюте - показываем нули
+        return {
+            cardsCount: 0,
+            balance: 0,
+            spent: 0,
+            topup: 0
+        };
+    }
+}
 
-        if (buyersToRender.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">В команде пока нет баеров</td></tr>';
-            return;
-        }
+   renderBuyersTable() {
+    const tbody = document.getElementById('buyers-table-body');
+    const buyersToRender = this.filteredBuyers || this.buyers;
 
-        const buyersHtml = buyersToRender.map(buyer => {
-            // Добавляем @ если его нет
-            const telegramHandle = buyer.telegram.startsWith('@') ? buyer.telegram : `@${buyer.telegram}`;
+    if (buyersToRender.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">В команде пока нет баеров</td></tr>';
+        return;
+    }
 
-            return `
+    const buyersHtml = buyersToRender.map(buyer => {
+        const telegramHandle = buyer.telegram.startsWith('@') ? buyer.telegram : `@${buyer.telegram}`;
+        
+        // ДОБАВИТЬ: Получаем данные для выбранной валюты
+        const currencyData = this.getBuyerCurrencyData(buyer);
+
+        return `
         <tr>
             <td>
                 <a href="#" class="buyer-name-link" onclick="window.teamDetailModule?.openBuyerDetail(${buyer.id}); return false;">
@@ -353,10 +398,10 @@ async filterAndUpdateData() {
                 ${telegramHandle}
             </a>
             </td>
-            <td>${buyer.cards_count || 0}</td>
-            <td>${parseFloat(buyer.total_balance || 0).toFixed(2)} USD</td>
-            <td>${buyer.filtered_spent !== undefined ? buyer.filtered_spent.toFixed(2) : (buyer.total_spent || 0)}</td>
-            <td>${buyer.filtered_topups !== undefined ? buyer.filtered_topups.toFixed(2) : (buyer.total_topup || 0)}</td>
+            <td>${currencyData.cardsCount}</td>
+            <td>${currencyData.balance.toFixed(2)} ${this.currentCurrency}</td>
+            <td>${currencyData.spent.toFixed(2)}</td>
+            <td>${currencyData.topup.toFixed(2)}</td>
             <td>${new Date(buyer.created_at).toLocaleDateString('ru-RU')}</td>
             <td>
                 <div class="buyer-table-actions">
@@ -375,10 +420,10 @@ async filterAndUpdateData() {
             </td>
         </tr>
     `;
-        }).join('');
+    }).join('');
 
-        tbody.innerHTML = buyersHtml;
-    }
+    tbody.innerHTML = buyersHtml;
+}
 
     switchView(view) {
         this.currentView = view;
@@ -535,11 +580,11 @@ async filterAndUpdateData() {
                 </div>
                 <div class="card-details">
                     ${card.currency} • Баланс: ${card.balance || 0} ${card.currency} • 
-                    Скручено: ${card.spent_amount || 0} ${card.currency} • 
-                    Пополнено: ${card.total_topups || 0} ${card.currency} • 
+                    Скручено: ${card.total_spent_calculated || 0} ${card.currency} • 
+                    Пополнено: ${card.total_top_up || 0} ${card.currency} • 
                     Статус: ${this.getStatusText(card.status)}
                     ${isAssignedToBuyer ? ' • <span class="assigned-badge">Назначена</span>' : ''}
-                    ${isAssignedToOther ? ' • <span class="other-badge">Занята</span>' : ''}
+                    ${isAssignedToOther ? ' • <span class="assigned-badge assigned-other">Назначена другому</span>' : ''}
                 </div>
             </div>
         </label>

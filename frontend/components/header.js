@@ -31,121 +31,196 @@ class HeaderComponent {
         this.updateUserInfo();
     }
 
-  setupEvents() {
-    const burgerBtn = document.getElementById('burger-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const sidebar = document.querySelector('.sidebar');
-    const mainContainer = document.querySelector('.main .container');
+    setupEvents() {
+        console.log('=== HEADER SETUP EVENTS ===');
+        const burgerBtn = document.getElementById('burger-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const sidebar = document.querySelector('.sidebar');
+        const mainContainer = document.querySelector('.main .container');
 
-    // ДОБАВИЛИ: Состояние сайдбара с сохранением в localStorage
-    let isManuallyOpened = localStorage.getItem('sidebar_manually_opened') === 'true';
+        console.log('Elements found:');
+        console.log('- Burger button:', !!burgerBtn);
+        console.log('- Sidebar:', !!sidebar);
+        console.log('- Main container:', !!mainContainer);
+        console.log('- Window width:', window.innerWidth);
 
-    // Восстанавливаем состояние при загрузке
-    if (window.innerWidth > 768) {
-        if (isManuallyOpened) {
-            sidebar?.classList.remove('hide');
-            mainContainer?.classList.remove('sidebar-hidden');
-        } else {
-            sidebar?.classList.add('hide');
-            mainContainer?.classList.add('sidebar-hidden');
-        }
-    }
+        // Состояние сайдбара с сохранением в localStorage
+        let isManuallyOpened = localStorage.getItem('sidebar_manually_opened') === 'true';
+        console.log('- Manual opened state:', isManuallyOpened);
 
-    // Создаем overlay для мобильных
-    let overlay = document.querySelector('.sidebar-overlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.className = 'sidebar-overlay';
-        overlay.addEventListener('click', () => {
-            sidebar?.classList.remove('show');
-            overlay.classList.remove('show');
-        });
-        document.body.appendChild(overlay);
-    }
-
-    if (burgerBtn) {
-        let hoverTimeout;
-
-        const showSidebar = () => {
-            if (window.innerWidth > 768 && !isManuallyOpened) {
+        // Восстанавливаем состояние при загрузке только для десктопа
+        if (window.innerWidth > 768) {
+            console.log('Desktop mode - restoring sidebar state');
+            if (isManuallyOpened) {
                 sidebar?.classList.remove('hide');
                 mainContainer?.classList.remove('sidebar-hidden');
-            }
-        };
-
-        const hideSidebar = () => {
-            if (hoverTimeout) clearTimeout(hoverTimeout);
-            hoverTimeout = setTimeout(() => {
-                if (window.innerWidth > 768 && !isManuallyOpened) {
-                    sidebar?.classList.add('hide');
-                    mainContainer?.classList.add('sidebar-hidden');
-                }
-            }, 400);
-        };
-
-        const cancelHide = () => {
-            if (hoverTimeout) clearTimeout(hoverTimeout);
-        };
-
-        // Hover на бургере
-        burgerBtn.addEventListener('mouseenter', showSidebar);
-        burgerBtn.addEventListener('mouseleave', hideSidebar);
-
-        // Hover на сайдбаре (вся область sidebar)
-        const sidebarContainer = document.getElementById('sidebar-container');
-        sidebarContainer?.addEventListener('mouseenter', cancelHide);
-        sidebarContainer?.addEventListener('mouseleave', hideSidebar);
-
-        // Дополнительно на самом sidebar элементе
-        sidebar?.addEventListener('mouseenter', cancelHide);
-        sidebar?.addEventListener('mouseleave', hideSidebar);
-
-        // Клик на бургер - для мобильных и переключения постоянного состояния на десктопе
-        burgerBtn.addEventListener('click', () => {
-            if (window.innerWidth <= 768) {
-                // На мобильных - показать/скрыть сайдбар
-                const sidebarContainer = document.getElementById('sidebar-container');
-                sidebar?.classList.toggle('show');
-                sidebarContainer?.classList.toggle('show');
-                overlay.classList.toggle('show');
             } else {
-                // На десктопе - переключить постоянное состояние
-                isManuallyOpened = !isManuallyOpened;
-                localStorage.setItem('sidebar_manually_opened', isManuallyOpened.toString());
-                
-                if (isManuallyOpened) {
+                sidebar?.classList.add('hide');
+                mainContainer?.classList.add('sidebar-hidden');
+            }
+        } else {
+            console.log('Mobile mode detected');
+        }
+
+        // Создаем overlay для мобильных
+        let overlay = document.querySelector('.sidebar-overlay');
+        console.log('Existing overlay:', !!overlay);
+
+        if (!overlay) {
+            console.log('Creating new overlay');
+            overlay = document.createElement('div');
+            overlay.className = 'sidebar-overlay';
+            overlay.addEventListener('click', () => {
+                console.log('Overlay clicked - closing sidebar');
+                sidebar?.classList.remove('show');
+                document.getElementById('sidebar-container')?.classList.remove('show');
+                overlay.classList.remove('show');
+            });
+            document.body.appendChild(overlay);
+            console.log('Overlay created and added to body');
+        }
+
+        if (burgerBtn) {
+            console.log('Setting up burger button events');
+
+            let hoverTimeout;
+
+            const showSidebar = () => {
+                if (window.innerWidth > 768 && !isManuallyOpened) {
+                    console.log('Showing sidebar on hover (desktop)');
                     sidebar?.classList.remove('hide');
                     mainContainer?.classList.remove('sidebar-hidden');
-                } else {
-                    sidebar?.classList.add('hide');
-                    mainContainer?.classList.add('sidebar-hidden');
                 }
+            };
+
+            const hideSidebar = () => {
+                if (hoverTimeout) clearTimeout(hoverTimeout);
+                hoverTimeout = setTimeout(() => {
+                    if (window.innerWidth > 768 && !isManuallyOpened) {
+                        console.log('Hiding sidebar after hover timeout (desktop)');
+                        sidebar?.classList.add('hide');
+                        mainContainer?.classList.add('sidebar-hidden');
+                    }
+                }, 400);
+            };
+
+            const cancelHide = () => {
+                if (hoverTimeout) {
+                    console.log('Canceling sidebar hide timeout');
+                    clearTimeout(hoverTimeout);
+                }
+            };
+
+            // Hover эффекты только для десктопа
+            if (window.innerWidth > 768) {
+                console.log('Setting up desktop hover effects');
+                burgerBtn.addEventListener('mouseenter', showSidebar);
+                burgerBtn.addEventListener('mouseleave', hideSidebar);
+
+                const sidebarContainer = document.getElementById('sidebar-container');
+                sidebarContainer?.addEventListener('mouseenter', cancelHide);
+                sidebarContainer?.addEventListener('mouseleave', hideSidebar);
+                sidebar?.addEventListener('mouseenter', cancelHide);
+                sidebar?.addEventListener('mouseleave', hideSidebar);
+            }
+
+            // Клик на бургер
+            burgerBtn.addEventListener('click', () => {
+                console.log('=== BURGER CLICKED ===');
+                console.log('Window width:', window.innerWidth);
+
+                if (window.innerWidth <= 768) {
+                    console.log('Mobile burger click detected');
+
+                    const sidebarContainer = document.getElementById('sidebar-container');
+
+                    // ДОБАВИТЬ: Принудительная очистка состояния перед проверкой
+                    console.log('Classes before cleanup:');
+                    console.log('- Sidebar:', sidebar?.className);
+                    console.log('- Container:', sidebarContainer?.className);
+                    console.log('- Overlay:', overlay?.className);
+
+                    const isVisible = sidebar?.classList.contains('show');
+                    console.log('Sidebar is currently visible:', isVisible);
+
+                    if (isVisible) {
+                        console.log('Hiding sidebar');
+                        sidebar?.classList.remove('show');
+                        sidebarContainer?.classList.remove('show');
+                        overlay.classList.remove('show');
+                    } else {
+                        console.log('Showing sidebar');
+                        // Принудительно очищаем все возможные классы перед показом
+                        sidebar?.classList.remove('hide', 'show');
+                        sidebarContainer?.classList.remove('show');
+                        overlay?.classList.remove('show');
+
+                        // Принудительное обновление DOM
+                        requestAnimationFrame(() => {
+                            // Добавляем нужные классы
+                            sidebar?.classList.add('show');
+                            sidebarContainer?.classList.add('show');
+                            overlay?.classList.add('show');
+
+                            console.log('Force DOM update completed');
+                            console.log('- Sidebar after force update:', sidebar?.className);
+                            console.log('- Container after force update:', sidebarContainer?.className);
+                            console.log('- Overlay after force update:', overlay?.className);
+                        });
+                    }
+
+                    console.log('Classes after operation:');
+                    console.log('- Sidebar:', sidebar?.className);
+                    console.log('- Container:', sidebarContainer?.className);
+                    console.log('- Overlay:', overlay?.className);
+
+                } else {
+                    console.log('Desktop burger click - toggling permanent state');
+                    isManuallyOpened = !isManuallyOpened;
+                    localStorage.setItem('sidebar_manually_opened', isManuallyOpened.toString());
+
+                    if (isManuallyOpened) {
+                        sidebar?.classList.remove('hide');
+                        mainContainer?.classList.remove('sidebar-hidden');
+                    } else {
+                        sidebar?.classList.add('hide');
+                        mainContainer?.classList.add('sidebar-hidden');
+                    }
+                }
+            });
+
+        } else {
+            console.error('Burger button not found!');
+        }
+
+
+        logoutBtn?.addEventListener('click', () => {
+            console.log('Logout button clicked');
+            if (window.app) {
+                window.app.logout();
+            }
+        });
+
+        window.addEventListener('mobileSidebarClosed', () => {
+            console.log('Received mobile sidebar closed event - sidebar state reset');
+        });
+
+        console.log('=== HEADER SETUP COMPLETE ===');
+
+        document.addEventListener('click', (e) => {
+            const menuItem = e.target.closest('.menu-item');
+            if (menuItem && window.innerWidth <= 768) {
+                console.log('Menu item clicked - closing mobile sidebar');
+                setTimeout(() => {
+                    sidebar?.classList.remove('show');
+                    document.getElementById('sidebar-container')?.classList.remove('show');
+                    overlay?.classList.remove('show');
+                }, 100);
             }
         });
     }
 
-    // НОВОЕ: Автозакрытие на мобильных при выборе модуля
-    sidebar?.addEventListener('click', (e) => {
-        const menuItem = e.target.closest('[data-module]');
-        if (menuItem && window.innerWidth <= 768) {
-            // Закрываем сайдбар на мобильных после выбора модуля
-            setTimeout(() => {
-                const sidebarContainer = document.getElementById('sidebar-container');
-                sidebar.classList.remove('show');
-                sidebarContainer?.classList.remove('show');
-                overlay.classList.remove('show');
-            }, 150);
-        }
-    });
 
-    logoutBtn?.addEventListener('click', () => {
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('userData');
-        window.location.href = 'auth/login.html';
-    });
-}
-
-    
     updateUserInfo() {
         const userData = JSON.parse(localStorage.getItem('userData') || '{}');
         const loginUsername = userData.loginUsername || userData.username || 'Пользователь';

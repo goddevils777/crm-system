@@ -88,7 +88,7 @@ router.put('/:id/status', authenticateToken, checkRole(['admin', 'manager']), as
 // Получение всех карт (с учетом роли)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const { team_id, unassigned } = req.query;
+    const { team_id, unassigned, buyer_id } = req.query; // ДОБАВИТЬ buyer_id
 
     let query = `
         SELECT 
@@ -114,6 +114,14 @@ router.get('/', authenticateToken, async (req, res) => {
 
     let params = ['deleted'];
     let paramIndex = 2;
+
+    // ДОБАВИТЬ ЭТО ПЕРЕД ОСТАЛЬНЫМИ ФИЛЬТРАМИ:
+    // Фильтр по конкретному баеру
+    if (buyer_id) {
+      query += ` AND c.buyer_id = $${paramIndex}`;
+      params.push(parseInt(buyer_id));
+      paramIndex++;
+    }
 
     // Фильтрация для менеджеров и баеров - только их команда
     if (req.user.role === 'manager' || req.user.role === 'buyer') {
@@ -156,8 +164,6 @@ router.get('/', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
-
-
 router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCardData, async (req, res) => {
   try {
     const {
@@ -165,7 +171,8 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
       card_password, phone, email, email_password, birth_date,
       passport_issue_date, ipn, second_bank_phone, second_bank_pin,
       second_bank_email, second_bank_password, contractor_name, launch_date,
-      next_payment_date, contractor_account, remaining_balance, commission_amount
+      next_payment_date, contractor_account, remaining_balance, commission_amount,
+      card_number, expiry_date, cvv_code, iban
     } = req.body;
 
     if (!name) {
@@ -197,13 +204,6 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
     const totalTopUpAmount = initialBalance; // первое пополнение = начальный баланс
     const commissionAmount = initialBalance > 0 ? customCommission : 0; // комиссия только если есть баланс
 
-    console.log('Card creation finances:');
-    console.log('- Initial balance:', initialBalance);
-    console.log('- Custom commission:', customCommission);
-    console.log('- Final balance:', finalBalance);
-    console.log('- Total top up:', totalTopUpAmount);
-    console.log('- Commission amount:', commissionAmount);
-
     const result = await db.query(
       `INSERT INTO cards (
         name, currency, team_id, full_name, bank_password, card_password, 
@@ -212,8 +212,9 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
         second_bank_password, contractor_name, launch_date, next_payment_date, 
         contractor_account, income_amount, top_up_uah, remaining_balance, balance,
         daily_limit, last_transaction_date, total_spent_calculated, warm_up_amount, 
-        total_top_up, commission_paid, topup_limit
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32) 
+        total_top_up, commission_paid, topup_limit,
+        card_number, expiry_date, cvv_code, iban
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36) 
       RETURNING *`,
       [
         name, currency, team_id || null, full_name || null, bank_password || null, card_password || null,
@@ -222,7 +223,8 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
         second_bank_password || null, contractor_name || null, launchDateValue, nextPaymentValue,
         contractor_account || null, 0, 0, initialBalance, finalBalance,
         8000, null, totalSpentCalculated, 0,
-        totalTopUpAmount, commissionAmount, 8000
+        totalTopUpAmount, commissionAmount, 8000,
+        card_number || null, expiry_date || null, cvv_code || null, iban || null
       ]
     );
 
@@ -245,9 +247,24 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
         ]
       );
 
-
-
-      console.log('Initial topup and commission transactions recorded');
+      // Сохраняем комиссию как отдельную транзакцию
+      if (commissionAmount > 0) {
+        await db.query(
+          `INSERT INTO card_transactions (card_id, transaction_type, amount, currency, balance_before, balance_after, description, created_by, transaction_date)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [
+            result.rows[0].id,
+            'expense',
+            -commissionAmount,
+            currency,
+            initialBalance,
+            finalBalance,
+            'Комиссия за обслуживание карты',
+            req.user.id,
+            getKyivDate()
+          ]
+        );
+      }
     }
 
     res.status(201).json({
@@ -443,25 +460,21 @@ router.get('/:id', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
-
 // Обновление финансовых данных карты (с сохранением истории)
 router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), validateFinancialData, async (req, res) => {
   console.log('=== UPDATE ROUTE CALLED ===');
   console.log('Card ID:', req.params.id);
   console.log('Body:', req.body);
-  console.log('User:', req.user);
 
   try {
     const cardId = req.params.id;
 
-    // Валидация ID карты
     if (!cardId || isNaN(parseInt(cardId))) {
       return res.status(400).json({ error: 'Некорректный ID карты' });
     }
 
     const { balance, topup_amount, update_date, description } = req.body;
 
-    // Получаем текущие данные карты
     const cardResult = await db.query('SELECT * FROM cards WHERE id = $1', [parseInt(cardId)]);
 
     if (cardResult.rows.length === 0) {
@@ -472,74 +485,58 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
     const card = cardResult.rows[0];
     console.log('Card found:', card.name, 'Current balance:', card.balance, card.currency);
 
-    // Проверяем права доступа
     if (req.user.role === 'manager' && card.team_id !== req.user.team_id) {
       console.log('Access denied for manager');
       return res.status(403).json({ error: 'Недостаточно прав для обновления этой карты' });
     }
 
-    // ИСПРАВЛЕННАЯ ЛОГИКА С НАКОПЛЕНИЕМ БАЛАНСА:
     const currentBalance = parseFloat(card.balance) || 0;
     const additionalTopUp = parseFloat(topup_amount) || 0;
-    const newRemainingBalance = parseFloat(balance) || 0; // это остаток, а не общий баланс
+    const newRemainingBalance = parseFloat(balance) || 0;
     const oldBalance = currentBalance;
     const currentTotalTopUp = parseFloat(card.total_top_up) || 0;
 
     let spentToday = 0;
     let newTotalSpent = parseFloat(card.total_spent_calculated) || 0;
     let newTotalTopUp = currentTotalTopUp;
-    let newCardBalance = currentBalance; // начинаем с текущего баланса
+    let newCardBalance = currentBalance;
 
-    // ЕСЛИ ЕСТЬ ПОПОЛНЕНИЕ - добавляем к общей сумме пополнений и балансу
     if (additionalTopUp > 0) {
       console.log('Topup detected');
       spentToday = 0;
       newTotalTopUp = currentTotalTopUp + additionalTopUp;
-      newCardBalance = currentBalance + additionalTopUp; // добавляем к существующему балансу
+      newCardBalance = currentBalance + additionalTopUp;
     } else {
-      // ЕСЛИ НЕТ ПОПОЛНЕНИЯ - считаем только трату
       spentToday = Math.max(0, currentBalance - newRemainingBalance);
       newTotalSpent = newTotalSpent + spentToday;
-      newCardBalance = newRemainingBalance; // устанавливаем новый остаток
+      newCardBalance = newRemainingBalance;
     }
 
-    console.log('Financial calculations:');
-    console.log('- Current card balance:', currentBalance, card.currency);
-    console.log('- New remaining balance (from form):', newRemainingBalance, card.currency);
-    console.log('- Topup today:', additionalTopUp, card.currency);
-    console.log('- Spent today:', spentToday, card.currency);
-    console.log('- New card balance (calculated):', newCardBalance, card.currency);
-    console.log('- Total spent:', newTotalSpent, card.currency);
-    console.log('- Total top up:', newTotalTopUp, card.currency);
-
-    // Начинаем транзакцию
-    console.log('Starting transaction...');
     await db.query('BEGIN');
 
     try {
-      // Сохраняем пополнение в историю (если было)
       if (additionalTopUp > 0) {
         console.log('Saving topup to history:', additionalTopUp);
 
-        // Проверяем была ли уже списана комиссия (ищем транзакцию с описанием комиссии)
         const commissionResult = await db.query(
           `SELECT COUNT(*) as commission_count 
-   FROM card_transactions 
-   WHERE card_id = $1 AND description LIKE '%омиссия%' AND is_cancelled = FALSE`,
+           FROM card_transactions 
+           WHERE card_id = $1 AND description LIKE '%омиссия%' AND is_cancelled = FALSE`,
           [cardId]
         );
 
         const hasCommission = parseInt(commissionResult.rows[0].commission_count) > 0;
-        // ИСПРАВИЛИ: Если есть комиссия в транзакциях ИЛИ карта создана с балансом > 0
         const wasCommissionTaken = hasCommission || (parseFloat(card.commission_paid) > 0);
         const commission = wasCommissionTaken ? 0 : 15;
 
-        console.log('Commission check:');
-        console.log('- Commission already taken:', hasCommission);
-        console.log('- Commission amount:', commission);
-
-        // Получаем текущую сумму пополнений за сегодня
+        // ДОБАВИТЬ ДЕТАЛЬНОЕ ЛОГИРОВАНИЕ ДАТ
         const today = update_date || getKyivDate();
+        console.log('=== TRANSACTION DATE ANALYSIS ===');
+        console.log('- Current system UTC time:', new Date().toISOString());
+        console.log('- update_date from frontend:', update_date);
+        console.log('- getKyivDate() result:', getKyivDate());
+        console.log('- Final date used for transaction:', today);
+        
         const todayTopupsResult = await db.query(
           `SELECT COALESCE(SUM(amount), 0) as today_topups 
            FROM card_transactions 
@@ -550,14 +547,7 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
         const currentTodayTopups = parseFloat(todayTopupsResult.rows[0].today_topups) || 0;
         const newTodayTopups = currentTodayTopups + additionalTopUp;
         const topupLimit = parseFloat(card.topup_limit) || 8000;
-
-        // Рассчитываем финальный баланс с учетом комиссии
         const finalBalanceAfterCommission = newCardBalance - commission;
-
-        console.log('Topup calculation:');
-        console.log('- New card balance before commission:', newCardBalance);
-        console.log('- Commission:', commission);
-        console.log('- Final balance after commission:', finalBalanceAfterCommission);
 
         // Сохраняем транзакцию пополнения
         await db.query(
@@ -566,27 +556,30 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
           [cardId, 'topup', additionalTopUp, card.currency, oldBalance, newCardBalance, description || 'Пополнение карты', req.user.id, today]
         );
 
-        // Сохраняем комиссию как отдельную транзакцию (если нужно)
+        console.log('=== TRANSACTION SAVED ===');
+        console.log('- Transaction type: topup');
+        console.log('- Amount:', additionalTopUp);
+        console.log('- Date saved:', today);
+
         if (commission > 0) {
           await db.query(
             `INSERT INTO card_transactions (card_id, transaction_type, amount, currency, balance_before, balance_after, description, created_by, transaction_date)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [cardId, 'expense', -commission, card.currency, newCardBalance, finalBalanceAfterCommission, 'Комиссия за пополнение', req.user.id, today]
           );
-          console.log('Commission transaction saved:', commission);
-
-          // Обновляем баланс с учетом комиссии
+          
+          console.log('=== COMMISSION TRANSACTION SAVED ===');
+          console.log('- Commission amount:', commission);
+          console.log('- Date saved:', today);
+          
           newCardBalance = finalBalanceAfterCommission;
         }
 
-        // Проверяем превышение лимита и обновляем статус
         let newStatus = card.status;
         if (newTodayTopups >= topupLimit && card.status === 'active') {
           newStatus = 'limit_exceeded';
-          console.log('Topup limit exceeded, changing status to limit_exceeded');
         }
 
-        // Обновляем карту
         const result = await db.query(
           `UPDATE cards SET 
             balance = $1, 
@@ -608,8 +601,6 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
           ]
         );
 
-        console.log('Card updated with topup, final balance:', newCardBalance);
-
         await db.query('COMMIT');
 
         res.json({
@@ -620,6 +611,12 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
       } else {
         // Нет пополнения - только траты
         console.log('No topup, only expenses');
+        const expenseDate = update_date || getKyivDate();
+        
+        console.log('=== EXPENSE DATE ANALYSIS ===');
+        console.log('- update_date from frontend:', update_date);
+        console.log('- getKyivDate() result:', getKyivDate());
+        console.log('- Final expense date used:', expenseDate);
 
         const result = await db.query(
           `UPDATE cards SET 
@@ -633,19 +630,21 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
             Math.max(0, newCardBalance),
             newRemainingBalance,
             newTotalSpent,
-            update_date || getKyivDate(),
+            expenseDate,
             cardId
           ]
         );
 
-        // Сохраняем трату в историю (если была)
         if (spentToday > 0) {
-          console.log('Saving expense to history:', spentToday);
           await db.query(
             `INSERT INTO card_transactions (card_id, transaction_type, amount, currency, balance_before, balance_after, description, created_by, transaction_date)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-            [cardId, 'expense', -spentToday, card.currency, oldBalance, newCardBalance, description || 'Ежедневная трата', req.user.id, update_date || new Date().toISOString().split('T')[0]]
+            [cardId, 'expense', -spentToday, card.currency, oldBalance, newCardBalance, description || 'Ежедневная трата', req.user.id, expenseDate]
           );
+          
+          console.log('=== EXPENSE TRANSACTION SAVED ===');
+          console.log('- Expense amount:', spentToday);
+          console.log('- Date saved:', expenseDate);
         }
 
         await db.query('COMMIT');
@@ -657,7 +656,6 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
       }
 
     } catch (error) {
-      console.log('Error in transaction, rolling back:', error);
       await db.query('ROLLBACK');
       throw error;
     }
@@ -693,6 +691,22 @@ router.get('/:id/transactions', authenticateToken, async (req, res) => {
        LIMIT 50`,
       [cardId]
     );
+
+    // ДОБАВИТЬ ЛОГИ для проверки дат
+    console.log('=== TRANSACTIONS FROM DB ===');
+    console.log('Current server time:', new Date().toISOString());
+    console.log('Current Kyiv date from function:', getKyivDate());
+    
+    result.rows.forEach(row => {
+      console.log({
+        id: row.id,
+        type: row.transaction_type,
+        amount: row.amount,
+        transaction_date: row.transaction_date,
+        created_at: row.created_at,
+        description: row.description
+      });
+    });
 
     res.json({
       transactions: result.rows
@@ -777,8 +791,6 @@ router.post('/transactions/:transactionId/cancel', authenticateToken, checkRole(
   }
 });
 
-
-// Обновление данных карты (только админ и менеджер)
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateCardData, async (req, res) => {
   try {
     const cardId = req.params.id;
@@ -787,7 +799,8 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateC
       card_password, phone, email, email_password, birth_date,
       passport_issue_date, ipn, second_bank_phone, second_bank_pin,
       second_bank_email, second_bank_password, contractor_name, launch_date,
-      next_payment_date, contractor_account, remaining_balance, commission_amount
+      next_payment_date, contractor_account,
+      card_number, expiry_date, cvv_code, iban
     } = req.body;
 
     // Проверяем существование карты
@@ -823,15 +836,19 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateC
         birth_date = $10, passport_issue_date = $11, ipn = $12, age = $13,
         second_bank_phone = $14, second_bank_pin = $15, second_bank_email = $16,
         second_bank_password = $17, contractor_name = $18, launch_date = $19,
-        next_payment_date = $20, contractor_account = $21, updated_at = CURRENT_TIMESTAMP
-      WHERE id = $22 RETURNING *`,
+        next_payment_date = $20, contractor_account = $21,
+        card_number = $22, expiry_date = $23, cvv_code = $24, iban = $25,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $26 RETURNING *`,
       [
         name, currency, team_id || null, full_name || null, bank_password || null,
         card_password || null, phone || null, email || null, email_password || null,
         birthDateValue, passportDateValue, ipn || null, age,
         second_bank_phone || null, second_bank_pin || null, second_bank_email || null,
         second_bank_password || null, contractor_name || null, launchDateValue,
-        nextPaymentValue, contractor_account || null, cardId
+        nextPaymentValue, contractor_account || null,
+        card_number || null, expiry_date || null, cvv_code || null, iban || null,
+        cardId
       ]
     );
 
@@ -968,6 +985,7 @@ router.put('/:id/assign', authenticateToken, checkRole(['admin', 'manager']), as
 });
 
 // Изменение команды карты (снимает назначение с баера)
+// Изменение команды карты (снимает назначение с баера)
 router.put('/:id/change-team', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const cardId = req.params.id;
@@ -984,6 +1002,26 @@ router.put('/:id/change-team', authenticateToken, checkRole(['admin', 'manager']
     // Проверяем права доступа
     if (req.user.role === 'manager' && card.team_id !== req.user.team_id) {
       return res.status(403).json({ error: 'Недостаточно прав для изменения команды карты' });
+    }
+
+    // ДОБАВИТЬ: Если карта была назначена баеру, создаем запись о переносе
+    if (card.buyer_id) {
+      await db.query(`
+        INSERT INTO card_transfers (
+          original_card_id, old_buyer_id, old_team_id, new_team_id,
+          card_name, balance_snapshot, spent_snapshot, topup_snapshot, currency
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `, [
+        cardId,
+        card.buyer_id,
+        card.team_id,
+        team_id || null,
+        card.name,
+        card.balance || 0,
+        card.total_spent_calculated || 0,
+        card.total_top_up || 0,
+        card.currency || 'USD'
+      ]);
     }
 
     // Обновляем команду карты и снимаем назначение с баера

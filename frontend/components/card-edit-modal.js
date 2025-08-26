@@ -9,67 +9,85 @@ class CardEditModal {
             const response = await api.request(`/cards/${cardId}`);
             const card = response.card;
 
-            console.log('Loaded card data for editing:', card);
-            console.log('Card team_id:', card.team_id, '(type:', typeof card.team_id, ')');
-
-            // Сохраняем оригинальные данные для сравнения
-            this.originalCard = card;
-
-            // Загружаем список команд
+            // Загружаем команды
             const teamsResponse = await api.request('/teams');
-            const teams = teamsResponse.teams;
+            const teams = teamsResponse.teams || [];
 
-            // Создаем модальное окно
-            this.create(card, teams);
-            this.setupEvents(cardId);
-
+            this.createModal(card, teams);
         } catch (error) {
-            console.error('Error opening card edit modal:', error);
+            console.error('Error loading card for edit:', error);
             notifications.error('Ошибка', 'Не удалось загрузить данные карты');
         }
     }
 
-    create(card, teams = []) {
-        // Удаляем существующее модальное окно
-        const existing = document.getElementById(this.modalId);
-        if (existing) existing.remove();
+    createModal(card, teams) {
+        // Удаляем существующий модал если есть
+        const existingModal = document.getElementById(this.modalId);
+        if (existingModal) existingModal.remove();
 
-        const modalHTML = `
-        <div id="${this.modalId}" class="modal show">
+        const modal = document.createElement('div');
+        modal.className = 'modal';
+        modal.id = this.modalId;
+
+        const teamsOptions = teams.map(team =>
+            `<option value="${team.id}" ${card.team_id == team.id ? 'selected' : ''}>${team.name}</option>`
+        ).join('');
+
+        modal.innerHTML = `
             <div class="modal-content">
                 <div class="modal-header">
-                    <h3>Редактировать карту</h3>
-                    <button class="modal-close">&times;</button>
+                    <h3>Редактировать карту: ${card.name}</h3>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
                 </div>
-                <form id="card-edit-form">
+                <form id="edit-card-form">
                     <div class="form-tabs">
                         <button type="button" class="tab-btn active" data-tab="basic">Основные</button>
+                        <button type="button" class="tab-btn" data-tab="requisites">Реквизиты</button>
                         <button type="button" class="tab-btn" data-tab="personal">Личные данные</button>
                         <button type="button" class="tab-btn" data-tab="second-bank">Второй банк</button>
                         <button type="button" class="tab-btn" data-tab="contractor">Подрядчик</button>
                     </div>
 
-                    <!-- Основные данные -->
+                    <!-- Основные -->
                     <div class="tab-content active" data-tab="basic">
                         <div class="form-group">
                             <label class="form-label">Название карты</label>
-                            <input type="text" name="name" class="form-input" value="${card.name || ''}" required>
+                            <input type="text" name="name" class="form-input" required value="${card.name || ''}">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Валюта</label>
                             <select name="currency" class="form-select">
                                 <option value="USD" ${card.currency === 'USD' ? 'selected' : ''}>USD - Доллары США</option>
                                 <option value="EUR" ${card.currency === 'EUR' ? 'selected' : ''}>EUR - Евро</option>
+                                <option value="UAH" ${card.currency === 'UAH' ? 'selected' : ''}>UAH - Гривна</option>
                             </select>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Команда</label>
                             <select name="team_id" class="form-select">
                                 <option value="">Без команды</option>
-                                ${teams.map(team =>
-            `<option value="${team.id}" ${card.team_id == team.id ? 'selected' : ''}>${team.name}</option>`
-        ).join('')}
+                                ${teamsOptions}
                             </select>
+                        </div>
+                    </div>
+
+                    <!-- Реквизиты -->
+                    <div class="tab-content" data-tab="requisites">
+                        <div class="form-group">
+                            <label class="form-label">Номер карты</label>
+                            <input type="text" name="card_number" class="form-input" value="${card.card_number || ''}" maxlength="16">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Дата завершения (MM/YY)</label>
+                            <input type="text" name="expiry_date" class="form-input" value="${card.expiry_date || ''}" maxlength="5">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">CVV код</label>
+                            <input type="text" name="cvv_code" class="form-input" value="${card.cvv_code || ''}" maxlength="3">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">IBAN</label>
+                            <input type="text" name="iban" class="form-input" value="${card.iban || ''}">
                         </div>
                     </div>
 
@@ -92,11 +110,11 @@ class CardEditModal {
                             <input type="tel" name="phone" class="form-input" value="${card.phone || ''}">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Email</label>
+                            <label class="form-label">Почта</label>
                             <input type="email" name="email" class="form-input" value="${card.email || ''}">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Пароль email</label>
+                            <label class="form-label">Пароль почты</label>
                             <input type="password" name="email_password" class="form-input" value="${card.email_password || ''}">
                         </div>
                         <div class="form-group">
@@ -108,7 +126,7 @@ class CardEditModal {
                             <input type="date" name="passport_issue_date" class="form-input" value="${card.passport_issue_date || ''}">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">ИНН</label>
+                            <label class="form-label">ІПН</label>
                             <input type="text" name="ipn" class="form-input" value="${card.ipn || ''}">
                         </div>
                     </div>
@@ -140,11 +158,11 @@ class CardEditModal {
                             <input type="text" name="contractor_name" class="form-input" value="${card.contractor_name || ''}">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Дата запуска</label>
+                            <label class="form-label">Дата запуска карты</label>
                             <input type="date" name="launch_date" class="form-input" value="${card.launch_date || ''}">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">Дата следующего платежа</label>
+                            <label class="form-label">Дата следующей оплаты</label>
                             <input type="date" name="next_payment_date" class="form-input" value="${card.next_payment_date || ''}">
                         </div>
                         <div class="form-group">
@@ -153,73 +171,92 @@ class CardEditModal {
                         </div>
                     </div>
 
-                    
-
                     <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary modal-cancel">Отмена</button>
+                        <button type="button" class="btn btn-secondary modal-cancel" onclick="this.closest('.modal').remove()">Отмена</button>
                         <button type="submit" class="btn btn-primary">Сохранить изменения</button>
                     </div>
                 </form>
             </div>
-        </div>
-    `;
+        `;
 
-        document.body.insertAdjacentHTML('beforeend', modalHTML);
-    }
+        document.body.appendChild(modal);
+        modal.classList.add('show');
 
-    setupEvents(cardId) {
-        const modal = document.getElementById(this.modalId);
-        const closeBtn = modal.querySelector('.modal-close');
-        const cancelBtn = modal.querySelector('.modal-cancel');
-        const form = modal.querySelector('#card-edit-form');
+        // Обработчик переключения вкладок
+        modal.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const tab = e.target.dataset.tab;
 
-        // Закрытие модального окна
-        [closeBtn, cancelBtn].forEach(btn => {
-            btn?.addEventListener('click', () => this.close());
-        });
+                // Убираем активные классы
+                modal.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                modal.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
 
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) this.close();
-        });
-
-        // Вкладки
-        this.setupTabs();
-
-        // Отправка формы
-        form.addEventListener('submit', (e) => this.handleSubmit(e, cardId));
-    }
-
-    setupTabs() {
-        const modal = document.getElementById(this.modalId);
-        const tabBtns = modal.querySelectorAll('.tab-btn');
-        const tabContents = modal.querySelectorAll('.tab-content');
-
-        tabBtns.forEach(btn => {
-            btn.addEventListener('click', () => {
-                const targetTab = btn.dataset.tab;
-                tabBtns.forEach(b => b.classList.remove('active'));
-                tabContents.forEach(c => c.classList.remove('active'));
-                btn.classList.add('active');
-                modal.querySelector(`[data-tab="${targetTab}"].tab-content`).classList.add('active');
+                // Добавляем активные классы
+                e.target.classList.add('active');
+                modal.querySelector(`.tab-content[data-tab="${tab}"]`).classList.add('active');
             });
         });
+
+        // ДОБАВИТЬ: Инициализация форматирования поля даты
+        this.initEditFormFormatting(modal);
+
+        // Обработчик формы
+        document.getElementById('edit-card-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.handleSubmit(card.id);
+        });
     }
 
-    async handleSubmit(e, cardId) {
-        e.preventDefault();
+    // ДОБАВИТЬ: Метод для инициализации форматирования в модале редактирования
+    initEditFormFormatting(modal) {
+        const expiryInput = modal.querySelector('input[name="expiry_date"]');
+        if (expiryInput) {
+            expiryInput.addEventListener('input', function (e) {
+                let value = e.target.value.replace(/[^\d]/g, '');
 
+                if (value.length > 4) {
+                    value = value.substring(0, 4);
+                }
+
+                if (value.length >= 3) {
+                    value = value.substring(0, 2) + '/' + value.substring(2);
+                }
+
+                e.target.value = value;
+            });
+
+            expiryInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Backspace') {
+                    const cursorPos = e.target.selectionStart;
+                    if (cursorPos === 3 && e.target.value.charAt(2) === '/') {
+                        e.target.value = e.target.value.substring(0, 1) + e.target.value.substring(3);
+                        e.target.setSelectionRange(1, 1);
+                        e.preventDefault();
+                    }
+                }
+
+                if (!/\d/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+                    e.preventDefault();
+                }
+            });
+        }
+    }
+
+    async handleSubmit(cardId) {
         try {
-            const formData = new FormData(e.target);
+            const form = document.getElementById('edit-card-form');
+            const formData = new FormData(form);
 
             const updateData = {
                 name: formData.get('name'),
                 currency: formData.get('currency'),
                 team_id: formData.get('team_id') || null,
                 full_name: formData.get('full_name'),
-                bank_password: formData.get('bank_password'),
-                card_password: formData.get('card_password'),
                 phone: formData.get('phone'),
                 email: formData.get('email'),
+                bank_password: formData.get('bank_password'),
+                card_password: formData.get('card_password'),
                 email_password: formData.get('email_password'),
                 birth_date: formData.get('birth_date'),
                 passport_issue_date: formData.get('passport_issue_date'),
@@ -229,65 +266,32 @@ class CardEditModal {
                 second_bank_email: formData.get('second_bank_email'),
                 second_bank_password: formData.get('second_bank_password'),
                 contractor_name: formData.get('contractor_name'),
+                contractor_account: formData.get('contractor_account'),
                 launch_date: formData.get('launch_date'),
                 next_payment_date: formData.get('next_payment_date'),
-                contractor_account: formData.get('contractor_account'),
-                remaining_balance: formData.get('remaining_balance'),
-                commission_amount: formData.get('commission_amount')
+                card_number: formData.get('card_number'),
+                expiry_date: formData.get('expiry_date'),
+                cvv_code: formData.get('cvv_code'),
+                iban: formData.get('iban')
             };
 
-            // Проверяем изменилась ли команда
-            const currentTeamId = this.originalCard.team_id;
-            const newTeamId = updateData.team_id;
-
-            // Приводим к одному типу для сравнения
-            const normalizedCurrent = currentTeamId ? String(currentTeamId) : null;
-            const normalizedNew = newTeamId ? String(newTeamId) : null;
-
-            console.log('Team comparison:');
-            console.log('- Current team ID:', currentTeamId, '(type:', typeof currentTeamId, ')');
-            console.log('- New team ID:', newTeamId, '(type:', typeof newTeamId, ')');
-            console.log('- Normalized current:', normalizedCurrent);
-            console.log('- Normalized new:', normalizedNew);
-
-            if (normalizedCurrent !== normalizedNew) {
-                console.log('Team changed, calling change-team API');
-                // Сначала меняем команду (это снимет назначение с баера)
-                const changeTeamResponse = await api.request(`/cards/${cardId}/change-team`, {
-                    method: 'PUT',
-                    body: JSON.stringify({ team_id: newTeamId })
-                });
-                console.log('Change team API response:', changeTeamResponse);
-            }
-
-            // Обновляем все данные карты (включая team_id)
-            const updateResponse = await api.request(`/cards/${cardId}`, {
+            await api.request(`/cards/${cardId}`, {
                 method: 'PUT',
                 body: JSON.stringify(updateData)
             });
-            console.log('Card update API response:', updateResponse);
 
             notifications.success('Карта обновлена', 'Изменения успешно сохранены');
             this.close();
 
-            // Безопасное обновление данных - только если соответствующие модули активны
+            // Обновляем данные если модули активны
             if (window.cardDetailModule && window.location.hash.includes('#card/')) {
-                try {
-                    await window.cardDetailModule.loadCard();
-                    window.cardDetailModule.fillCardInfo();
-                } catch (error) {
-                    console.log('Card detail update skipped:', error.message);
-                }
+                await window.cardDetailModule.loadCard();
+                window.cardDetailModule.fillCardInfo();
             }
 
-            // Обновляем список карт если модуль загружен
             if (window.cardsModule) {
-                try {
-                    await window.cardsModule.loadCards();
-                    window.cardsModule.renderCards();
-                } catch (error) {
-                    console.log('Cards list update skipped:', error.message);
-                }
+                await window.cardsModule.loadCards();
+                window.cardsModule.renderCards();
             }
 
         } catch (error) {

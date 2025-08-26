@@ -270,16 +270,19 @@ if (typeof window.CardsModule === 'undefined') {
       const totalSpent = card.total_spent_calculated || 0;
       const commissionPaid = card.commission_paid || 0;
       const totalTopUp = card.total_top_up || 0;
-      const daysSinceTransaction = this.calculateDaysSinceTransaction(card.last_transaction_date);
+      const timeInfo = this.calculateTimeSinceTransaction(card.last_transaction_date);
 
       return `
-        <tr class="${daysSinceTransaction >= 3 ? 'warning-row' : ''}" data-card-id="${card.id}">
+        <tr class="${timeInfo.days >= 2 ? 'warning-row' : ''}" data-card-id="${card.id}">
             <td title="${card.name}">
                 <a href="#" class="card-name-link" onclick="window.cardsModule?.openCardDetail(${card.id}); return false;">
                     ${card.name}
                 </a>
             </td>
-            <td><span class="table-status ${statusClass}">${statusText}</span></td>
+            <td>
+                <span class="table-status ${statusClass}">${statusText}</span>
+                ${timeInfo.days >= 2 ? `<br><small style="color: var(--error-color);">⚠️ ${timeInfo.text}</small>` : ''}
+            </td>
             <td>${card.currency}</td>
             <td>${card.balance || 0} ${card.currency}</td>
             <td>${totalSpent} ${card.currency}</td>
@@ -308,10 +311,10 @@ if (typeof window.CardsModule === 'undefined') {
       const commissionPaid = card.commission_paid || 0;
       const totalTopUp = card.total_top_up || 0;
       const balance = card.balance || 0;
-      const daysSinceTransaction = this.calculateDaysSinceTransaction(card.last_transaction_date);
+      const timeInfo = this.calculateTimeSinceTransaction(card.last_transaction_date); // ИЗМЕНЕНО
 
       return `
-        <div class="card-item ${daysSinceTransaction >= 3 ? 'warning-card' : ''}" data-card-id="${card.id}">
+        <div class="card-item ${timeInfo.days >= 2 ? 'warning-card' : ''}" data-card-id="${card.id}">
             <div class="card-actions">
                 <button class="card-action-btn edit" onclick="window.cardsModule?.editCard(${card.id})" title="Редактировать карту">
                     <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor">
@@ -374,10 +377,10 @@ if (typeof window.CardsModule === 'undefined') {
                         <span class="card-info-value">${card.contractor_name}</span>
                     </div>
                     ` : ''}
-                    ${daysSinceTransaction >= 3 ? `
+                    ${timeInfo.days >= 2 ? `
                     <div class="card-info-item warning">
-                        <span class="card-info-label">⚠️ Без транзакций</span>
-                        <span class="card-info-value">${daysSinceTransaction} дней</span>
+                        <span class="card-info-label">⚠️ Без операций</span>
+                        <span class="card-info-value">${timeInfo.text}</span>
                     </div>
                     ` : ''}
                 </div>
@@ -511,12 +514,28 @@ if (typeof window.CardsModule === 'undefined') {
       }
     }
 
-    calculateDaysSinceTransaction(lastTransactionDate) {
-      if (!lastTransactionDate) return 0;
-      const today = new Date();
+    calculateTimeSinceTransaction(lastTransactionDate) {
+      if (!lastTransactionDate) return { days: 0, hours: 0, text: 'Нет транзакций' };
+
+      const now = new Date();
       const lastDate = new Date(lastTransactionDate);
-      const diffTime = Math.abs(today - lastDate);
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const diffTime = now - lastDate;
+
+      const totalHours = Math.floor(diffTime / (1000 * 60 * 60));
+      const days = Math.floor(totalHours / 24);
+      const hours = totalHours % 24;
+
+      let text = '';
+      if (days > 0) {
+        text = `${days} дн. ${hours} ч.`;
+      } else if (hours > 0) {
+        text = `${hours} ч.`;
+      } else {
+        const minutes = Math.floor(diffTime / (1000 * 60));
+        text = minutes > 0 ? `${minutes} мин.` : 'Менее минуты';
+      }
+
+      return { days, hours, text };
     }
 
     getStatusText(status) {
@@ -538,17 +557,17 @@ if (typeof window.CardsModule === 'undefined') {
       const modal = document.getElementById('card-modal');
       modal?.classList.add('show');
 
-      // Генерируем уникальный ID для новой карты
       const uniqueId = this.generateUniqueCardId();
-
       this.populateTeamsSelect();
 
-      // Автоматически заполняем название карты
       const nameField = document.querySelector('input[name="name"]');
       if (nameField && !nameField.value) {
         nameField.value = uniqueId;
-        nameField.select(); // Выделяем текст чтобы можно было сразу заменить
+        nameField.select();
       }
+
+      // Инициализируем форматирование полей
+      setTimeout(() => initCardFormFormatting(), 100);
     }
 
     // Псевдоним для shortcuts.js
@@ -622,8 +641,8 @@ if (typeof window.CardsModule === 'undefined') {
 
         // Логика создания новой карты остается без изменений
         const cardData = {
-          name: formData.get('name'),
-          currency: formData.get('currency'),
+          name: SecurityUtils.escapeHtml(formData.get('name')),
+          currency: formData.get('currency') || 'USD',
           team_id: formData.get('team_id') || null,
           full_name: SecurityUtils.escapeHtml(formData.get('full_name')),
           phone: SecurityUtils.escapeHtml(formData.get('phone')),
@@ -643,7 +662,12 @@ if (typeof window.CardsModule === 'undefined') {
           launch_date: formData.get('launch_date'),
           next_payment_date: formData.get('next_payment_date'),
           remaining_balance: formData.get('remaining_balance'),
-          commission_amount: formData.get('commission_amount')
+          commission_amount: formData.get('commission_amount'),
+          // ДОБАВИТЬ НОВЫЕ ПОЛЯ:
+          card_number: SecurityUtils.escapeHtml(formData.get('card_number')),
+          expiry_date: SecurityUtils.escapeHtml(formData.get('expiry_date')),
+          cvv_code: SecurityUtils.escapeHtml(formData.get('cvv_code')),
+          iban: SecurityUtils.escapeHtml(formData.get('iban'))
         };
 
         const errors = SecurityUtils.validateCardInput(cardData);
@@ -1054,6 +1078,49 @@ if (typeof window.CardsModule === 'undefined') {
 
       // Применяем фильтр
       this.filterCardsByPeriod();
+    }
+  }
+
+  function formatExpiryDate(input) {
+    let value = input.value.replace(/[^\d]/g, '');
+
+    // Ограничиваем до 4 цифр
+    if (value.length > 4) {
+      value = value.substring(0, 4);
+    }
+
+    // Добавляем слеш после второй цифры
+    if (value.length >= 3) {
+      value = value.substring(0, 2) + '/' + value.substring(2);
+    }
+
+    input.value = value;
+  }
+
+  function initCardFormFormatting() {
+    const expiryInput = document.querySelector('input[name="expiry_date"]');
+    if (expiryInput) {
+      expiryInput.addEventListener('input', function (e) {
+        formatExpiryDate(e.target);
+      });
+
+      expiryInput.addEventListener('keydown', function (e) {
+        // Если нажат Backspace и курсор стоит после слеша
+        if (e.key === 'Backspace') {
+          const cursorPos = e.target.selectionStart;
+          if (cursorPos === 3 && e.target.value.charAt(2) === '/') {
+            // Удаляем символ перед слешем
+            e.target.value = e.target.value.substring(0, 1) + e.target.value.substring(3);
+            e.target.setSelectionRange(1, 1);
+            e.preventDefault();
+          }
+        }
+
+        // Предотвращаем ввод нечисловых символов
+        if (!/\d/.test(e.key) && !['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+          e.preventDefault();
+        }
+      });
     }
   }
 

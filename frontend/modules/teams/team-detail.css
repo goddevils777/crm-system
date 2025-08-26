@@ -615,3 +615,78 @@
         margin: 0;
     }
 }
+
+/* Мобильная адаптация для team-detail-header */
+@media (max-width: 768px) {
+    .team-detail-header {
+        flex-direction: column;
+        gap: 16px;
+        padding: 16px;
+    }
+    
+    .team-info {
+        order: 1;
+        text-align: center;
+    }
+    
+    .team-info h2 {
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+    
+    .team-stats-summary {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+        justify-content: center;
+    }
+    
+    .team-stats-summary .stat-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 8px;
+        background: rgba(0, 0, 0, 0.02);
+        border-radius: 6px;
+    }
+    
+    .team-stats-summary .stat-label {
+        font-size: 11px;
+        margin-bottom: 2px;
+    }
+    
+    .team-stats-summary .stat-value {
+        font-size: 13px;
+        font-weight: 600;
+    }
+    
+    .back-btn {
+        order: 0;
+        align-self: flex-start;
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+    
+    .team-actions {
+        order: 2;
+        width: 100%;
+    }
+    
+    .team-actions .btn {
+        width: 100%;
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+}
+
+/* Для очень маленьких экранов */
+@media (max-width: 480px) {
+    .team-stats-summary {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    
+    .team-stats-summary .stat-value {
+        font-size: 12px;
+    }
+}

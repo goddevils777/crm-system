@@ -1,20 +1,21 @@
 // Компонент сайдбара
 class SidebarComponent {
- constructor() {
-   this.activeModule = localStorage.getItem('active_module') || 'cards';
-   this.onModuleChange = null; // Callback для смены модуля
- }
+  constructor() {
+    this.activeModule = localStorage.getItem('active_module') || 'cards';
+    this.onModuleChange = null; // Callback для смены модуля
+  }
 
- render() {
-   const menuItems = [
-     { id: 'cards', title: 'Карты', icon: '💳' },
-     { id: 'expenses', title: 'Расходы', icon: '💰' },
-     { id: 'teams', title: 'Команды', icon: '👥' },
-     { id: 'income', title: 'Доходы', icon: '📈' },
-     { id: 'analytics', title: 'Аналитика', icon: '📊' }
-   ];
+  render() {
+    const menuItems = [
+      { id: 'cards', title: 'Карты', icon: '💳' },
+      { id: 'expenses', title: 'Расходы', icon: '💰' },
+      { id: 'teams', title: 'Команды', icon: '👥' },
+      { id: 'clients', title: 'Клиенты', icon: '📌' }, // ДОБАВИТЬ ЭТУ СТРОКУ
+      { id: 'income', title: 'Доходы', icon: '📈' },
+      { id: 'analytics', title: 'Аналитика', icon: '📊' }
+    ];
 
-   const menuHtml = menuItems.map(item => `
+    const menuHtml = menuItems.map(item => `
      <li>
        <a href="#" data-module="${item.id}" class="menu-item ${item.id === this.activeModule ? 'active' : ''}">
          <span class="menu-icon">${item.icon}</span>
@@ -23,84 +24,92 @@ class SidebarComponent {
      </li>
    `).join('');
 
-   return `
+    return `
      <aside class="sidebar">
        <ul class="menu" id="main-menu">
          ${menuHtml}
        </ul>
      </aside>
    `;
- }
+  }
 
- mount(container) {
-   // Проверяем актуальный модуль перед рендером
-   this.activeModule = localStorage.getItem('active_module') || 'cards';
+  mount(container) {
+    // Проверяем актуальный модуль перед рендером
+    this.activeModule = localStorage.getItem('active_module') || 'cards';
 
-   container.innerHTML = this.render();
-   this.setupEvents();
+    container.innerHTML = this.render();
+    this.setupEvents();
 
-   // Принудительно устанавливаем активный класс после рендера
-   setTimeout(() => {
-     this.setActiveModule(this.activeModule);
-   }, 10);
- }
+    // Принудительно устанавливаем активный класс после рендера
+    setTimeout(() => {
+      this.setActiveModule(this.activeModule);
+    }, 10);
+  }
 
- setupEvents() {
-   const menu = document.getElementById('main-menu');
+  setupEvents() {
+    const menu = document.getElementById('main-menu');
 
-   menu?.addEventListener('click', (e) => {
-     e.preventDefault();
-     const link = e.target.closest('.menu-item');
-     if (link) {
-       const module = link.dataset.module;
-       
-       // НОВАЯ ЛОГИКА: Если кликнули на "Карты" находясь на детальной странице
-       if (module === 'cards' && window.location.hash.startsWith('#card/')) {
-         console.log('Forcing return to cards list from detail page');
-         // Очищаем детальную страницу
-         localStorage.removeItem('current_card_detail');
-         // Принудительно меняем URL на список карт
-         window.history.replaceState({module: 'cards'}, '', '#cards');
-         // Принудительно перезагружаем модуль
-         if (window.moduleLoader) {
-           window.moduleLoader.loadedModules.delete('cards');
-         }
-       }
-       
-       this.setActiveModule(module);
+    menu?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const link = e.target.closest('.menu-item');
+      if (link) {
+        const module = link.dataset.module;
 
-       // Вызываем callback для смены модуля
-       if (this.onModuleChange) {
-         this.onModuleChange(module);
-       }
-     }
-   });
- }
+        // УБРАТЬ ВСЮ СЕКЦИЮ АВТОЗАКРЫТИЯ:
+        // if (window.innerWidth <= 768) { ... }
 
- setActiveModule(moduleName) {
-   console.log('Setting active module:', moduleName);
-   this.activeModule = moduleName;
-   localStorage.setItem('active_module', moduleName);
+        // Принудительная очистка состояния карты при переходе в команды
+        if (module === 'teams') {
+          console.log('Forcing clear card state when clicking teams');
+          localStorage.removeItem('current_card_detail');
+          window.history.replaceState({ module: 'teams' }, '', '#teams');
+          if (window.moduleLoader && window.moduleLoader.loadedModules.has('teams')) {
+            window.moduleLoader.loadedModules.delete('teams');
+          }
+        }
 
-   // ИСПРАВЛЕННЫЙ СЕЛЕКТОР - ищем только ссылки меню
-   document.querySelectorAll('.menu-item').forEach(link => {
-     link.classList.remove('active');
-   });
+        if (module === 'cards' && window.location.hash.startsWith('#card/')) {
+          console.log('Forcing return to cards list from detail page');
+          localStorage.removeItem('current_card_detail');
+          window.history.replaceState({ module: 'cards' }, '', '#cards');
+          if (window.moduleLoader) {
+            window.moduleLoader.loadedModules.delete('cards');
+          }
+        }
 
-   // ИСПРАВЛЕННЫЙ СЕЛЕКТОР - более точный поиск
-   const activeLink = document.querySelector(`.menu-item[data-module="${moduleName}"]`);
-   console.log('Found active link:', activeLink);
-   if (activeLink) {
-     activeLink.classList.add('active');
-     console.log('Added active class to:', moduleName);
-   } else {
-     console.error('Active link not found for module:', moduleName);
-   }
- }
+        this.setActiveModule(module);
 
- setModuleChangeCallback(callback) {
-   this.onModuleChange = callback;
- }
+        if (this.onModuleChange) {
+          this.onModuleChange(module);
+        }
+      }
+    });
+  }
+
+  setActiveModule(moduleName) {
+    console.log('Setting active module:', moduleName);
+    this.activeModule = moduleName;
+    localStorage.setItem('active_module', moduleName);
+
+    // ИСПРАВЛЕННЫЙ СЕЛЕКТОР - ищем только ссылки меню
+    document.querySelectorAll('.menu-item').forEach(link => {
+      link.classList.remove('active');
+    });
+
+    // ИСПРАВЛЕННЫЙ СЕЛЕКТОР - более точный поиск
+    const activeLink = document.querySelector(`.menu-item[data-module="${moduleName}"]`);
+    console.log('Found active link:', activeLink);
+    if (activeLink) {
+      activeLink.classList.add('active');
+      console.log('Added active class to:', moduleName);
+    } else {
+      console.error('Active link not found for module:', moduleName);
+    }
+  }
+
+  setModuleChangeCallback(callback) {
+    this.onModuleChange = callback;
+  }
 }
 
 window.SidebarComponent = SidebarComponent;
