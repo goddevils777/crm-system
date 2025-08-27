@@ -4,10 +4,11 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--border-color-split);
-    flex-wrap: wrap;
-    gap: 16px;
+    padding: 20px 24px;
+    background: var(--component-background);
+    border-radius: 12px;
+    border: 1px solid var(--border-color-split);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .module-header h2 {
@@ -623,7 +624,7 @@
     .cards-filters {
         grid-template-columns: 1fr 1fr 1fr;
     }
-    
+
     .cards-grid {
         grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     }
@@ -634,21 +635,21 @@
         flex-direction: column;
         align-items: stretch;
     }
-    
 
-    
+
+
     .cards-filters {
         grid-template-columns: 1fr;
     }
-    
+
     .cards-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .cards-table-container {
         overflow-x: auto;
     }
-    
+
     .cards-table {
         min-width: 800px;
     }
@@ -724,7 +725,7 @@
         align-items: flex-start;
         gap: 12px;
     }
-    
+
     .period-stats {
         gap: 16px;
         flex-wrap: wrap;
@@ -737,6 +738,7 @@
         opacity: 0;
         transform: translateY(-20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -750,11 +752,11 @@
         align-items: flex-start;
         gap: 16px;
     }
-    
+
     .period-stats {
         gap: 16px;
     }
-    
+
     .reset-period-btn {
         align-self: stretch;
         min-width: auto;
@@ -770,7 +772,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    width: 160px;
+    width: 100%;
     padding: 9px 16px;
     background: var(--component-background);
     border: 1px solid var(--border-color);
@@ -789,7 +791,8 @@
     position: absolute;
     top: 100%;
     left: 0;
-    width: 200px; /* фиксированная ширина */
+    width: 200px;
+    /* фиксированная ширина */
     background: var(--component-background);
     border: 1px solid var(--border-color);
     border-radius: 8px;

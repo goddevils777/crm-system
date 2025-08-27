@@ -157,7 +157,13 @@ ${this.card.buyer_assigned_date && this.card.buyer_name ? `<div class="info-item
             })}</div>` : ''}
         <div class="info-item"><strong>Подрядчик:</strong> ${this.card.contractor_name || '—'}</div>
         <div class="info-item"><strong>Дата запуска:</strong> ${this.card.launch_date ? new Date(this.card.launch_date).toLocaleDateString() : '—'}</div>
-        <div class="info-item"><strong>Дата создания:</strong> ${createdDate}</div>
+        <div class="info-item"><strong>Дата создания:</strong> ${new Date(this.card.created_at).toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })}</div>
     `;
         }
 
@@ -254,7 +260,7 @@ ${this.card.buyer_assigned_date && this.card.buyer_name ? `<div class="info-item
                 </select>
             </div>
             
-            <div id="custom-period-inputs" style="display: none;">
+            <div id="custom-period-inputs" style="display: block;">
                 <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                     <input type="date" id="period-from" class="form-input" style="flex: 1; font-size: 12px;">
                     <input type="date" id="period-to" class="form-input" style="flex: 1; font-size: 12px;">
@@ -757,17 +763,20 @@ ${this.card.buyer_assigned_date && this.card.buyer_name ? `<div class="info-item
             const fromInput = document.getElementById('period-from');
             const toInput = document.getElementById('period-to');
 
+
             periodFilter?.addEventListener('change', (e) => {
                 const value = e.target.value;
 
                 if (value === 'custom') {
-                    customInputs.style.display = 'block';
+                    // Для произвольного периода ничего не делаем - пользователь сам выберет даты
                     resetBtn.style.display = 'block';
                 } else {
-                    customInputs.style.display = 'none';
+                    // Поля остаются всегда видимыми!
+                    // customInputs.style.display = 'none'; // ← УБИРАЕМ ЭТУ СТРОКУ
 
                     if (value === '') {
-                        this.resetToOriginalStats();
+                        // ДОБАВЛЯЕМ ВЫЗОВ applyPeriodFilter для очистки полей
+                        this.applyPeriodFilter('');
                         resetBtn.style.display = 'none';
                     } else {
                         this.applyPeriodFilter(value);
@@ -833,13 +842,26 @@ ${this.card.buyer_assigned_date && this.card.buyer_name ? `<div class="info-item
                     fromDate = getKyivDateString(-30);
                     toDate = getKyivDateString(0);
                     break;
+                case '':
+                    // Сброс фильтра - очищаем поля
+                    fromDate = '';
+                    toDate = '';
+                    console.log('Setting empty dates for "all time":', fromDate, toDate);
+                    break;
             }
+
+            // ВСЕГДА ЗАПОЛНЯЕМ ПОЛЯ (даже пустыми значениями)
+            console.log('About to set fields:', fromDate || 'EMPTY', toDate || 'EMPTY');
+            document.getElementById('period-from').value = fromDate || '';
+            document.getElementById('period-to').value = toDate || '';
+            console.log('Fields set to:', document.getElementById('period-from').value, document.getElementById('period-to').value);
 
             if (fromDate && toDate) {
                 this.loadAndUpdateStats(fromDate, toDate);
+            } else {
+                this.resetToOriginalStats();
             }
         }
-
 
         async applyCustomPeriod() {
             const fromDate = document.getElementById('period-from').value;

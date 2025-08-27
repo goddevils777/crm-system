@@ -1,0 +1,53 @@
+<div class="module-header">
+    <div class="header-left">
+        <h2>Клиенты</h2>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-primary" id="add-client-btn">
+            + Добавить клиента
+        </button>
+    </div>
+</div>
+
+<div class="clients-filters">
+    <div class="filter-group">
+        <input type="text" id="search-clients" class="form-input" placeholder="Поиск клиентов...">
+    </div>
+</div>
+
+<!-- Список клиентов -->
+<div class="clients-grid" id="clients-container">
+    <!-- Клиенты загружаются динамически -->
+</div>
+
+<!-- Модальное окно добавления клиента -->
+<div id="client-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Добавить клиента</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <form id="client-form">
+            <div class="form-group">
+                <label class="form-label">Название клиента *</label>
+                <input type="text" name="name" class="form-input" required placeholder="Введите название">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" name="email" class="form-input" placeholder="client@example.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Телефон</label>
+                <input type="tel" name="phone" class="form-input" placeholder="+1234567890">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Описание</label>
+                <textarea name="description" class="form-input" rows="3" placeholder="Дополнительная информация"></textarea>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn btn-secondary modal-cancel">Отмена</button>
+                <button type="submit" class="btn btn-primary">Создать клиента</button>
+            </div>
+        </form>
+    </div>
+</div>

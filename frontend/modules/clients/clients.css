@@ -1,0 +1,273 @@
+/* Общие стили для модуля клиентов */
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 20px 24px;
+    background: var(--component-background);
+    border-radius: 12px;
+    border: 1px solid var(--border-color-split);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+
+
+.form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.filter-group {
+    position: relative;
+}
+
+/* Clients Module Styles - Изолированные префиксом .clients- */
+.clients-filters {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 24px;
+    padding: 16px;
+    background: var(--component-background);
+    border-radius: 8px;
+    border: 1px solid var(--border-color-split);
+}
+
+.clients-filters .filter-group {
+    flex: 1;
+    max-width: 300px;
+}
+
+/* Clients Grid */
+.clients-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+    padding: 8px;
+}
+
+/* Client Card - уникальные имена классов */
+.clients-card {
+    background: var(--component-background);
+    border: 1px solid var(--border-color-split);
+    border-radius: 12px;
+    padding: 20px;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.clients-card:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.clients-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+}
+
+.clients-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.clients-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.clients-action-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    background: var(--background-color);
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.clients-action-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    transform: scale(1.1);
+}
+
+.clients-action-btn.edit:hover {
+    background: var(--warning-color);
+}
+
+.clients-action-btn.delete:hover {
+    background: var(--error-color);
+}
+
+/* Client Card Body */
+.clients-card-body {
+    margin-bottom: 16px;
+}
+
+.clients-info-item {
+    display: flex;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.clients-info-item .label {
+    color: var(--text-secondary);
+    min-width: 80px;
+    font-weight: 500;
+}
+
+.clients-info-item:last-child {
+    margin-bottom: 0;
+}
+
+/* Client Card Footer */
+.clients-card-footer {
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color-split);
+}
+
+.clients-created-date {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Empty State */
+.clients-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--text-secondary);
+}
+
+.clients-empty h3 {
+    font-size: 18px;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+/* Modal остается с ID для изоляции */
+#client-modal .modal-content {
+    max-width: 500px;
+}
+
+#client-modal .form-group {
+    margin-bottom: 16px;
+}
+
+#client-modal .form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: var(--text-primary);
+}
+
+#client-modal .form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+#client-modal .form-input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.1);
+    outline: none;
+}
+
+#client-modal textarea.form-input {
+    resize: vertical;
+    min-height: 80px;
+}
+
+#client-modal .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color-split);
+}
+
+#client-modal .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+#client-modal .btn-secondary {
+    background: var(--background-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+}
+
+#client-modal .btn-secondary:hover {
+    background: var(--border-color-split);
+}
+
+#client-modal .btn-primary {
+    background: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    color: white;
+}
+
+#client-modal .btn-primary:hover {
+    background: var(--primary-hover);
+    border-color: var(--primary-hover);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .clients-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .clients-filters {
+        flex-direction: column;
+    }
+
+    .clients-card {
+        padding: 16px;
+    }
+
+    #client-modal .modal-actions {
+        flex-direction: column;
+    }
+
+    #client-modal .btn {
+        width: 100%;
+    }
+}

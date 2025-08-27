@@ -1,0 +1,93 @@
+<div class="client-detail-container">
+    <div class="client-detail-header">
+        <button class="btn btn-secondary back-btn" onclick="app.loadModule('clients')">
+            ← Назад к клиентам
+        </button>
+        <div class="client-info">
+            <h2 id="client-name">Загрузка...</h2>
+            <div class="client-meta">
+                <span id="client-contact"></span>
+                <span id="client-created"></span>
+            </div>
+        </div>
+        <div class="client-actions">
+            <button class="btn btn-primary" id="create-bill-btn">
+                Сформировать счет
+            </button>
+        </div>
+    </div>
+
+    <!-- Список выставленных счетов -->
+    <div class="bills-section">
+        <div class="section-header">
+            <h3>Выставленные счета</h3>
+        </div>
+        <div class="bills-table-container" id="bills-container">
+            <table class="bills-table">
+                <thead>
+                    <tr>
+                        <th>Дата</th>
+                        <th>Период</th>
+                        <th>Команда</th>
+                        <th>Баеров</th>
+                        <th>Карт</th>
+                        <th>Сумма</th>
+                        <th>Статус</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody id="bills-table-body">
+                    <!-- Счета загружаются динамически -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно создания счета -->
+<div id="create-bill-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Создать счет</h3>
+            <button class="modal-close">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-group">
+                <label class="form-label">Команда</label>
+                <select id="team-select" class="form-select">
+                    <option value="">Выберите команду</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Период</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="date" id="period-from" class="form-input" placeholder="от">
+                    <input type="date" id="period-to" class="form-input" placeholder="до">
+                </div>
+            </div>
+            <div id="team-summary" style="display: none;">
+                <h4>Данные по команде:</h4>
+                <div class="bill-summary-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Баеров:</span>
+                        <span class="stat-value" id="summary-buyers">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Карт:</span>
+                        <span class="stat-value" id="summary-cards">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Скручено:</span>
+                        <span class="stat-value" id="summary-spent">0 USD</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button type="button" class="btn btn-secondary modal-cancel">Отмена</button>
+            <button type="button" class="btn btn-primary" id="send-bill-btn" disabled>
+                Отправить счет
+            </button>
+        </div>
+    </div>
+</div>

@@ -69,8 +69,20 @@ class TeamDetailModule {
                 const { startDate, endDate } = this.getPeriodDates(period);
 
                 if (startDate && endDate) {
-                    dateFrom.value = startDate.toISOString().split('T')[0];
-                    dateTo.value = endDate.toISOString().split('T')[0];
+                    // Форматируем дату без конвертации в UTC
+                    const formatDate = (date) => {
+                        const year = date.getFullYear();
+                        const month = String(date.getMonth() + 1).padStart(2, '0');
+                        const day = String(date.getDate()).padStart(2, '0');
+                        return `${year}-${month}-${day}`;
+                    };
+
+                    dateFrom.value = formatDate(startDate);
+                    dateTo.value = formatDate(endDate);
+
+                    console.log('=== SETUP DATE FILTER FIXED ===');
+                    console.log('- startDate:', startDate);
+                    console.log('- Field value:', formatDate(startDate));
                 }
 
                 this.applyDateFilter(period);
@@ -124,13 +136,31 @@ class TeamDetailModule {
     }
 
     getPeriodDates(period) {
+        // Используем киевское время как в card-detail
+        const getKyivDate = (offsetDays = 0) => {
+            const now = new Date();
+            const kyivTime = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Kiev" }));
+            kyivTime.setDate(kyivTime.getDate() + offsetDays);
+            return new Date(kyivTime.getFullYear(), kyivTime.getMonth(), kyivTime.getDate());
+        };
+
+        console.log('=== getPeriodDates FIXED DEBUG ===');
+
+        // ДОБАВЬ ЭТУ СТРОКУ:
         const now = new Date();
-        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        console.log('=== getPeriodDates DEBUG ===');
+        console.log('- Current time (now):', now.toISOString());
+
+        const today = getKyivDate(0); // Сегодня в киевском времени
+        console.log('- Today (Kyiv):', today);
 
         switch (period) {
             case 'today':
                 const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1);
-                return { startDate: today, endDate: todayEnd }; // ТОЛЬКО сегодня
+                console.log('- Today start:', today);
+                console.log('- Today end:', todayEnd);
+                return { startDate: today, endDate: todayEnd };
+            // ... остальные cases остаются как были
             case 'yesterday':
                 const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
                 const yesterdayEnd = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1);
@@ -188,35 +218,293 @@ class TeamDetailModule {
 
 
     updateTeamStats() {
-    if (!this.filteredBuyers) return;
+        if (!this.filteredBuyers) return;
 
-    console.log('this.currentDateFilter:', this.currentDateFilter);
-    const isFiltered = !!this.currentDateFilter;
-    console.log('isFiltered result:', isFiltered);
-    console.log('Current currency:', this.currentCurrency);
+        console.log('this.currentDateFilter:', this.currentDateFilter);
+        const isFiltered = !!this.currentDateFilter;
+        console.log('isFiltered result:', isFiltered);
+        console.log('Current currency:', this.currentCurrency);
 
-    let totalSpent = 0;
-    let totalTopups = 0;
-    let totalBalance = 0;
+        let totalSpent = 0;
+        let totalTopups = 0;
+        let totalBalance = 0;
 
-    this.filteredBuyers.forEach((buyer, index) => {
-        console.log(`Баер ${index + 1}:`, buyer.username);
-        
-        // Используем тот же метод что и для отображения баеров
-        const currencyData = this.getBuyerCurrencyData(buyer);
-        
-        totalSpent += currencyData.spent;
-        totalTopups += currencyData.topup;
-        totalBalance += currencyData.balance;
-        
-        console.log(`- ${this.currentCurrency} данные:`, currencyData);
+        this.filteredBuyers.forEach((buyer, index) => {
+            console.log(`Баер ${index + 1}:`, buyer.username);
+
+            // Используем тот же метод что и для отображения баеров
+            const currencyData = this.getBuyerCurrencyData(buyer);
+
+            totalSpent += currencyData.spent;
+            totalTopups += currencyData.topup;
+            totalBalance += currencyData.balance;
+
+            console.log(`- ${this.currentCurrency} данные:`, currencyData);
+        });
+
+        console.log('FINAL TOTALS for', this.currentCurrency, ':', { totalSpent, totalTopups, totalBalance });
+
+        document.getElementById('total-balance').textContent = `${totalBalance.toFixed(2)} ${this.currentCurrency}`;
+        document.getElementById('total-spent').textContent = `${totalSpent.toFixed(2)} ${this.currentCurrency}`;
+        document.getElementById('total-topup').textContent = `${totalTopups.toFixed(2)} ${this.currentCurrency}`;
+
+        // Показываем кнопку "Сформировать счет" если выбран период и есть траты
+        const billButton = document.getElementById('generate-bill-btn');
+
+        if (isFiltered && totalSpent > 0) {
+            if (!billButton) {
+                // Создаем кнопку если её нет
+                const statsContainer = document.querySelector('.team-stats-summary');
+                const buttonHtml = `
+                <button id="generate-bill-btn" class="btn btn-success" style="margin-top: 30px; padding: 8px 16px; font-size: 14px;">
+                    Сформировать счет
+                </button>
+            `;
+                statsContainer.insertAdjacentHTML('afterend', buttonHtml);
+
+                document.getElementById('generate-bill-btn').addEventListener('click', () => {
+                    this.generateBill(totalSpent, totalTopups, totalBalance);
+                });
+            } else {
+                billButton.style.display = 'inline-flex';
+            }
+        } else if (billButton) {
+            billButton.style.display = 'none';
+        }
+    }
+
+    generateBill(totalSpent, totalTopups, totalBalance) {
+        console.log('Generating bill with data:', {
+            totalSpent,
+            totalTopups,
+            totalBalance,
+            period: this.currentDateFilter.period,
+            currency: this.currentCurrency
+        });
+
+        // Курс конвертации EUR -> USD
+        const EUR_TO_USD_RATE = 1.03;
+
+        // Собираем данные по валютам и картам
+        let usdSpent = 0;
+        let eurSpent = 0;
+        let cardsList = [];
+        let buyersCount = 0;
+        let cardsCount = 0;
+
+        this.filteredBuyers.forEach(buyer => {
+            if (buyer.usd_spent > 0 || buyer.eur_spent > 0) {
+                buyersCount++;
+
+                // USD карты
+                if (buyer.usd_spent > 0) {
+                    usdSpent += buyer.usd_spent;
+                    cardsCount += buyer.usd_cards_count || 0;
+
+                    cardsList.push({
+                        buyerName: buyer.username,
+                        currency: 'USD',
+                        spent: buyer.usd_spent,
+                        cardsCount: buyer.usd_cards_count || 0
+                    });
+                }
+
+                // EUR карты
+                if (buyer.eur_spent > 0) {
+                    eurSpent += buyer.eur_spent;
+                    cardsCount += buyer.eur_cards_count || 0;
+
+                    cardsList.push({
+                        buyerName: buyer.username,
+                        currency: 'EUR',
+                        spent: buyer.eur_spent,
+                        cardsCount: buyer.eur_cards_count || 0
+                    });
+                }
+            }
+        });
+
+        // Конвертируем EUR в USD
+        const eurInUsd = eurSpent * EUR_TO_USD_RATE;
+        const totalInUsd = usdSpent + eurInUsd;
+
+        // Создаем блок с детализацией
+        this.showBillDetails(totalInUsd, buyersCount, cardsCount, cardsList, EUR_TO_USD_RATE, eurSpent);
+    }
+
+   async showBillDetails(totalInUsd, buyersCount, cardsCount, cardsList, eurRate, eurSpent) {
+    // Удаляем существующий блок если есть
+    const existingBlock = document.getElementById('bill-details-block');
+    if (existingBlock) existingBlock.remove();
+    
+    // Загружаем список клиентов
+    let clients = [];
+    try {
+        const response = await api.request('/clients');
+        clients = response.clients || [];
+    } catch (error) {
+        console.error('Error loading clients:', error);
+        // Используем моковые данные если API недоступно
+        clients = [
+            { id: 1, name: 'Компания ABC' },
+            { id: 2, name: 'ООО Пример' }
+        ];
+    }
+    
+    const billBlock = document.createElement('div');
+    billBlock.id = 'bill-details-block';
+    billBlock.className = 'bill-details-block';
+    
+    const cardsListHtml = cardsList.map((card, index) => `
+        <div class="bill-card-item" data-index="${index}">
+            <span class="buyer-name">${card.buyerName}</span>
+            <span class="cards-info">${card.cardsCount} карт</span>
+            <span class="spent-amount">${card.spent.toFixed(2)} ${card.currency}</span>
+            <button class="remove-card-btn" onclick="this.closest('.bill-card-item').remove(); window.teamDetailModule.recalculateBillTotal()">×</button>
+        </div>
+    `).join('');
+    
+    const clientsOptions = clients.map(client => 
+        `<option value="${client.id}">${client.name}</option>`
+    ).join('');
+    
+    billBlock.innerHTML = `
+        <div class="bill-header">
+            <h3>Детализация счета</h3>
+            <button class="close-bill-btn" onclick="document.getElementById('bill-details-block').remove()">×</button>
+        </div>
+        <div class="bill-summary">
+            <div class="bill-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Баеров:</span>
+                    <span class="stat-value" id="bill-buyers-count">${buyersCount}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Карт:</span>
+                    <span class="stat-value" id="bill-cards-count">${cardsCount}</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">К оплате:</span>
+                    <span class="stat-value" id="bill-total-amount">${totalInUsd.toFixed(2)} USD</span>
+                </div>
+                ${eurSpent > 0 ? `<div class="rate-info">Курс EUR/USD: ${eurRate}</div>` : ''}
+            </div>
+        </div>
+        <div class="bill-cards-list">
+            <h4>Детали по баерам:</h4>
+            <div id="bill-cards-container">
+                ${cardsListHtml}
+            </div>
+        </div>
+        <div class="bill-actions">
+            <div class="client-select-group">
+                <label class="form-label">Клиент:</label>
+                <select id="client-select" class="form-select">
+                    <option value="">Выберите клиента</option>
+                    ${clientsOptions}
+                </select>
+            </div>
+            <button class="btn btn-primary" id="send-bill-to-client-btn" disabled>
+                Отправить клиенту на оплату
+            </button>
+        </div>
+    `;
+    
+    // Добавляем блок в начало контейнера
+    const container = document.querySelector('.team-detail-container');
+    container.insertBefore(billBlock, container.firstChild);
+    
+    // Добавляем обработчик для выбора клиента
+    document.getElementById('client-select').addEventListener('change', (e) => {
+        const sendBtn = document.getElementById('send-bill-to-client-btn');
+        sendBtn.disabled = !e.target.value;
     });
+    
+    // Добавляем обработчик для отправки счета
+    document.getElementById('send-bill-to-client-btn').addEventListener('click', () => {
+        this.sendBillToClient();
+    });
+}
 
-    console.log('FINAL TOTALS for', this.currentCurrency, ':', { totalSpent, totalTopups, totalBalance });
+// Метод для пересчета итогов при удалении карт
+recalculateBillTotal() {
+    const remainingCards = document.querySelectorAll('.bill-card-item');
+    let totalAmount = 0;
+    let buyersCount = 0;
+    let cardsCount = 0;
+    const EUR_TO_USD_RATE = 1.03;
+    
+    const processedBuyers = new Set();
+    
+    remainingCards.forEach(cardElement => {
+        const buyerName = cardElement.querySelector('.buyer-name').textContent;
+        const cardsInfo = cardElement.querySelector('.cards-info').textContent;
+        const spentText = cardElement.querySelector('.spent-amount').textContent;
+        
+        // Извлекаем количество карт
+        const cardCount = parseInt(cardsInfo.split(' ')[0]);
+        cardsCount += cardCount;
+        
+        // Извлекаем сумму и валюту
+        const [amountStr, currency] = spentText.split(' ');
+        const amount = parseFloat(amountStr);
+        
+        if (currency === 'EUR') {
+            totalAmount += amount * EUR_TO_USD_RATE;
+        } else {
+            totalAmount += amount;
+        }
+        
+        // Считаем уникальных баеров
+        if (!processedBuyers.has(buyerName)) {
+            processedBuyers.add(buyerName);
+            buyersCount++;
+        }
+    });
+    
+    // Обновляем итоги
+    document.getElementById('bill-buyers-count').textContent = buyersCount;
+    document.getElementById('bill-cards-count').textContent = cardsCount;
+    document.getElementById('bill-total-amount').textContent = `${totalAmount.toFixed(2)} USD`;
+}
 
-    document.getElementById('total-balance').textContent = `${totalBalance.toFixed(2)} ${this.currentCurrency}`;
-    document.getElementById('total-spent').textContent = `${totalSpent.toFixed(2)} ${this.currentCurrency}`;
-    document.getElementById('total-topup').textContent = `${totalTopups.toFixed(2)} ${this.currentCurrency}`;
+async sendBillToClient() {
+    const clientSelect = document.getElementById('client-select');
+    const clientId = clientSelect.value;
+    const clientName = clientSelect.selectedOptions[0].text;
+    
+    if (!clientId) {
+        notifications.error('Ошибка', 'Выберите клиента');
+        return;
+    }
+    
+    const buyersCount = document.getElementById('bill-buyers-count').textContent;
+    const cardsCount = document.getElementById('bill-cards-count').textContent;
+    const totalAmount = document.getElementById('bill-total-amount').textContent.replace(' USD', '');
+    
+    const billData = {
+        client_id: clientId,
+        team_id: this.teamId,
+        buyers_count: parseInt(buyersCount),
+        cards_count: parseInt(cardsCount),
+        amount: parseFloat(totalAmount),
+        period_from: this.currentDateFilter.startDate.toISOString().split('T')[0],
+        period_to: this.currentDateFilter.endDate.toISOString().split('T')[0]
+    };
+    
+    try {
+        // Пока используем заглушку
+        console.log('Sending bill to client:', billData);
+        
+        notifications.success('Счет отправлен', `Счет на сумму ${totalAmount} USD отправлен клиенту "${clientName}"`);
+        
+        // Закрываем блок детализации
+        document.getElementById('bill-details-block').remove();
+        
+    } catch (error) {
+        console.error('Error sending bill:', error);
+        notifications.error('Ошибка', 'Не удалось отправить счет клиенту');
+    }
 }
 
 
@@ -248,7 +536,7 @@ class TeamDetailModule {
         } catch (error) {
             console.error('Ошибка загрузки баеров:', error);
         }
-    } 
+    }
 
     updateTeamHeader() {
         if (!this.team) return;
@@ -338,52 +626,52 @@ class TeamDetailModule {
     }
 
     // ДОБАВИТЬ: Вспомогательный метод для получения данных баера по валюте
-// Вспомогательный метод для получения данных баера по валюте
-getBuyerCurrencyData(buyer) {
-    const currencyBreakdown = buyer.currency_breakdown || {};
-    const selectedCurrencyData = currencyBreakdown[this.currentCurrency];
-    
-    if (selectedCurrencyData) {
-        // Если у баера есть карты в выбранной валюте
-        const isFiltered = !!this.currentDateFilter;
-        
-        return {
-            cardsCount: selectedCurrencyData.cards_count || 0,
-            balance: parseFloat(selectedCurrencyData.balance || 0),
-            spent: isFiltered ? 
-                (buyer.filtered_spent || 0) * (selectedCurrencyData.balance / (buyer.total_balance || 1)) :
-                parseFloat(selectedCurrencyData.spent || 0),
-            topup: isFiltered ? 
-                (buyer.filtered_topups || 0) * (selectedCurrencyData.balance / (buyer.total_balance || 1)) :
-                parseFloat(selectedCurrencyData.topup || 0)
-        };
-    } else {
-        // Если у баера нет карт в выбранной валюте - показываем нули
-        return {
-            cardsCount: 0,
-            balance: 0,
-            spent: 0,
-            topup: 0
-        };
-    }
-}
+    // Вспомогательный метод для получения данных баера по валюте
+    getBuyerCurrencyData(buyer) {
+        const currencyBreakdown = buyer.currency_breakdown || {};
+        const selectedCurrencyData = currencyBreakdown[this.currentCurrency];
 
-   renderBuyersTable() {
-    const tbody = document.getElementById('buyers-table-body');
-    const buyersToRender = this.filteredBuyers || this.buyers;
+        if (selectedCurrencyData) {
+            // Если у баера есть карты в выбранной валюте
+            const isFiltered = !!this.currentDateFilter;
 
-    if (buyersToRender.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">В команде пока нет баеров</td></tr>';
-        return;
+            return {
+                cardsCount: selectedCurrencyData.cards_count || 0,
+                balance: parseFloat(selectedCurrencyData.balance || 0),
+                spent: isFiltered ?
+                    (buyer.filtered_spent || 0) * (selectedCurrencyData.balance / (buyer.total_balance || 1)) :
+                    parseFloat(selectedCurrencyData.spent || 0),
+                topup: isFiltered ?
+                    (buyer.filtered_topups || 0) * (selectedCurrencyData.balance / (buyer.total_balance || 1)) :
+                    parseFloat(selectedCurrencyData.topup || 0)
+            };
+        } else {
+            // Если у баера нет карт в выбранной валюте - показываем нули
+            return {
+                cardsCount: 0,
+                balance: 0,
+                spent: 0,
+                topup: 0
+            };
+        }
     }
 
-    const buyersHtml = buyersToRender.map(buyer => {
-        const telegramHandle = buyer.telegram.startsWith('@') ? buyer.telegram : `@${buyer.telegram}`;
-        
-        // ДОБАВИТЬ: Получаем данные для выбранной валюты
-        const currencyData = this.getBuyerCurrencyData(buyer);
+    renderBuyersTable() {
+        const tbody = document.getElementById('buyers-table-body');
+        const buyersToRender = this.filteredBuyers || this.buyers;
 
-        return `
+        if (buyersToRender.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; padding: 40px; color: var(--text-secondary);">В команде пока нет баеров</td></tr>';
+            return;
+        }
+
+        const buyersHtml = buyersToRender.map(buyer => {
+            const telegramHandle = buyer.telegram.startsWith('@') ? buyer.telegram : `@${buyer.telegram}`;
+
+            // ДОБАВИТЬ: Получаем данные для выбранной валюты
+            const currencyData = this.getBuyerCurrencyData(buyer);
+
+            return `
         <tr>
             <td>
                 <a href="#" class="buyer-name-link" onclick="window.teamDetailModule?.openBuyerDetail(${buyer.id}); return false;">
@@ -420,10 +708,10 @@ getBuyerCurrencyData(buyer) {
             </td>
         </tr>
     `;
-    }).join('');
+        }).join('');
 
-    tbody.innerHTML = buyersHtml;
-}
+        tbody.innerHTML = buyersHtml;
+    }
 
     switchView(view) {
         this.currentView = view;

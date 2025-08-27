@@ -690,3 +690,146 @@
         font-size: 12px;
     }
 }
+
+/* Bill Details Block */
+.bill-details-block {
+    background: #f0f9ff;
+    border: 2px solid #0ea5e9;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    animation: slideInDown 0.3s ease-out;
+}
+
+.bill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.bill-header h3 {
+    color: #0ea5e9;
+    margin: 0;
+    font-size: 18px;
+}
+
+.close-bill-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #64748b;
+}
+
+.bill-summary {
+    margin-bottom: 16px;
+}
+
+.bill-stats {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    margin-bottom: 8px;
+
+}
+
+.bill-stats .stat-item {
+    display: flex;
+    gap: 4px;
+            background: var(--component-background);
+    padding: 16px 12px;
+    text-align: center;
+}
+
+
+
+.bill-stats .stat-label {
+    color: #64748b;
+}
+
+.bill-stats .stat-value {
+    font-weight: 600;
+    color: #0ea5e9;
+}
+
+.rate-info {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.bill-cards-list h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: #374151;
+}
+
+.bill-card-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    margin-bottom: 8px;
+}
+
+.remove-card-btn {
+    background: #ef4444;
+    color: white;
+    border: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    cursor: pointer;
+}
+
+.bill-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.bill-actions .form-select {
+    flex: 1;
+    max-width: 200px;
+}
+
+.bill-actions {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-color-split);
+}
+
+.client-select-group {
+    flex: 1;
+    max-width: 250px;
+}
+
+.client-select-group .form-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.client-select-group .form-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 14px;
+}
+
+#send-bill-to-client-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

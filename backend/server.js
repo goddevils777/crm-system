@@ -79,11 +79,13 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Подключение роутов
+const { createAdminUser } = require('./utils/createAdmin');
 const authRoutes = require('./routes/auth');
 const cardRoutes = require('./routes/cards');
 const expenseRoutes = require('./routes/expenses');
 const teamRoutes = require('./routes/teams');
-const { createAdminUser } = require('./utils/createAdmin');
+const clientsRoutes = require('./routes/clients');
+
 
 app.use(express.static(path.join(__dirname, '../frontend')));
 
@@ -93,6 +95,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/cards', cardRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/clients', clientsRoutes);
 
 // Тестовый роут
 app.get('/api/test', (req, res) => {

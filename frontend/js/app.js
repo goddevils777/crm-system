@@ -108,7 +108,6 @@ class App {
       moduleName = 'cards'; // Принудительно загружаем модуль карт
     }
 
-
     localStorage.setItem('active_module', moduleName);
 
     console.log('=== APP LOAD MODULE ===');

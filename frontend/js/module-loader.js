@@ -80,6 +80,19 @@ class ModuleLoader {
                 console.log('Creating new TeamsModule instance...');
                 moduleInstance = new window.TeamsModule();
                 window.teamsModule = moduleInstance;
+            } else if (moduleName === 'clients' && window.ClientsModule) {
+                console.log('Creating new ClientsModule instance...');
+                moduleInstance = new window.ClientsModule();
+                window.clientsModule = moduleInstance;
+            } else if (moduleName === 'client-detail' && window.ClientDetailModule) {
+                console.log('Creating new ClientDetailModule instance...');
+                const clientId = localStorage.getItem('current_client_detail');
+                if (clientId) {
+                    moduleInstance = new window.ClientDetailModule(clientId);
+                    window.clientDetailModule = moduleInstance;
+                } else {
+                    console.error('Client ID not found for client detail module');
+                }
             } else if (moduleName === 'team-detail' && window.TeamDetailModule) {
                 console.log('Creating new TeamDetailModule instance...');
                 const teamId = localStorage.getItem('current_team_detail');
@@ -179,6 +192,21 @@ class ModuleLoader {
                 console.log('Creating new TeamsModule instance...');
                 moduleInstance = new window.TeamsModule();
                 window.teamsModule = moduleInstance;
+
+
+            } else if (moduleName === 'clients' && window.ClientsModule) {
+                console.log('Creating new ClientsModule instance...');
+                moduleInstance = new window.ClientsModule();
+                window.clientsModule = moduleInstance;
+            } else if (moduleName === 'client-detail' && window.ClientDetailModule) {
+                console.log('Creating new ClientDetailModule instance...');
+                const clientId = localStorage.getItem('current_client_detail');
+                if (clientId) {
+                    moduleInstance = new window.ClientDetailModule(clientId);
+                    window.clientDetailModule = moduleInstance;
+                } else {
+                    console.error('Client ID not found for client detail module');
+                }
             } else if (moduleName === 'team-detail' && window.TeamDetailModule) {
                 console.log('Creating new TeamDetailModule instance...');
                 const teamId = localStorage.getItem('current_team_detail');

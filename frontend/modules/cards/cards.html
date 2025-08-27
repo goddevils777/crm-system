@@ -35,53 +35,8 @@
     <div class="filter-group">
         <input type="text" id="search-cards" class="form-input" placeholder="Поиск по названию карты...">
     </div>
-    <div class="filter-group">
-        <select id="status-filter" class="form-select">
-            <option value="">Все статусы</option>
-            <option value="active">Активные</option>
-            <option value="blocked">Заблокированные</option>
-            <option value="reissue">Перевыпуск</option>
-            <option value="error">Ошибка</option>
-            <option value="rebind">Переподвязать</option>
-            <option value="not_issued">Не выданы</option>
-            <option value="not_spinning">Не крутят</option>
-            <option value="limit_exceeded">Лимит достигнут</option>
-        </select>
-    </div>
 
-    <div class="filter-group">
-        <div style="display: flex; gap: 8px;">
-            <input type="date" id="date-from" class="form-input" title="Дата начала">
-            <input type="date" id="date-to" class="form-input" title="Дата окончания">
-        </div>
-    </div>
-
-    <div class="filter-group">
-        <select id="period-filter" class="form-select">
-            <option value="">Выберите период</option>
-            <option value="today">Сегодня</option>
-            <option value="yesterday">Вчера</option>
-            <option value="3days">Последние 3 дня</option>
-            <option value="week">Последние 7 дней</option>
-            <option value="month">Последние 30 дней</option>
-        </select>
-    </div>
-
-    <div class="filter-group">
-        <select id="sort-cards" class="form-select">
-            <option value="created_desc">Новые сначала</option>
-            <option value="created_asc">Старые сначала</option>
-            <option value="name_asc">По названию А-Я</option>
-            <option value="name_desc">По названию Я-А</option>
-            <option value="balance_desc">По балансу (больше)</option>
-            <option value="balance_asc">По балансу (меньше)</option>
-            <option value="spent_desc">По скрученному (больше)</option>
-            <option value="spent_asc">По скрученному (меньше)</option>
-        </select>
-    </div>
-
-
-    <div class="teams-filter-container">
+        <div class="teams-filter-container">
         <button type="button" class="teams-filter-button" id="teams-filter-button">
             <span class="filter-text">Все команды</span>
             <span class="filter-arrow">▼</span>
@@ -105,6 +60,57 @@
             </div>
         </div>
     </div>
+    <div class="filter-group">
+        <select id="status-filter" class="form-select">
+            <option value="">Все статусы</option>
+            <option value="active">Активные</option>
+            <option value="blocked">Заблокированные</option>
+            <option value="reissue">Перевыпуск</option>
+            <option value="error">Ошибка</option>
+            <option value="rebind">Переподвязать</option>
+            <option value="not_issued">Не выданы</option>
+            <option value="not_spinning">Не крутят</option>
+            <option value="limit_exceeded">Лимит достигнут</option>
+        </select>
+    </div>
+
+
+
+
+
+        <div class="filter-group">
+        <select id="sort-cards" class="form-select">
+            <option value="created_desc">Новые сначала</option>
+            <option value="created_asc">Старые сначала</option>
+            <option value="name_asc">По названию А-Я</option>
+            <option value="name_desc">По названию Я-А</option>
+            <option value="balance_desc">По балансу (больше)</option>
+            <option value="balance_asc">По балансу (меньше)</option>
+            <option value="spent_desc">По скрученному (больше)</option>
+            <option value="spent_asc">По скрученному (меньше)</option>
+        </select>
+    </div>
+
+
+    <div class="filter-group">
+        <select id="period-filter" class="form-select">
+            <option value="">Выберите период</option>
+            <option value="today">Сегодня</option>
+            <option value="yesterday">Вчера</option>
+            <option value="3days">Последние 3 дня</option>
+            <option value="week">Последние 7 дней</option>
+            <option value="month">Последние 30 дней</option>
+        </select>
+    </div>
+
+
+    <div class="filter-group">
+        <div style="display: flex; gap: 8px;">
+            <input type="date" id="date-from" class="form-input" title="Дата начала">
+            <input type="date" id="date-to" class="form-input" title="Дата окончания">
+        </div>
+    </div>
+
 
 
 

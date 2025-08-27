@@ -793,12 +793,18 @@ router.post('/transactions/:transactionId/cancel', authenticateToken, checkRole(
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
-
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateCardData, async (req, res) => {
   try {
     const cardId = req.params.id;
+    
+    console.log('=== UPDATE CARD REQUEST ===');
+    console.log('Card ID:', cardId);
+    console.log('Request body:', req.body);
+    console.log('Buyer ID from request:', req.body.buyer_id);
+    console.log('Team ID from request:', req.body.team_id);
+    
     const {
-      name, currency, team_id, full_name, bank_password,
+      name, currency, team_id, buyer_id, full_name, bank_password,
       card_password, phone, email, email_password, birth_date,
       passport_issue_date, ipn, second_bank_phone, second_bank_pin,
       second_bank_email, second_bank_password, contractor_name, launch_date,
@@ -807,16 +813,79 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateC
     } = req.body;
 
     // Проверяем существование карты
-    const checkResult = await db.query('SELECT id, team_id FROM cards WHERE id = $1', [cardId]);
+    const checkResult = await db.query('SELECT * FROM cards WHERE id = $1', [cardId]);
     if (checkResult.rows.length === 0) {
       return res.status(404).json({ error: 'Карта не найдена' });
     }
 
     const card = checkResult.rows[0];
+    console.log('Current card data:', {
+      id: card.id,
+      name: card.name,
+      team_id: card.team_id,
+      buyer_id: card.buyer_id
+    });
 
     // Проверяем права доступа
     if (req.user.role === 'manager' && card.team_id !== req.user.team_id) {
       return res.status(403).json({ error: 'Недостаточно прав для редактирования этой карты' });
+    }
+
+    // Если меняется команда и у карты был баер, создаем запись о переносе
+    if (team_id && team_id != card.team_id && card.buyer_id) {
+      console.log('Creating transfer record...');
+      console.log('Transfer data:', {
+        cardId,
+        oldBuyerId: card.buyer_id,
+        oldTeamId: card.team_id,
+        newTeamId: team_id,
+        cardName: name || card.name,
+        balance: card.balance || 0,
+        spent: card.total_spent_calculated || 0,
+        topup: card.total_top_up || 0,
+        currency: currency || card.currency || 'USD'
+      });
+      
+      try {
+        await db.query(`
+          INSERT INTO card_transfers (
+            original_card_id, old_buyer_id, old_team_id, new_team_id,
+            card_name, balance_snapshot, spent_snapshot, topup_snapshot, currency
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        `, [
+          cardId,
+          card.buyer_id,
+          card.team_id,
+          team_id,
+          name || card.name,
+          card.balance || 0,
+          card.total_spent_calculated || 0,
+          card.total_top_up || 0,
+          currency || card.currency || 'USD'
+        ]);
+        console.log('Transfer record created successfully');
+      } catch (transferError) {
+        console.error('Error creating transfer record:', transferError);
+        // Продолжаем выполнение даже если не удалось создать запись о переносе
+      }
+    }
+
+    // Если указан buyer_id, проверяем что баер принадлежит выбранной команде
+    if (buyer_id && team_id) {
+      console.log('Checking buyer validity...');
+      const buyerCheck = await db.query(
+        'SELECT team_id FROM team_buyers WHERE id = $1', 
+        [buyer_id]
+      );
+      
+      if (buyerCheck.rows.length === 0) {
+        return res.status(400).json({ error: 'Указанный баер не найден' });
+      }
+      
+      if (buyerCheck.rows[0].team_id != team_id) {
+        return res.status(400).json({ error: 'Баер должен принадлежать выбранной команде' });
+      }
+      console.log('Buyer validation passed');
     }
 
     // Обработка дат
@@ -832,19 +901,23 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateC
       age = new Date().getFullYear() - birthYear;
     }
 
+    console.log('Updating card with parameters:', {
+      name, currency, team_id, buyer_id, full_name, age
+    });
+
     const result = await db.query(
       `UPDATE cards SET 
-        name = $1, currency = $2, team_id = $3, full_name = $4, bank_password = $5,
-        card_password = $6, phone = $7, email = $8, email_password = $9,
-        birth_date = $10, passport_issue_date = $11, ipn = $12, age = $13,
-        second_bank_phone = $14, second_bank_pin = $15, second_bank_email = $16,
-        second_bank_password = $17, contractor_name = $18, launch_date = $19,
-        next_payment_date = $20, contractor_account = $21,
-        card_number = $22, expiry_date = $23, cvv_code = $24, iban = $25,
+        name = $1, currency = $2, team_id = $3, buyer_id = $4, full_name = $5, bank_password = $6,
+        card_password = $7, phone = $8, email = $9, email_password = $10,
+        birth_date = $11, passport_issue_date = $12, ipn = $13, age = $14,
+        second_bank_phone = $15, second_bank_pin = $16, second_bank_email = $17,
+        second_bank_password = $18, contractor_name = $19, launch_date = $20,
+        next_payment_date = $21, contractor_account = $22,
+        card_number = $23, expiry_date = $24, cvv_code = $25, iban = $26,
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $26 RETURNING *`,
+      WHERE id = $27 RETURNING *`,
       [
-        name, currency, team_id || null, full_name || null, bank_password || null,
+        name, currency, team_id || null, buyer_id || null, full_name || null, bank_password || null,
         card_password || null, phone || null, email || null, email_password || null,
         birthDateValue, passportDateValue, ipn || null, age,
         second_bank_phone || null, second_bank_pin || null, second_bank_email || null,
@@ -855,12 +928,17 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateC
       ]
     );
 
+    console.log('Card updated successfully:', result.rows[0].id);
+
     res.json({
       message: 'Карта успешно обновлена',
       card: result.rows[0]
     });
   } catch (error) {
-    console.error('Ошибка обновления карты:', error);
+    console.error('=== ERROR UPDATING CARD ===');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    console.error('================================');
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
