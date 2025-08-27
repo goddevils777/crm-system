@@ -644,6 +644,7 @@ if (typeof window.CardsModule === 'undefined') {
           name: SecurityUtils.escapeHtml(formData.get('name')),
           currency: formData.get('currency') || 'USD',
           team_id: formData.get('team_id') || null,
+          buyer_id: formData.get('buyer_id') || null,
           full_name: SecurityUtils.escapeHtml(formData.get('full_name')),
           phone: SecurityUtils.escapeHtml(formData.get('phone')),
           email: SecurityUtils.escapeHtml(formData.get('email')),
@@ -895,27 +896,70 @@ if (typeof window.CardsModule === 'undefined') {
         this.teams = [];
       }
     }
-    populateTeamsSelect() {
-      const teamSelect = document.querySelector('select[name="team_id"]');
-      if (!teamSelect) return;
 
-      // Очищаем текущие опции (кроме первой)
-      teamSelect.innerHTML = '<option value="">Выберите команду</option>';
 
-      // Проверяем что команды загружены
-      if (!this.teams || this.teams.length === 0) {
-        console.log('Teams not loaded yet, will populate when available');
-        return;
+populateTeamsSelect() {
+  const teamSelect = document.querySelector('select[name="team_id"]');
+  if (!teamSelect) return;
+
+  // Очищаем текущие опции (кроме первой)
+  teamSelect.innerHTML = '<option value="">Выберите команду</option>';
+
+  // Проверяем что команды загружены
+  if (!this.teams || this.teams.length === 0) {
+    console.log('Teams not loaded yet, will populate when available');
+    return;
+  }
+
+  // Добавляем команды
+  this.teams.forEach(team => {
+    const option = document.createElement('option');
+    option.value = team.id;
+    option.textContent = team.name;
+    teamSelect.appendChild(option);
+  });
+
+  // Добавляем обработчик изменения команды
+  const buyerField = document.getElementById('buyer-field');
+  const buyerSelect = document.getElementById('buyer_id');
+
+  if (buyerField && buyerSelect) {
+    // Удаляем старые обработчики если есть
+    teamSelect.removeEventListener('change', this._teamChangeHandler);
+    
+    // Создаем новый обработчик
+    this._teamChangeHandler = async (e) => {
+      const teamId = e.target.value;
+      
+      if (teamId) {
+        // Показываем поле баера
+        buyerField.style.display = 'block';
+        
+        // Загружаем баеров команды
+        try {
+          const buyersResponse = await api.request(`/teams/${teamId}/buyers`);
+          const buyers = buyersResponse.buyers || [];
+          
+          // Очищаем и заполняем список баеров
+          buyerSelect.innerHTML = '<option value="">Выберите баера</option>';
+          buyers.forEach(buyer => {
+            buyerSelect.innerHTML += `<option value="${buyer.id}">${buyer.username}</option>`;
+          });
+          
+        } catch (error) {
+          console.error('Ошибка загрузки баеров:', error);
+          buyerSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+        }
+      } else {
+        // Скрываем поле баера
+        buyerField.style.display = 'none';
+        buyerSelect.innerHTML = '<option value="">Выберите баера</option>';
       }
-
-      // Добавляем команды
-      this.teams.forEach(team => {
-        const option = document.createElement('option');
-        option.value = team.id;
-        option.textContent = team.name;
-        teamSelect.appendChild(option);
-      });
-    }
+    };
+    
+    teamSelect.addEventListener('change', this._teamChangeHandler);
+  }
+}
 
 
     setupTeamsFilter() {

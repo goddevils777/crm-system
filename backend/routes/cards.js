@@ -164,10 +164,11 @@ router.get('/', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
+
 router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCardData, async (req, res) => {
   try {
     const {
-      name, currency = 'USD', team_id, full_name, bank_password,
+      name, currency = 'USD', team_id, buyer_id, full_name, bank_password,
       card_password, phone, email, email_password, birth_date,
       passport_issue_date, ipn, second_bank_phone, second_bank_pin,
       second_bank_email, second_bank_password, contractor_name, launch_date,
@@ -184,6 +185,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
     const passportDateValue = passport_issue_date && passport_issue_date.trim() !== '' ? passport_issue_date : null;
     const launchDateValue = launch_date && launch_date.trim() !== '' ? launch_date : null;
     const nextPaymentValue = next_payment_date && next_payment_date.trim() !== '' ? next_payment_date : null;
+    const buyerAssignedDate = buyer_id ? new Date() : null;
 
     // Вычисление возраста
     let age = null;
@@ -206,7 +208,7 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
 
     const result = await db.query(
       `INSERT INTO cards (
-        name, currency, team_id, full_name, bank_password, card_password, 
+        name, currency, team_id, buyer_id, buyer_assigned_date, full_name, bank_password, card_password, 
         phone, email, email_password, birth_date, passport_issue_date, 
         ipn, age, second_bank_phone, second_bank_pin, second_bank_email,
         second_bank_password, contractor_name, launch_date, next_payment_date, 
@@ -214,10 +216,11 @@ router.post('/', authenticateToken, checkRole(['admin', 'manager']), validateCar
         daily_limit, last_transaction_date, total_spent_calculated, warm_up_amount, 
         total_top_up, commission_paid, topup_limit,
         card_number, expiry_date, cvv_code, iban
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36) 
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38)
       RETURNING *`,
       [
-        name, currency, team_id || null, full_name || null, bank_password || null, card_password || null,
+        name, currency, team_id || null, buyer_id || null, buyerAssignedDate,
+        full_name || null, bank_password || null, card_password || null,
         phone || null, email || null, email_password || null, birthDateValue, passportDateValue,
         ipn || null, age, second_bank_phone || null, second_bank_pin || null, second_bank_email || null,
         second_bank_password || null, contractor_name || null, launchDateValue, nextPaymentValue,
@@ -536,7 +539,7 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
         console.log('- update_date from frontend:', update_date);
         console.log('- getKyivDate() result:', getKyivDate());
         console.log('- Final date used for transaction:', today);
-        
+
         const todayTopupsResult = await db.query(
           `SELECT COALESCE(SUM(amount), 0) as today_topups 
            FROM card_transactions 
@@ -567,11 +570,11 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [cardId, 'expense', -commission, card.currency, newCardBalance, finalBalanceAfterCommission, 'Комиссия за пополнение', req.user.id, today]
           );
-          
+
           console.log('=== COMMISSION TRANSACTION SAVED ===');
           console.log('- Commission amount:', commission);
           console.log('- Date saved:', today);
-          
+
           newCardBalance = finalBalanceAfterCommission;
         }
 
@@ -612,7 +615,7 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
         // Нет пополнения - только траты
         console.log('No topup, only expenses');
         const expenseDate = update_date || getKyivDate();
-        
+
         console.log('=== EXPENSE DATE ANALYSIS ===');
         console.log('- update_date from frontend:', update_date);
         console.log('- getKyivDate() result:', getKyivDate());
@@ -641,7 +644,7 @@ router.post('/:id/update', authenticateToken, checkRole(['admin', 'manager']), v
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
             [cardId, 'expense', -spentToday, card.currency, oldBalance, newCardBalance, description || 'Ежедневная трата', req.user.id, expenseDate]
           );
-          
+
           console.log('=== EXPENSE TRANSACTION SAVED ===');
           console.log('- Expense amount:', spentToday);
           console.log('- Date saved:', expenseDate);
@@ -696,7 +699,7 @@ router.get('/:id/transactions', authenticateToken, async (req, res) => {
     console.log('=== TRANSACTIONS FROM DB ===');
     console.log('Current server time:', new Date().toISOString());
     console.log('Current Kyiv date from function:', getKyivDate());
-    
+
     result.rows.forEach(row => {
       console.log({
         id: row.id,
@@ -944,7 +947,7 @@ router.put('/:id/assign', authenticateToken, checkRole(['admin', 'manager']), as
     // Если buyer_id === null, снимаем назначение
     if (buyer_id === null) {
       const result = await db.query(
-        'UPDATE cards SET buyer_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
+        'UPDATE cards SET buyer_id = NULL, buyer_assigned_date = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *',
         [cardId]
       );
 
@@ -968,8 +971,9 @@ router.put('/:id/assign', authenticateToken, checkRole(['admin', 'manager']), as
     }
 
     // Назначаем карту
+    // Назначаем карту
     const result = await db.query(
-      'UPDATE cards SET buyer_id = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
+      'UPDATE cards SET buyer_id = $1, buyer_assigned_date = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = $2 RETURNING *',
       [buyer_id, cardId]
     );
 
