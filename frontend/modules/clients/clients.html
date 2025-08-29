@@ -1,6 +1,20 @@
 <div class="module-header">
     <div class="header-left">
         <h2>Клиенты</h2>
+        <div class="view-toggle">
+            <button class="view-btn active" data-view="grid" title="Карточки">
+                <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
+                    <path d="M928 224H768v-56c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v56H548v-56c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v56H328v-56c0-4.4-3.6-8-8-8h-56c-4.4 0-8 3.6-8 8v56H96c-17.7 0-32 14.3-32 32v576c0 17.7 14.3 32 32 32h832c17.7 0 32-14.3 32-32V256c0-17.7-14.3-32-32-32zM888 792H136V296h120v56c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-56h148v56c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-56h148v56c0 4.4 3.6 8 8 8h56c4.4 0 8-3.6 8-8v-56h120v496z" />
+                </svg>
+            </button>
+            <button class="view-btn" data-view="table" title="Таблица">
+                <svg width="16" height="16" viewBox="0 0 1024 1024" fill="currentColor">
+                    <path d="M928 160H96c-17.7 0-32 14.3-32 32v640c0 17.7 14.3 32 32 32h832c17.7 0 32-14.3 32-32V192c0-17.7-14.3-32-32-32zM888 792H136V232h752v560z" />
+                    <path d="M424 400h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H424c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H424c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H424c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8z" />
+                    <path d="M232 336h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H232c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H232c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8zm0 144h112c4.4 0 8-3.6 8-8v-48c0-4.4-3.6-8-8-8H232c-4.4 0-8 3.6-8 8v48c0 4.4 3.6 8 8 8z" />
+                </svg>
+            </button>
+        </div>
     </div>
     <div class="header-actions">
         <button class="btn btn-primary" id="add-client-btn">
@@ -13,11 +27,37 @@
     <div class="filter-group">
         <input type="text" id="search-clients" class="form-input" placeholder="Поиск клиентов...">
     </div>
+    <div class="filter-group">
+        <select id="sort-clients" class="form-select">
+            <option value="created_desc">Сначала новые</option>
+            <option value="created_asc">Сначала старые</option>
+            <option value="name_asc">По названию А-Я</option>
+            <option value="name_desc">По названию Я-А</option>
+        </select>
+    </div>
 </div>
 
-<!-- Список клиентов -->
-<div class="clients-grid" id="clients-container">
+<!-- Grid вид (карточки) -->
+<div class="clients-grid" id="clients-container" style="display: grid;">
     <!-- Клиенты загружаются динамически -->
+</div>
+
+<!-- Table вид (таблица) -->
+<div class="clients-table-container" id="clients-table-container" style="display: none;">
+    <table class="clients-table">
+        <thead>
+            <tr>
+                <th>Название</th>
+                <th>Контакты</th>
+                <th>Описание</th>
+                <th>Дата создания</th>
+                <th>Действия</th>
+            </tr>
+        </thead>
+        <tbody id="clients-table-body">
+            <!-- Строки таблицы загружаются динамически -->
+        </tbody>
+    </table>
 </div>
 
 <!-- Модальное окно добавления клиента -->

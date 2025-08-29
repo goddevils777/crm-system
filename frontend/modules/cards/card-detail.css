@@ -430,7 +430,7 @@
     color: var(--text-disabled);
 }
 
-.btn-sm {
+.card-detail-container .btn-sm {
     padding: 4px 8px;
     font-size: 11px;
     height: auto;

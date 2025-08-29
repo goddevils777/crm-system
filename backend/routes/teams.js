@@ -260,9 +260,9 @@ router.get('/:id/buyers', authenticateToken, async (req, res) => {
         WHERE buyer_id = $1 AND status != 'deleted'
         GROUP BY currency
       `;
-      
+
       const currencyResult = await db.query(currencyQuery, [buyer.id]);
-      
+
       const currencyBreakdown = {};
       currencyResult.rows.forEach(row => {
         currencyBreakdown[row.currency] = {
@@ -559,6 +559,128 @@ router.delete('/buyers/:buyerId/transfers/:transferId', authenticateToken, check
 
   } catch (error) {
     console.error('Ошибка удаления записи о переносе:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+
+// Получение статистики команды за период для формирования счета
+router.get('/:id/billing-stats', authenticateToken, async (req, res) => {
+  try {
+    const teamId = req.params.id;
+    const { startDate, endDate, currency = 'USD' } = req.query;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({ error: 'Не указаны даты периода' });
+    }
+
+    // Получаем баеров команды с их картами за период
+const buyersQuery = `
+  SELECT 
+    tb.id,
+    tb.name as buyer_name,
+    COUNT(DISTINCT c.id) as cards_count,
+    COALESCE(SUM(c.balance), 0) as total_balance,
+    COALESCE(SUM(c.total_spent_calculated), 0) as total_spent,
+    COALESCE(SUM(c.total_top_up), 0) as total_topup,
+    JSON_AGG(
+      CASE WHEN c.id IS NOT NULL THEN
+        JSON_BUILD_OBJECT(
+          'id', c.id,
+          'name', c.name,
+          'balance', c.balance,
+          'spent', c.total_spent_calculated,
+          'topup', c.total_top_up,
+          'status', c.status,
+          'currency', c.currency
+        )
+      END
+    ) FILTER (WHERE c.id IS NOT NULL) as cards
+  FROM team_buyers tb
+  LEFT JOIN cards c ON tb.id = c.buyer_id 
+    AND c.status != 'deleted'
+  WHERE tb.team_id = $1
+  GROUP BY tb.id, tb.name
+  ORDER BY tb.name
+`;
+
+   const result = await db.query(buyersQuery, [teamId]);
+
+    // Подсчитываем общие цифры
+    let totalBuyers = 0;
+    let totalCards = 0;
+    let totalAmount = 0;
+
+result.rows.forEach(buyer => {
+  if (buyer.cards_count > 0) {
+    totalBuyers++;
+    totalCards += parseInt(buyer.cards_count);
+    
+    // Пересчитываем с учетом валют
+    const EUR_TO_USD_RATE = 1.03;
+    if (buyer.cards) {
+      buyer.cards.forEach(card => {
+        if (card && card.spent) {
+          if (card.currency === 'EUR') {
+            totalAmount += card.spent * EUR_TO_USD_RATE;
+          } else {
+            totalAmount += card.spent;
+          }
+        }
+      });
+    }
+  }
+});
+
+    res.json({
+      stats: {
+        buyers_count: totalBuyers,
+        cards_count: totalCards,
+        total_amount: Math.round(totalAmount * 100) / 100,
+        currency: currency
+      },
+      buyers: result.rows.map(buyer => ({
+        ...buyer,
+        cards_count: parseInt(buyer.cards_count),
+        total_balance: parseFloat(buyer.total_balance),
+        total_spent: parseFloat(buyer.total_spent),
+        total_topup: parseFloat(buyer.total_topup),
+        cards: buyer.cards || []
+      }))
+    });
+
+  } catch (error) {
+    console.error('Ошибка получения статистики для счета:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+
+// Получение счетов команды за период
+router.get('/:id/bills', authenticateToken, async (req, res) => {
+  try {
+    const teamId = req.params.id;
+    const { startDate, endDate } = req.query;
+    
+    let query = `
+      SELECT b.*, c.name as client_name 
+      FROM bills b
+      JOIN clients c ON b.client_id = c.id
+      WHERE b.team_id = $1
+    `;
+    const params = [teamId];
+    
+    if (startDate && endDate) {
+      query += ` AND b.period_from <= $2 AND b.period_to >= $3`;
+      params.push(endDate, startDate);
+    }
+    
+    query += ` ORDER BY b.created_at DESC`;
+    
+    const result = await db.query(query, params);
+    res.json({ bills: result.rows });
+  } catch (error) {
+    console.error('Ошибка получения счетов команды:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });

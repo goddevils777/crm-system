@@ -563,12 +563,12 @@
     align-self: flex-end;
 }
 
-.card-info {
+.buyer-cards .card-info {
     flex: 1;
     width: 100%;
 }
 
-.card-name {
+.buyer-cards .card-name {
     font-weight: 600;
     color: var(--text-primary);
     margin-bottom: 8px;
@@ -576,7 +576,7 @@
     line-height: 1.3;
 }
 
-.card-details {
+.buyer-cards .card-details {
     font-size: 11px;
     color: var(--text-secondary);
     line-height: 1.4;
@@ -677,6 +677,7 @@
         padding: 10px 16px;
         font-size: 14px;
     }
+
 }
 
 /* Для очень маленьких экранов */
@@ -689,147 +690,226 @@
     .team-stats-summary .stat-value {
         font-size: 12px;
     }
+    .team-detail-container {
+        padding: 17px;
+    }
 }
 
-/* Bill Details Block */
+
+
+/* Простые стили с выделением даты и суммы */
 .bill-details-block {
-    background: #f0f9ff;
-    border: 2px solid #0ea5e9;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 24px;
-    animation: slideInDown 0.3s ease-out;
+    background: var(--component-background);
+    border: 1px solid var(--border-color-split);
+    border-radius: 8px;
+    margin: 16px 0;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
-.bill-header {
+.bill-details-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color-split);
 }
 
-.bill-header h3 {
-    color: #0ea5e9;
+.bill-details-header h4 {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
-.close-bill-btn {
-    background: none;
+.close-bill-details {
+    width: 28px;
+    height: 28px;
     border: none;
-    font-size: 20px;
+    background: none;
+    font-size: 18px;
+    color: var(--text-secondary);
     cursor: pointer;
-    color: #64748b;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.close-bill-details:hover {
+    background: var(--border-color-split);
 }
 
 .bill-summary {
-    margin-bottom: 16px;
-}
-
-.bill-stats {
+    padding: 16px 20px;
     display: flex;
     gap: 24px;
-    align-items: center;
-    margin-bottom: 8px;
-
+    border-bottom: 1px solid var(--border-color-split);
 }
 
-.bill-stats .stat-item {
-    display: flex;
-    gap: 4px;
-            background: var(--component-background);
-    padding: 16px 12px;
-    text-align: center;
-}
-
-
-
-.bill-stats .stat-label {
-    color: #64748b;
-}
-
-.bill-stats .stat-value {
-    font-weight: 600;
-    color: #0ea5e9;
-}
-
-.rate-info {
-    font-size: 12px;
-    color: #64748b;
-}
-
-.bill-cards-list h4 {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    color: #374151;
-}
-
-.bill-card-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 12px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    margin-bottom: 8px;
-}
-
-.remove-card-btn {
-    background: #ef4444;
-    color: white;
-    border: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    cursor: pointer;
-}
-
-.bill-actions {
-    display: flex;
-    gap: 12px;
-    align-items: center;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid #e5e7eb;
-}
-
-.bill-actions .form-select {
-    flex: 1;
-    max-width: 200px;
-}
-
-.bill-actions {
-    display: flex;
-    gap: 16px;
-    align-items: flex-end;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-color-split);
-}
-
-.client-select-group {
-    flex: 1;
-    max-width: 250px;
-}
-
-.client-select-group .form-label {
-    display: block;
-    margin-bottom: 6px;
+.bill-stat {
     font-size: 14px;
     color: var(--text-primary);
+}
+
+.bill-stat strong {
+    color: var(--text-secondary);
     font-weight: 500;
 }
 
-.client-select-group .form-select {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
+/* Выделение суммы к оплате */
+.bill-stat#bill-total-stat {
+    background: var(--success-color);
+    color: white;
+    padding: 8px 16px;
     border-radius: 6px;
+    font-weight: 600;
+    margin-left: auto;
+}
+
+.bill-stat#bill-total-stat strong {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+/* Выделение периода */
+.bill-period {
+    padding: 12px 20px;
+    background: var(--primary-color);
+    color: white;
+    font-size: 15px;
+    font-weight: 500;
+    text-align: center;
+    border-bottom: 1px solid var(--border-color-split);
+}
+
+.bill-period strong {
+    color: white;
+    font-weight: 600;
+}
+
+.bill-buyers-details {
+    padding: 16px 20px;
+}
+
+.bill-buyers-details h5 {
+    margin: 0 0 16px 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.buyer-detail-item {
+    border: 1px solid var(--border-color-split);
+    border-radius: 6px;
+    margin-bottom: 12px;
+    overflow: hidden;
+}
+
+.buyer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--background-color);
+    border-bottom: 1px solid var(--border-color-split);
+}
+
+.buyer-header strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.buyer-summary {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.buyer-cards {
+    padding: 8px;
+}
+
+.card-checkbox-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.card-checkbox-item:hover {
+    background: var(--background-color);
+}
+
+.card-checkbox-item input[type="checkbox"] {
+    margin-right: 12px;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--primary-color);
+}
+
+.buyer-cards .card-name {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-primary);
+    display: block;
+    margin-bottom: 2px;
+}
+
+.buyer-cards .card-stats {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.bill-client-selection {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color-split);
+}
+
+.bill-client-selection label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.bill-client-selection .form-select {
+    width: 100%;
+    max-width: 300px;
+    height: 36px;
+}
+
+.bill-actions {
+    padding: 16px 20px;
+    background: var(--background-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.bill-actions .btn {
+    min-width: 100px;
+    height: 36px;
     font-size: 14px;
 }
 
-#send-bill-to-client-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+/* Мобильная адаптивность */
+@media (max-width: 768px) {
+    .bill-summary {
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .bill-stat#bill-total-stat {
+        margin-left: 0;
+    }
+    
+    .buyer-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+    
+    .bill-actions {
+        flex-direction: column;
+    }
 }

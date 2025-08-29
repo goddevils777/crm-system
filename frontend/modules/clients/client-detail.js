@@ -1,134 +1,178 @@
+// Модуль детальной страницы клиента - ОТДЕЛЬНЫЙ модуль
 class ClientDetailModule {
     constructor(clientId) {
         this.clientId = parseInt(clientId);
         this.client = null;
         this.teams = [];
         this.bills = [];
-        
+
         console.log('ClientDetailModule initialized for client ID:', this.clientId);
-        this.loadStyles();
         this.init();
     }
 
     async init() {
+        console.log('Initializing client detail module...');
+
         try {
             await this.loadClient();
             await this.loadTeams();
             await this.loadBills();
+            this.renderHTML();
             this.setupEventListeners();
             this.renderClientInfo();
             this.renderBills();
+
+            console.log('Client detail module initialization complete');
         } catch (error) {
             console.error('Error initializing client detail:', error);
             notifications.error('Ошибка', 'Не удалось загрузить данные клиента');
         }
     }
 
-    loadStyles() {
-        const timestamp = Date.now();
-        
-        const detailCss = document.createElement('link');
-        detailCss.rel = 'stylesheet';
-        detailCss.href = `modules/clients/client-detail.css?v=${timestamp}`;
-        
-        if (!document.querySelector('link[href*="client-detail.css"]')) {
-            document.head.appendChild(detailCss);
+
+    renderHTML() {
+        const contentArea = document.getElementById('content-area');
+        contentArea.innerHTML = this.getClientDetailHTML();
+    }
+
+    getClientDetailHTML() {
+        return `
+            <div class="client-detail-container">
+                <div class="client-detail-header">
+                    <button class="btn btn-secondary back-btn" id="back-to-clients-btn">
+                        ← Назад к клиентам
+                    </button>
+                    <div class="client-info">
+                        <h2 id="client-name">Загрузка...</h2>
+                        <div class="client-meta">
+                            <span id="client-contact"></span>
+                            <span id="client-created"></span>
+                        </div>
+                    </div>
+                    <div class="client-actions">
+                        <button class="btn btn-primary" id="create-bill-btn">
+                            Сформировать счет
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Список выставленных счетов -->
+                <div class="bills-section">
+                    <div class="section-header">
+                        <h3>Выставленные счета</h3>
+                    </div>
+                    <div class="bills-table-container" id="bills-container">
+                        <table class="bills-table">
+                            <thead>
+                                <tr>
+                                    <th>Дата</th>
+                                    <th>Период</th>
+                                    <th>Команда</th>
+                                    <th>Баеров</th>
+                                    <th>Карт</th>
+                                    <th>Сумма</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody id="bills-table-body">
+                                <!-- Счета загружаются динамически -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    setupEventListeners() {
+        // Кнопка "Назад к клиентам"
+        const backBtn = document.getElementById('back-to-clients-btn');
+        backBtn?.addEventListener('click', () => this.goBackToClients());
+
+        // Кнопка создания счета
+        const createBillBtn = document.getElementById('create-bill-btn');
+        createBillBtn?.addEventListener('click', () => this.createBill());
+    }
+
+    async loadClient() {
+        try {
+            const response = await api.request(`/clients/${this.clientId}`);
+            this.client = response.client;
+            console.log('Client loaded:', this.client);
+        } catch (error) {
+            console.error('Error loading client:', error);
+            // Fallback
+            this.client = {
+                id: this.clientId,
+                name: 'Клиент не найден',
+                email: null,
+                phone: null,
+                created_at: new Date().toISOString()
+            };
         }
     }
 
-async loadClient() {
-    try {
-        const response = await api.request(`/clients/${this.clientId}`);
-        this.client = response.client;
-    } catch (error) {
-        console.error('Error loading client:', error);
-        // Fallback
-        this.client = {
-            id: this.clientId,
-            name: 'Клиент не найден',
-            created_at: new Date().toISOString()
-        };
+    async loadBills() {
+        try {
+            const response = await api.request(`/clients/${this.clientId}/bills`);
+            this.bills = response.bills || [];
+            console.log('Bills loaded:', this.bills.length);
+        } catch (error) {
+            console.error('Error loading bills:', error);
+            this.bills = [];
+        }
     }
-}
-
-async loadBills() {
-    try {
-        const response = await api.request(`/clients/${this.clientId}/bills`);
-        this.bills = response.bills || [];
-    } catch (error) {
-        console.error('Error loading bills:', error);
-        this.bills = [];
-    }
-}
 
     async loadTeams() {
         try {
             const response = await api.request('/teams');
             this.teams = response.teams || [];
+            console.log('Teams loaded:', this.teams.length);
         } catch (error) {
             console.error('Error loading teams:', error);
             this.teams = [];
         }
     }
 
-
-    setupEventListeners() {
-        // Кнопка создания счета
-        const createBillBtn = document.getElementById('create-bill-btn');
-        createBillBtn?.addEventListener('click', () => this.showCreateBillModal());
-
-        // Модальное окно создания счета
-        this.setupModalEvents();
-
-        // Выбор команды
-        const teamSelect = document.getElementById('team-select');
-        teamSelect?.addEventListener('change', (e) => this.onTeamSelect(e.target.value));
-
-        // Поля дат
-        const periodFrom = document.getElementById('period-from');
-        const periodTo = document.getElementById('period-to');
-        
-        [periodFrom, periodTo].forEach(input => {
-            input?.addEventListener('change', () => this.updateTeamSummary());
-        });
-    }
-
-    setupModalEvents() {
-        const modal = document.getElementById('create-bill-modal');
-        const closeBtn = modal?.querySelector('.modal-close');
-        const cancelBtn = modal?.querySelector('.modal-cancel');
-        const sendBtn = document.getElementById('send-bill-btn');
-
-        closeBtn?.addEventListener('click', () => this.hideCreateBillModal());
-        cancelBtn?.addEventListener('click', () => this.hideCreateBillModal());
-        sendBtn?.addEventListener('click', () => this.sendBill());
-
-        modal?.addEventListener('click', (e) => {
-            if (e.target === modal) this.hideCreateBillModal();
-        });
-    }
-
     renderClientInfo() {
-        document.getElementById('client-name').textContent = this.client.name;
-        
-        const contactInfo = [];
-        if (this.client.email) contactInfo.push(this.client.email);
-        if (this.client.phone) contactInfo.push(this.client.phone);
-        
-        document.getElementById('client-contact').textContent = contactInfo.join(' • ');
-        
-        const createdDate = new Date(this.client.created_at).toLocaleDateString('ru-RU');
-        document.getElementById('client-created').textContent = `Создан: ${createdDate}`;
+        if (!this.client) return;
+
+        // Название клиента
+        const nameElement = document.getElementById('client-name');
+        if (nameElement) {
+            nameElement.textContent = this.client.name;
+        }
+
+        // Контактная информация
+        const contactElement = document.getElementById('client-contact');
+        if (contactElement) {
+            const contacts = [];
+            if (this.client.email) contacts.push(this.client.email);
+            if (this.client.phone) contacts.push(this.client.phone);
+            contactElement.textContent = contacts.join(' • ') || 'Контакты не указаны';
+        }
+
+        // Дата создания
+        const createdElement = document.getElementById('client-created');
+        if (createdElement) {
+            const createdDate = new Date(this.client.created_at).toLocaleDateString('ru-RU');
+            createdElement.textContent = `Создан: ${createdDate}`;
+        }
     }
 
     renderBills() {
         const tbody = document.getElementById('bills-table-body');
-        
+        if (!tbody) return;
+
         if (this.bills.length === 0) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 40px;">
-                        Счетов пока нет
+                    <td colspan="8" class="text-center">
+                        <div class="no-bills">
+                            <h4>Счетов пока нет</h4>
+                            <p>Сформируйте первый счет для клиента</p>
+                        </div>
                     </td>
                 </tr>
             `;
@@ -140,159 +184,140 @@ async loadBills() {
     }
 
     renderBillRow(bill) {
-        const date = new Date(bill.date).toLocaleDateString('ru-RU');
-        const statusText = this.getStatusText(bill.status);
-        
+        const createdDate = new Date(bill.created_at).toLocaleDateString('ru-RU');
+        const statusClass = bill.status === 'paid' ? 'status-paid' : 'status-pending';
+        const statusText = bill.status === 'paid' ? 'Оплачен' : 'Ожидает оплаты';
+
+        // Формируем период
+        let periodText = '-';
+        if (bill.period_from && bill.period_to) {
+            const fromDate = new Date(bill.period_from).toLocaleDateString('ru-RU');
+            const toDate = new Date(bill.period_to).toLocaleDateString('ru-RU');
+            periodText = `${fromDate} - ${toDate}`;
+        }
+
         return `
-            <tr>
-                <td>${date}</td>
-                <td>${bill.period}</td>
-                <td>${bill.team_name}</td>
-                <td>${bill.buyers_count}</td>
-                <td>${bill.cards_count}</td>
-                <td>${bill.amount.toFixed(2)} ${bill.currency}</td>
-                <td><span class="bill-status ${bill.status}">${statusText}</span></td>
-                <td>
-                    <button class="btn btn-secondary btn-sm" onclick="window.clientDetailModule?.viewBill(${bill.id})">
-                        Просмотр
-                    </button>
-                </td>
-            </tr>
-        `;
+        <tr>
+            <td>${createdDate}</td>
+            <td>${periodText}</td>
+            <td>${bill.team_name || '-'}</td>
+            <td>${parseInt(bill.buyers_count) || 0}</td>
+            <td>${parseInt(bill.cards_count) || 0}</td>
+            <td>${bill.amount ? `$${parseFloat(bill.amount).toFixed(2)}` : '$0.00'}</td>
+            <td>
+    <div class="status-dropdown-container" style="position: relative;">
+        <span class="status-badge ${statusClass} clickable-status" 
+              onclick="window.clientDetailModule?.toggleStatusDropdown(${bill.id}, this)">
+            ${statusText}
+            <span class="status-arrow">▼</span>
+        </span>
+        <div class="status-dropdown" id="status-dropdown-${bill.id}" style="display: none;">
+            <div class="status-option ${bill.status === 'pending' ? 'current' : ''}" 
+                 onclick="window.clientDetailModule?.changeStatus(${bill.id}, 'pending', this)">
+                Ожидает оплаты
+            </div>
+            <div class="status-option ${bill.status === 'paid' ? 'current' : ''}" 
+                 onclick="window.clientDetailModule?.changeStatus(${bill.id}, 'paid', this)">
+                Оплачен
+            </div>
+        </div>
+    </div>
+</td>
+            <td>
+                <button class="btn btn-sm btn-primary" onclick="window.clientDetailModule?.generateClientLink(${bill.id})" title="Ссылка для клиента">
+                    <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor">
+                        <path d="M574 665.4a8.03 8.03 0 0 0-11.3 0L446.5 781.6c-53.8 53.8-144.6 59.5-204 0-59.5-59.5-53.8-150.2 0-204l116.2-116.2c3.1-3.1 3.1-8.2 0-11.3l-39.8-39.8a8.03 8.03 0 0 0-11.3 0L191.4 526.5c-84.6 84.6-84.6 221.5 0 306s221.5 84.6 306 0l116.2-116.2c3.1-3.1 3.1-8.2 0-11.3L574 665.4zm258.6-474c-84.6-84.6-221.5-84.6-306 0L410.3 307.6a8.03 8.03 0 0 0 0 11.3l39.7 39.7c3.1 3.1 8.2 3.1 11.3 0l116.2-116.2c53.8-53.8 144.6-59.5 204 0 59.5 59.5 53.8 150.2 0 204L665.3 562.6a8.03 8.03 0 0 0 0 11.3l39.8 39.8c3.1 3.1 8.2 3.1 11.3 0l116.2-116.2c84.5-84.6 84.5-221.5 0-306.1z"/>
+                    </svg>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="window.clientDetailModule?.deleteBill(${bill.id})" title="Удалить">
+                    <svg width="14" height="14" viewBox="0 0 1024 1024" fill="currentColor">
+                        <path d="M360 184h-8c4.4 0 8-3.6 8-8v8h304v-8c0 4.4 3.6 8 8 8h-8v72h72v-80c0-35.3-28.7-64-64-64H352c-35.3 0-64 28.7-64 64v80h72v-72zm504 72H160c-17.7 0-32 14.3-32 32v32c0 4.4 3.6 8 8 8h60.4l24.7 523c1.6 34.1 29.8 61 63.9 61h454c34.2 0 62.3-26.8 63.9-61l24.7-523H888c4.4 0 8-3.6 8-8v-32c0-17.7-14.3-32-32-32z"/>
+                    </svg>
+                </button>
+            </td>
+        </tr>
+    `;
     }
 
-    getStatusText(status) {
-        const statuses = {
-            'paid': 'Оплачен',
-            'pending': 'Ожидает оплаты',
-            'overdue': 'Просрочен'
-        };
-        return statuses[status] || status;
+    generateClientLink(billId) {
+        const link = `${window.location.origin}/bill/${billId}`;
+        navigator.clipboard.writeText(link);
+        notifications.success('Ссылка скопирована', 'Ссылка на счет скопирована в буфер обмена');
     }
 
-    showCreateBillModal() {
-        const modal = document.getElementById('create-bill-modal');
-        
-        // Заполняем список команд
-        const teamSelect = document.getElementById('team-select');
-        const teamsOptions = this.teams.map(team => 
-            `<option value="${team.id}">${team.name}</option>`
-        ).join('');
-        teamSelect.innerHTML = '<option value="">Выберите команду</option>' + teamsOptions;
-
-        // Устанавливаем текущую дату как "до"
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('period-to').value = today;
-
-        modal.classList.add('show');
-    }
-
-    hideCreateBillModal() {
-        const modal = document.getElementById('create-bill-modal');
-        modal.classList.remove('show');
-        
-        // Очищаем форму
-        document.getElementById('team-select').value = '';
-        document.getElementById('period-from').value = '';
-        document.getElementById('period-to').value = '';
-        document.getElementById('team-summary').style.display = 'none';
-        document.getElementById('send-bill-btn').disabled = true;
-    }
-
-    async onTeamSelect(teamId) {
-        if (!teamId) {
-            document.getElementById('team-summary').style.display = 'none';
-            document.getElementById('send-bill-btn').disabled = true;
-            return;
+    toggleStatusDropdown(billId, element) {
+    // Закрываем все открытые dropdown
+    document.querySelectorAll('.status-dropdown').forEach(dropdown => {
+        if (dropdown.id !== `status-dropdown-${billId}`) {
+            dropdown.style.display = 'none';
         }
-
-        await this.updateTeamSummary();
-    }
-
-    async updateTeamSummary() {
-        const teamId = document.getElementById('team-select').value;
-        const fromDate = document.getElementById('period-from').value;
-        const toDate = document.getElementById('period-to').value;
-
-        if (!teamId || !fromDate || !toDate) {
-            document.getElementById('send-bill-btn').disabled = true;
-            return;
-        }
-
-        try {
-            // Получаем данные команды за период
-            const response = await api.request(`/teams/${teamId}/stats?startDate=${fromDate}&endDate=${toDate}`);
-            
-            // Подсчитываем статистику
-            const buyers = response.buyers || [];
-            let totalSpent = 0;
-            let totalCards = 0;
-            const EUR_TO_USD = 1.03;
-
-            buyers.forEach(buyer => {
-                const usdSpent = parseFloat(buyer.usd_spent || 0);
-                const eurSpent = parseFloat(buyer.eur_spent || 0);
-                const usdCards = parseInt(buyer.usd_cards_count || 0);
-                const eurCards = parseInt(buyer.eur_cards_count || 0);
-
-                totalSpent += usdSpent + (eurSpent * EUR_TO_USD);
-                totalCards += usdCards + eurCards;
-            });
-
-            // Показываем сводку
-            document.getElementById('summary-buyers').textContent = buyers.length;
-            document.getElementById('summary-cards').textContent = totalCards;
-            document.getElementById('summary-spent').textContent = `${totalSpent.toFixed(2)} USD`;
-            
-            document.getElementById('team-summary').style.display = 'block';
-            document.getElementById('send-bill-btn').disabled = totalSpent === 0;
-
-        } catch (error) {
-            console.error('Error loading team stats:', error);
-            document.getElementById('send-bill-btn').disabled = true;
-        }
-    }
-
-async sendBill() {
-    const teamId = document.getElementById('team-select').value;
-    const fromDate = document.getElementById('period-from').value;
-    const toDate = document.getElementById('period-to').value;
+    });
     
-    const billData = {
-        team_id: teamId,
-        period_from: fromDate,
-        period_to: toDate,
-        buyers_count: parseInt(document.getElementById('summary-buyers').textContent),
-        cards_count: parseInt(document.getElementById('summary-cards').textContent),
-        amount: parseFloat(document.getElementById('summary-spent').textContent.replace(' USD', ''))
-    };
+    // Переключаем текущий dropdown
+    const dropdown = document.getElementById(`status-dropdown-${billId}`);
+    dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+}
 
+async changeStatus(billId, newStatus, element) {
     try {
-        await api.request(`/clients/${this.clientId}/bills`, {
-            method: 'POST',
-            body: JSON.stringify(billData)
+        await api.request(`/clients/${this.clientId}/bills/${billId}/status`, {
+            method: 'PUT',
+            body: JSON.stringify({ status: newStatus })
         });
         
         // Перезагружаем счета
         await this.loadBills();
         this.renderBills();
-        this.hideCreateBillModal();
-
-        notifications.success('Счет создан', 'Счет успешно отправлен клиенту');
+        
+        const statusText = newStatus === 'paid' ? 'Оплачен' : 'Ожидает оплаты';
+        notifications.success('Статус изменен', `Статус счета изменен на "${statusText}"`);
         
     } catch (error) {
-        console.error('Error sending bill:', error);
-        notifications.error('Ошибка', 'Не удалось отправить счет');
+        console.error('Ошибка изменения статуса:', error);
+        notifications.error('Ошибка', 'Не удалось изменить статус счета');
     }
 }
 
+    async deleteBill(billId) {
+        const confirmed = await confirmDelete('Вы уверены, что хотите удалить этот счет?');
+        if (!confirmed) return;
+
+        try {
+            await api.request(`/clients/${this.clientId}/bills/${billId}`, { method: 'DELETE' });
+            await this.loadBills();
+            this.renderBills();
+            notifications.success('Счет удален', 'Счет успешно удален');
+        } catch (error) {
+            console.error('Error deleting bill:', error);
+            notifications.error('Ошибка', 'Не удалось удалить счет');
+        }
+    }
+
+    goBackToClients() {
+        console.log('Going back to clients list');
+        localStorage.removeItem('current_client_detail');
+        window.location.hash = '#clients';
+        window.app.loadModule('clients');
+    }
+
+    createBill() {
+        console.log('Creating bill for client:', this.clientId);
+        notifications.info('Создание счета', 'Функция формирования счета в разработке');
+    }
+
     viewBill(billId) {
-        console.log('Viewing bill ID:', billId);
-        notifications.info('Просмотр счета', 'Функция просмотра в разработке');
+        console.log('Viewing bill:', billId);
+        notifications.info('Просмотр счета', 'Функция просмотра счета в разработке');
+    }
+
+    downloadBill(billId) {
+        console.log('Downloading bill:', billId);
+        notifications.info('Скачивание', 'Функция скачивания счета в разработке');
     }
 
     destroy() {
         console.log('Destroying client detail module...');
+        localStorage.removeItem('current_client_detail');
     }
 }
 

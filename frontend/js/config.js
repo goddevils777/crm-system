@@ -19,7 +19,7 @@ window.APP_CONFIG = {
         }
 
         // Для продакшена
-        return 'https://7641d64bfc84.ngrok-free.app/api';
+        return 'https://bf818b1b3428.ngrok-free.app/api';
     })(),
 
     // Другие настройки

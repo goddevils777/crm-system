@@ -318,7 +318,7 @@
 
 
 /* Financial Stats */
-.card-stats {
+.card-item .card-stats {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 1px;
@@ -356,7 +356,7 @@
 }
 
 .stat-value.warning {
-    color: var(--warning-color);
+    color: #fa4214;
 }
 
 /* Card Body */
@@ -365,13 +365,13 @@
 }
 
 /* Card Info */
-.card-info {
+.card-item .card-info {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
-.card-info-item {
+.card-item .card-info-item {
     display: flex;
     justify-content: space-between;
     align-items: center;

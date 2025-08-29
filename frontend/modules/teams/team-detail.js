@@ -156,11 +156,14 @@ class TeamDetailModule {
 
         switch (period) {
             case 'today':
-                const todayEnd = new Date(today.getTime() + 24 * 60 * 60 * 1000 - 1);
-                console.log('- Today start:', today);
+                // Убираем сложную логику, делаем просто
+                const todayStart = new Date(today);
+                const todayEnd = new Date(today);
+                todayEnd.setHours(23, 59, 59, 999); // Конец дня
+
+                console.log('- Today start:', todayStart);
                 console.log('- Today end:', todayEnd);
-                return { startDate: today, endDate: todayEnd };
-            // ... остальные cases остаются как были
+                return { startDate: todayStart, endDate: todayEnd };
             case 'yesterday':
                 const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
                 const yesterdayEnd = new Date(yesterday.getTime() + 24 * 60 * 60 * 1000 - 1);
@@ -273,89 +276,294 @@ class TeamDetailModule {
         }
     }
 
-    generateBill(totalSpent, totalTopups, totalBalance) {
-        console.log('Generating bill with data:', {
-            totalSpent,
-            totalTopups,
-            totalBalance,
-            period: this.currentDateFilter.period,
-            currency: this.currentCurrency
-        });
+    async generateBill() {
+        if (!this.currentDateFilter.startDate || !this.currentDateFilter.endDate) {
+            notifications.error('Ошибка', 'Выберите период для формирования счета');
+            return;
+        }
 
-        // Курс конвертации EUR -> USD
-        const EUR_TO_USD_RATE = 1.03;
-
-        // Собираем данные по валютам и картам
-        let usdSpent = 0;
-        let eurSpent = 0;
-        let cardsList = [];
-        let buyersCount = 0;
-        let cardsCount = 0;
-
-        this.filteredBuyers.forEach(buyer => {
-            if (buyer.usd_spent > 0 || buyer.eur_spent > 0) {
-                buyersCount++;
-
-                // USD карты
-                if (buyer.usd_spent > 0) {
-                    usdSpent += buyer.usd_spent;
-                    cardsCount += buyer.usd_cards_count || 0;
-
-                    cardsList.push({
-                        buyerName: buyer.username,
-                        currency: 'USD',
-                        spent: buyer.usd_spent,
-                        cardsCount: buyer.usd_cards_count || 0
-                    });
-                }
-
-                // EUR карты
-                if (buyer.eur_spent > 0) {
-                    eurSpent += buyer.eur_spent;
-                    cardsCount += buyer.eur_cards_count || 0;
-
-                    cardsList.push({
-                        buyerName: buyer.username,
-                        currency: 'EUR',
-                        spent: buyer.eur_spent,
-                        cardsCount: buyer.eur_cards_count || 0
-                    });
-                }
+        try {
+            // Показываем лоадер
+            const existingBlock = document.getElementById('bill-details-block');
+            if (existingBlock) {
+                existingBlock.remove();
             }
-        });
 
-        // Конвертируем EUR в USD
-        const eurInUsd = eurSpent * EUR_TO_USD_RATE;
-        const totalInUsd = usdSpent + eurInUsd;
+            // Получаем текущую валюту
+            const currencyFilter = document.getElementById('currency-filter');
+            const currency = currencyFilter ? currencyFilter.value : 'USD';
 
-        // Создаем блок с детализацией
-        this.showBillDetails(totalInUsd, buyersCount, cardsCount, cardsList, EUR_TO_USD_RATE, eurSpent);
+            // Загружаем статистику для счета
+            // Форматируем даты без учета временных зон
+            const formatDate = (date) => {
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            };
+
+            const startDate = formatDate(this.currentDateFilter.startDate);
+            const endDate = formatDate(this.currentDateFilter.endDate);
+
+            console.log('Loading billing stats for period:', startDate, 'to', endDate, 'currency:', currency);
+
+            const response = await api.request(`/teams/${this.teamId}/billing-stats?startDate=${startDate}&endDate=${endDate}&currency=${currency}`);
+
+            console.log('Billing stats response:', response);
+
+            this.currentBillData = response; // Сохраняем данные
+
+            // Создаем блок детализации
+            await this.createBillDetailsBlock(response.stats, response.buyers, startDate, endDate);
+
+        } catch (error) {
+            console.error('Ошибка загрузки данных для счета:', error);
+            notifications.error('Ошибка', 'Не удалось загрузить данные для формирования счета');
+        }
     }
 
-   async showBillDetails(totalInUsd, buyersCount, cardsCount, cardsList, eurRate, eurSpent) {
-    // Удаляем существующий блок если есть
-    const existingBlock = document.getElementById('bill-details-block');
-    if (existingBlock) existingBlock.remove();
-    
-    // Загружаем список клиентов
-    let clients = [];
-    try {
-        const response = await api.request('/clients');
-        clients = response.clients || [];
-    } catch (error) {
-        console.error('Error loading clients:', error);
-        // Используем моковые данные если API недоступно
-        clients = [
-            { id: 1, name: 'Компания ABC' },
-            { id: 2, name: 'ООО Пример' }
-        ];
+
+    async createBillDetailsBlock(stats, buyers, startDate, endDate) {
+        await this.checkExistingBills(startDate, endDate);
+
+        const detailsHtml = `
+        <div class="bill-details-block" id="bill-details-block">
+            <div class="bill-details-header">
+                <h4>Детализация счета</h4>
+                <button class="close-bill-details" onclick="document.getElementById('bill-details-block').remove()">×</button>
+            </div>
+<div class="bill-summary">
+    <div class="bill-stat">
+        <strong>Баеров: </strong><span id="bill-buyers-count">${stats.buyers_count}</span>
+    </div>
+    <div class="bill-stat">
+        <strong>Карт: </strong><span id="bill-cards-count">${stats.cards_count}</span>
+    </div>
+    <div class="bill-stat">
+        <strong>Текущий курс: </strong><span>EUR = 1.03 USD</span>
+    </div>
+    <div class="bill-stat" id="bill-total-stat">
+        <strong>К оплате:</strong><br>
+        <span id="bill-total-amount">${stats.total_amount.toFixed(2)} USD</span>
+    </div>
+</div>
+            
+            <div class="bill-period">
+                <strong>Период:</strong> ${new Date(startDate).toLocaleDateString('ru-RU')} - ${new Date(endDate).toLocaleDateString('ru-RU')}
+            </div>
+            
+            <div class="bill-buyers-details">
+                <h5>Детали по баерам:</h5>
+                <div id="buyers-details-list">
+                    ${this.renderBuyersDetails(buyers)}
+                </div>
+            </div>
+            
+            <div class="bill-client-selection">
+                <label><strong>Клиент:</strong></label>
+                <select id="bill-client-select" class="form-select">
+                    <option value="">Выберите клиента</option>
+                </select>
+            </div>
+            
+            <div class="bill-actions">
+                <button class="btn btn-secondary" onclick="document.getElementById('bill-details-block').remove()">Отмена</button>
+                <button class="btn btn-primary" id="send-bill-btn" onclick="teamDetailModule.sendBillToClient()">Отправить клиенту на оплату</button>
+            </div>
+        </div>
+    `;
+
+        // Вставляем после секции баеров
+        const buyersSection = document.querySelector('.buyers-section');
+        buyersSection.insertAdjacentHTML('afterend', detailsHtml);
+
+        // Загружаем список клиентов
+        this.loadClientsForBill();
+
+        // Прокручиваем к блоку детализации
+        document.getElementById('bill-details-block').scrollIntoView({ behavior: 'smooth' });
     }
-    
-    const billBlock = document.createElement('div');
-    billBlock.id = 'bill-details-block';
-    billBlock.className = 'bill-details-block';
-    
-    const cardsListHtml = cardsList.map((card, index) => `
+
+    async checkExistingBills(startDate, endDate) {
+        try {
+            // Загружаем все счета команды
+            const response = await api.request(`/teams/${this.teamId}/bills?startDate=${startDate}&endDate=${endDate}`);
+            const existingBills = response.bills || [];
+
+            if (existingBills.length > 0) {
+                // Группируем счета по клиентам
+                const billsByClient = {};
+                existingBills.forEach(bill => {
+                    if (!billsByClient[bill.client_id]) {
+                        billsByClient[bill.client_id] = [];
+                    }
+                    billsByClient[bill.client_id].push(bill);
+                });
+
+                this.existingBills = billsByClient;
+                console.log('Найдены существующие счета за период:', billsByClient);
+            } else {
+                this.existingBills = {};
+            }
+        } catch (error) {
+            console.error('Ошибка проверки существующих счетов:', error);
+            this.existingBills = {};
+        }
+    }
+
+
+    renderBuyersDetails(buyers) {
+        if (!buyers || buyers.length === 0) {
+            return '<p>Нет данных по баерам за выбранный период</p>';
+        }
+
+        return buyers.map(buyer => {
+            if (!buyer.cards || buyer.cards.length === 0) {
+                return `
+                <div class="buyer-detail-item">
+                    <div class="buyer-header">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <input type="checkbox" 
+                                   id="buyer-${buyer.id}" 
+                                   data-buyer="${buyer.id}"
+                                   checked
+                                   onchange="teamDetailModule.toggleBuyer(${buyer.id}, this.checked)"
+                                   style="width: 18px; height: 18px;">
+                            <strong>${buyer.buyer_name}</strong>
+                        </div>
+                        <span class="buyer-summary">Нет карт за период</span>
+                    </div>
+                </div>
+            `;
+            }
+
+            // Группируем скрученные суммы по валютам
+            const spentByCurrency = {};
+            buyer.cards.forEach(card => {
+                const currency = card.currency || 'USD';
+                const spent = card.spent || 0;
+                if (!spentByCurrency[currency]) {
+                    spentByCurrency[currency] = 0;
+                }
+                spentByCurrency[currency] += spent;
+            });
+
+            // Формируем строку скручено с конвертацией EUR
+            const EUR_TO_USD_RATE = 1.03;
+            let spentString = '';
+            let eurInUSD = 0;
+
+            if (spentByCurrency['USD']) {
+                spentString += `${spentByCurrency['USD'].toFixed(2)} USD`;
+            }
+
+            if (spentByCurrency['EUR']) {
+                eurInUSD = spentByCurrency['EUR'] * EUR_TO_USD_RATE;
+                const eurPart = `${spentByCurrency['EUR'].toFixed(2)} EUR(${eurInUSD.toFixed(2)} USD)`;
+                spentString += spentString ? ` + ${eurPart}` : eurPart;
+            }
+
+            // Если есть другие валюты
+            Object.entries(spentByCurrency).forEach(([currency, amount]) => {
+                if (currency !== 'USD' && currency !== 'EUR') {
+                    const part = `${amount.toFixed(2)} ${currency}`;
+                    spentString += spentString ? ` + ${part}` : part;
+                }
+            });
+
+            // Расчет общей суммы в USD
+            let buyerTotalUSD = (spentByCurrency['USD'] || 0) + eurInUSD;
+
+            return `
+            <div class="buyer-detail-item">
+                <div class="buyer-header">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <input type="checkbox" 
+                               id="buyer-${buyer.id}" 
+                               data-buyer="${buyer.id}"
+                               checked
+                               onchange="teamDetailModule.toggleBuyer(${buyer.id}, this.checked)"
+                               style="width: 18px; height: 18px;">
+                        <strong>${buyer.buyer_name}</strong>
+                    </div>
+                    <span class="buyer-summary" id="buyer-summary-${buyer.id}">
+                        Карт: ${buyer.cards_count} | 
+                        Скручено: ${spentString} | 
+                        К оплате: ${buyerTotalUSD.toFixed(2)} USD
+                    </span>
+                </div>
+                <div class="buyer-cards">
+                    ${buyer.cards.map(card => `
+                        <label class="card-checkbox-item">
+                            <input type="checkbox" 
+                                   name="selected-cards" 
+                                   value="${card.id}" 
+                                   data-buyer="${buyer.id}"
+                                   data-spent="${card.spent || 0}"
+                                   data-currency="${card.currency || 'USD'}"
+                                   checked
+                                   onchange="teamDetailModule.recalculateBillTotal()">
+                            <div class="card-info">
+                                <span class="card-name">${card.name}</span>
+                                <span class="card-stats">
+                                    Скручено: ${(card.spent || 0).toFixed(2)} ${card.currency || 'USD'} | 
+                                    Статус: ${this.getStatusText(card.status)}
+                                </span>
+                            </div>
+                        </label>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        }).join('');
+    }
+
+    async loadClientsForBill() {
+        try {
+            const response = await api.request('/clients');
+            const clients = response.clients || [];
+
+            const select = document.getElementById('bill-client-select');
+            if (select) {
+                select.innerHTML = '<option value="">Выберите клиента</option>' +
+                    clients.map(client => {
+                        const hasExistingBill = this.existingBills && this.existingBills[client.id];
+                        const warning = hasExistingBill ? ' ⚠️ (уже есть счет за период)' : '';
+                        return `<option value="${client.id}">${client.name}${warning}</option>`;
+                    }).join('');
+            }
+        } catch (error) {
+            console.error('Ошибка загрузки клиентов:', error);
+            notifications.error('Ошибка', 'Не удалось загрузить список клиентов');
+        }
+    }
+
+
+
+    async showBillDetails(totalInUsd, buyersCount, cardsCount, cardsList, eurRate, eurSpent) {
+        // Удаляем существующий блок если есть
+        const existingBlock = document.getElementById('bill-details-block');
+        if (existingBlock) existingBlock.remove();
+
+        // Загружаем список клиентов
+        let clients = [];
+        try {
+            const response = await api.request('/clients');
+            clients = response.clients || [];
+        } catch (error) {
+            console.error('Error loading clients:', error);
+            // Используем моковые данные если API недоступно
+            clients = [
+                { id: 1, name: 'Компания ABC' },
+                { id: 2, name: 'ООО Пример' }
+            ];
+        }
+
+        const billBlock = document.createElement('div');
+        billBlock.id = 'bill-details-block';
+        billBlock.className = 'bill-details-block';
+
+        const cardsListHtml = cardsList.map((card, index) => `
         <div class="bill-card-item" data-index="${index}">
             <span class="buyer-name">${card.buyerName}</span>
             <span class="cards-info">${card.cardsCount} карт</span>
@@ -363,12 +571,12 @@ class TeamDetailModule {
             <button class="remove-card-btn" onclick="this.closest('.bill-card-item').remove(); window.teamDetailModule.recalculateBillTotal()">×</button>
         </div>
     `).join('');
-    
-    const clientsOptions = clients.map(client => 
-        `<option value="${client.id}">${client.name}</option>`
-    ).join('');
-    
-    billBlock.innerHTML = `
+
+        const clientsOptions = clients.map(client =>
+            `<option value="${client.id}">${client.name}</option>`
+        ).join('');
+
+        billBlock.innerHTML = `
         <div class="bill-header">
             <h3>Детализация счета</h3>
             <button class="close-bill-btn" onclick="document.getElementById('bill-details-block').remove()">×</button>
@@ -409,103 +617,175 @@ class TeamDetailModule {
             </button>
         </div>
     `;
-    
-    // Добавляем блок в начало контейнера
-    const container = document.querySelector('.team-detail-container');
-    container.insertBefore(billBlock, container.firstChild);
-    
-    // Добавляем обработчик для выбора клиента
-    document.getElementById('client-select').addEventListener('change', (e) => {
-        const sendBtn = document.getElementById('send-bill-to-client-btn');
-        sendBtn.disabled = !e.target.value;
-    });
-    
-    // Добавляем обработчик для отправки счета
-    document.getElementById('send-bill-to-client-btn').addEventListener('click', () => {
-        this.sendBillToClient();
-    });
-}
 
-// Метод для пересчета итогов при удалении карт
-recalculateBillTotal() {
-    const remainingCards = document.querySelectorAll('.bill-card-item');
-    let totalAmount = 0;
-    let buyersCount = 0;
-    let cardsCount = 0;
-    const EUR_TO_USD_RATE = 1.03;
-    
-    const processedBuyers = new Set();
-    
-    remainingCards.forEach(cardElement => {
-        const buyerName = cardElement.querySelector('.buyer-name').textContent;
-        const cardsInfo = cardElement.querySelector('.cards-info').textContent;
-        const spentText = cardElement.querySelector('.spent-amount').textContent;
-        
-        // Извлекаем количество карт
-        const cardCount = parseInt(cardsInfo.split(' ')[0]);
-        cardsCount += cardCount;
-        
-        // Извлекаем сумму и валюту
-        const [amountStr, currency] = spentText.split(' ');
-        const amount = parseFloat(amountStr);
-        
-        if (currency === 'EUR') {
-            totalAmount += amount * EUR_TO_USD_RATE;
-        } else {
-            totalAmount += amount;
-        }
-        
-        // Считаем уникальных баеров
-        if (!processedBuyers.has(buyerName)) {
-            processedBuyers.add(buyerName);
-            buyersCount++;
-        }
-    });
-    
-    // Обновляем итоги
-    document.getElementById('bill-buyers-count').textContent = buyersCount;
-    document.getElementById('bill-cards-count').textContent = cardsCount;
-    document.getElementById('bill-total-amount').textContent = `${totalAmount.toFixed(2)} USD`;
-}
+        // Добавляем блок в начало контейнера
+        const container = document.querySelector('.team-detail-container');
+        container.insertBefore(billBlock, container.firstChild);
 
-async sendBillToClient() {
-    const clientSelect = document.getElementById('client-select');
-    const clientId = clientSelect.value;
-    const clientName = clientSelect.selectedOptions[0].text;
-    
-    if (!clientId) {
-        notifications.error('Ошибка', 'Выберите клиента');
-        return;
+        // Добавляем обработчик для выбора клиента
+        document.getElementById('client-select').addEventListener('change', (e) => {
+            const sendBtn = document.getElementById('send-bill-to-client-btn');
+            sendBtn.disabled = !e.target.value;
+        });
+
+        // Добавляем обработчик для отправки счета
+        document.getElementById('send-bill-to-client-btn').addEventListener('click', () => {
+            this.sendBillToClient();
+        });
     }
-    
-    const buyersCount = document.getElementById('bill-buyers-count').textContent;
-    const cardsCount = document.getElementById('bill-cards-count').textContent;
-    const totalAmount = document.getElementById('bill-total-amount').textContent.replace(' USD', '');
-    
-    const billData = {
-        client_id: clientId,
-        team_id: this.teamId,
-        buyers_count: parseInt(buyersCount),
-        cards_count: parseInt(cardsCount),
-        amount: parseFloat(totalAmount),
-        period_from: this.currentDateFilter.startDate.toISOString().split('T')[0],
-        period_to: this.currentDateFilter.endDate.toISOString().split('T')[0]
-    };
-    
-    try {
-        // Пока используем заглушку
-        console.log('Sending bill to client:', billData);
-        
-        notifications.success('Счет отправлен', `Счет на сумму ${totalAmount} USD отправлен клиенту "${clientName}"`);
-        
-        // Закрываем блок детализации
-        document.getElementById('bill-details-block').remove();
-        
-    } catch (error) {
-        console.error('Error sending bill:', error);
-        notifications.error('Ошибка', 'Не удалось отправить счет клиенту');
+
+    recalculateBillTotal() {
+        const checkedCards = document.querySelectorAll('input[name="selected-cards"]:checked');
+        let totalAmountUSD = 0;
+        let totalCards = 0;
+        const EUR_TO_USD_RATE = 1.03;
+        const activeBuyers = new Set();
+
+        // Группируем по валютам для отладки
+        let usdSpent = 0;
+        let eurSpent = 0;
+
+        // Группируем карты по баерам для пересчета строк баеров
+        const buyerCards = {};
+
+        checkedCards.forEach(checkbox => {
+            const spent = parseFloat(checkbox.dataset.spent) || 0;
+            const currency = checkbox.dataset.currency || 'USD';
+            const buyerId = checkbox.dataset.buyer;
+
+            // Инициализируем данные баера
+            if (!buyerCards[buyerId]) {
+                buyerCards[buyerId] = { cards: 0, USD: 0, EUR: 0 };
+            }
+
+            // Считаем карты и суммы по валютам
+            buyerCards[buyerId].cards++;
+            buyerCards[buyerId][currency] = (buyerCards[buyerId][currency] || 0) + spent;
+
+            if (currency === 'EUR') {
+                eurSpent += spent;
+                totalAmountUSD += spent * EUR_TO_USD_RATE;
+            } else {
+                usdSpent += spent;
+                totalAmountUSD += spent;
+            }
+
+            totalCards++;
+            activeBuyers.add(buyerId);
+        });
+
+        // Обрабатываем ВСЕХ баеров (включая тех, у кого нет выбранных карт)
+        document.querySelectorAll('.buyer-detail-item').forEach(item => {
+            const buyerCheckbox = item.querySelector('input[id^="buyer-"]');
+            if (!buyerCheckbox) return;
+
+            const buyerId = buyerCheckbox.dataset.buyer;
+            const data = buyerCards[buyerId];
+
+            if (!data || data.cards === 0) {
+                // Если у баера нет выбранных карт - показываем нули
+                const summaryElement = document.getElementById(`buyer-summary-${buyerId}`);
+                if (summaryElement) {
+                    summaryElement.textContent = `Карт: 0 | Скручено: 0.00 USD | К оплате: 0.00 USD`;
+                }
+
+                // Снимаем чекбокс баера
+                buyerCheckbox.checked = false;
+                return;
+            }
+
+            // Остальная логика для баеров с выбранными картами
+            let spentString = '';
+            let buyerTotalUSD = 0;
+
+            if (data.USD > 0) {
+                spentString += `${data.USD.toFixed(2)} USD`;
+                buyerTotalUSD += data.USD;
+            }
+
+            if (data.EUR > 0) {
+                const eurInUSD = data.EUR * EUR_TO_USD_RATE;
+                const eurPart = `${data.EUR.toFixed(2)} EUR(${eurInUSD.toFixed(2)} USD)`;
+                spentString += spentString ? ` + ${eurPart}` : eurPart;
+                buyerTotalUSD += eurInUSD;
+            }
+
+            const summaryElement = document.getElementById(`buyer-summary-${buyerId}`);
+            if (summaryElement) {
+                summaryElement.textContent = `Карт: ${data.cards} | Скручено: ${spentString} | К оплате: ${buyerTotalUSD.toFixed(2)} USD`;
+            }
+
+            // Обновляем чекбокс баера
+            const allBuyerCards = document.querySelectorAll(`input[name="selected-cards"][data-buyer="${buyerId}"]`);
+            const checkedBuyerCards = document.querySelectorAll(`input[name="selected-cards"][data-buyer="${buyerId}"]:checked`);
+            buyerCheckbox.checked = allBuyerCards.length === checkedBuyerCards.length;
+        });
+
+        console.log('Пересчет суммы:', {
+            usdSpent: usdSpent.toFixed(2),
+            eurSpent: eurSpent.toFixed(2),
+            totalAmountUSD: totalAmountUSD.toFixed(2),
+            activeBuyers: activeBuyers.size,
+            totalCards
+        });
+
+        // Обновляем общие цифры
+        document.getElementById('bill-buyers-count').textContent = activeBuyers.size;
+        document.getElementById('bill-cards-count').textContent = totalCards;
+        document.getElementById('bill-total-amount').textContent = `${totalAmountUSD.toFixed(2)} USD`;
     }
-}
+    async sendBillToClient() {
+        const clientSelect = document.getElementById('bill-client-select');
+        const clientId = clientSelect.value;
+        const clientName = clientSelect.options[clientSelect.selectedIndex].text;
+
+        if (!clientId) {
+            notifications.error('Ошибка', 'Выберите клиента для отправки счета');
+            return;
+        }
+
+        // Собираем данные счета
+        const buyersCount = document.getElementById('bill-buyers-count').textContent;
+        const cardsCount = document.getElementById('bill-cards-count').textContent;
+        const totalAmount = document.getElementById('bill-total-amount').textContent.replace(' USD', '');
+
+        const billData = {
+            client_id: parseInt(clientId),
+            team_id: this.teamId,
+            buyers_count: parseInt(buyersCount),
+            cards_count: parseInt(cardsCount),
+            amount: parseFloat(totalAmount),
+            period_from: this.formatDateForAPI(this.currentDateFilter.startDate),
+            period_to: this.formatDateForAPI(this.currentDateFilter.endDate)
+        };
+
+        try {
+            console.log('Отправка счета клиенту:', billData);
+
+            // Отправляем POST запрос на создание счета
+            const response = await api.request(`/clients/${clientId}/bills`, {
+                method: 'POST',
+                body: JSON.stringify(billData)
+            });
+
+            notifications.success('Счет отправлен', `Счет на сумму ${totalAmount} USD создан для клиента "${clientName}"`);
+
+            // Закрываем блок детализации
+            document.getElementById('bill-details-block').remove();
+
+        } catch (error) {
+            console.error('Ошибка отправки счета:', error);
+            notifications.error('Ошибка', 'Не удалось создать счет для клиента');
+        }
+    }
+
+    formatDateForAPI(date) {
+        if (!date) return null;
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
 
 
     async loadTeam() {
@@ -536,6 +816,19 @@ async sendBillToClient() {
         } catch (error) {
             console.error('Ошибка загрузки баеров:', error);
         }
+    }
+
+    toggleBuyer(buyerId, isChecked) {
+        // Находим все чекбоксы карт этого баера
+        const buyerCards = document.querySelectorAll(`input[name="selected-cards"][data-buyer="${buyerId}"]`);
+
+        // Устанавливаем состояние всех карт баера
+        buyerCards.forEach(checkbox => {
+            checkbox.checked = isChecked;
+        });
+
+        // Пересчитываем общую сумму
+        this.recalculateBillTotal();
     }
 
     updateTeamHeader() {

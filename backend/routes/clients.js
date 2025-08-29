@@ -114,4 +114,77 @@ router.post('/:id/bills', authenticateToken, checkRole(['admin', 'manager']), as
   }
 });
 
+// Удаление клиента
+router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const clientId = req.params.id;
+    
+    // Проверяем существует ли клиент
+    const checkResult = await db.query('SELECT id FROM clients WHERE id = $1', [clientId]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Клиент не найден' });
+    }
+
+    // Удаляем клиента
+    await db.query('DELETE FROM clients WHERE id = $1', [clientId]);
+    
+    res.json({ message: 'Клиент успешно удален' });
+  } catch (error) {
+    console.error('Ошибка удаления клиента:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Изменение статуса счета
+router.put('/:clientId/bills/:billId/status', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const { clientId, billId } = req.params;
+    const { status } = req.body;
+    
+    if (!['pending', 'paid'].includes(status)) {
+      return res.status(400).json({ error: 'Неверный статус' });
+    }
+    
+    const result = await db.query(
+      'UPDATE bills SET status = $1 WHERE id = $2 AND client_id = $3 RETURNING *',
+      [status, billId, clientId]
+    );
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Счет не найден' });
+    }
+    
+    res.json({ bill: result.rows[0] });
+  } catch (error) {
+    console.error('Ошибка изменения статуса счета:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Удаление счета
+router.delete('/:clientId/bills/:billId', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const { clientId, billId } = req.params;
+    
+    // Проверяем что счет принадлежит указанному клиенту
+    const checkResult = await db.query(
+      'SELECT id FROM bills WHERE id = $1 AND client_id = $2', 
+      [billId, clientId]
+    );
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Счет не найден' });
+    }
+    
+    // Удаляем счет
+    await db.query('DELETE FROM bills WHERE id = $1', [billId]);
+    
+    res.json({ message: 'Счет успешно удален' });
+  } catch (error) {
+    console.error('Ошибка удаления счета:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
 module.exports = router;

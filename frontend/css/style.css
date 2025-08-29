@@ -441,7 +441,7 @@ body {
 /* Mobile sidebar */
 @media (max-width: 768px) {
   .main .container {
-    grid-template-columns: 1fr;
+    grid-template-columns: 0fr;
   }
   
   .sidebar {

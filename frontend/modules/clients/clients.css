@@ -271,3 +271,131 @@
         width: 100%;
     }
 }
+
+/* View Toggle - копируем из cards.css */
+.view-toggle {
+    display: flex;
+    background: var(--component-background);
+    border-radius: 8px;
+    padding: 4px;
+    border: 1px solid var(--border-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--text-secondary);
+}
+
+.view-btn:hover {
+    color: var(--primary-color);
+    background: rgba(24, 144, 255, 0.06);
+}
+
+.view-btn.active {
+    background: var(--primary-color);
+    color: var(--component-background);
+    box-shadow: 0 1px 2px rgba(24, 144, 255, 0.2);
+}
+
+/* Clients Table */
+.clients-table-container {
+    background: var(--component-background);
+    border-radius: 12px;
+    border: 1px solid var(--border-color-split);
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.clients-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--component-background);
+}
+
+.clients-table th {
+    background: var(--background-color);
+    padding: 16px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-primary);
+    border-bottom: 1px solid var(--border-color-split);
+}
+
+.clients-table td {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color-split);
+    font-size: 14px;
+    color: var(--text-primary);
+    vertical-align: middle;
+}
+
+.clients-table tr:last-child td {
+    border-bottom: none;
+}
+
+.clients-table tr:hover {
+    background: var(--background-color);
+}
+
+.client-name-link {
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.client-name-link:hover {
+    color: var(--primary-hover) !important;
+}
+
+.table-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.table-action-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.table-action-btn.edit {
+    background: rgba(24, 144, 255, 0.1);
+    color: var(--primary-color);
+}
+
+.table-action-btn.edit:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+.table-action-btn.delete {
+    background: rgba(245, 34, 45, 0.1);
+    color: var(--error-color);
+}
+
+.table-action-btn.delete:hover {
+    background: var(--error-color);
+    color: white;
+}
+
+.text-center {
+    text-align: center;
+}
