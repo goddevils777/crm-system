@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../models/database');
 const { authenticateToken, checkRole } = require('../middleware/auth');
+const crypto = require('crypto');
 
 // Получение всех клиентов
 router.get('/', authenticateToken, async (req, res) => {
@@ -186,5 +187,109 @@ router.delete('/:clientId/bills/:billId', authenticateToken, checkRole(['admin',
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
+
+// Генерация публичной ссылки для счета
+router.get('/:clientId/bills/:billId/link', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const { clientId, billId } = req.params;
+    
+    const token = crypto.randomBytes(32).toString('hex');
+    
+    // Сохраняем токен в базе
+    await db.query(
+      'UPDATE bills SET public_token = $1 WHERE id = $2 AND client_id = $3',
+      [token, billId, clientId]
+    );
+    
+    const publicUrl = `${req.protocol}://${req.get('host')}/modules/clients/bill/index.html?token=${token}`;
+    res.json({ url: publicUrl });
+  } catch (error) {
+    console.error('Ошибка генерации ссылки:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// Публичный доступ к счету
+router.get('/bills/public/:token', async (req, res) => {
+  try {
+    console.log('Запрос публичного счета с токеном:', req.params.token);
+    
+    const token = req.params.token;
+    
+    const result = await db.query(`
+      SELECT b.*, c.name as client_name 
+      FROM bills b 
+      JOIN clients c ON b.client_id = c.id 
+      WHERE b.public_token = $1
+    `, [token]);
+    
+    console.log('Результат поиска счета:', result.rows.length);
+    
+    if (result.rows.length === 0) {
+      console.log('Счет с токеном не найден:', token);
+      return res.status(404).json({ error: 'Счет не найден' });
+    }
+    
+    console.log('Счет найден:', result.rows[0].id);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Ошибка получения публичного счета:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+// ВАЖНО: этот роут должен быть БЕЗ middleware аутентификации
+router.put('/bills/public/:token/pay', async (req, res) => {
+  console.log('=== PAYMENT ROUTE CALLED ===');
+  console.log('Token:', req.params.token);
+  console.log('Method:', req.method);
+  console.log('Full URL:', req.originalUrl);
+  
+  try {
+    const token = req.params.token;
+    
+    // Сначала проверим что счет существует
+    const checkResult = await db.query(
+      'SELECT id, status FROM bills WHERE public_token = $1',
+      [token]
+    );
+    
+    console.log('Bills found:', checkResult.rows.length);
+    
+    if (checkResult.rows.length === 0) {
+      console.log('Bill not found for token:', token);
+      return res.status(404).json({ error: 'Счет не найден' });
+    }
+    
+    if (checkResult.rows[0].status === 'paid') {
+      console.log('Bill already paid');
+      return res.json({ message: 'Счет уже оплачен', bill: checkResult.rows[0] });
+    }
+    
+    // Обновляем статус
+    const result = await db.query(
+      'UPDATE bills SET status = $1 WHERE public_token = $2 RETURNING *',
+      ['paid', token]
+    );
+    
+    console.log('Update result:', result.rows.length);
+    
+    res.json({ 
+      message: 'Счет отмечен как оплаченный', 
+      bill: result.rows[0] 
+    });
+    
+  } catch (error) {
+    console.error('=== PAYMENT ERROR ===');
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
+    res.status(500).json({ 
+      error: 'Внутренняя ошибка сервера', 
+      details: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
+  }
+});
+
+console.log('Payment route registered');
 
 module.exports = router;

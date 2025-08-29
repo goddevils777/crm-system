@@ -49,11 +49,7 @@ class ClientDetailModule {
                             <span id="client-created"></span>
                         </div>
                     </div>
-                    <div class="client-actions">
-                        <button class="btn btn-primary" id="create-bill-btn">
-                            Сформировать счет
-                        </button>
-                    </div>
+             
                 </div>
 
                 <!-- Список выставленных счетов -->
@@ -239,11 +235,16 @@ class ClientDetailModule {
     `;
     }
 
-    generateClientLink(billId) {
-        const link = `${window.location.origin}/bill/${billId}`;
-        navigator.clipboard.writeText(link);
-        notifications.success('Ссылка скопирована', 'Ссылка на счет скопирована в буфер обмена');
+async generateClientLink(billId) {
+    try {
+        const response = await api.request(`/clients/${this.clientId}/bills/${billId}/link`);
+        window.open(response.url, '_blank');
+        notifications.success('Ссылка открыта', 'Ссылка на счет открыта в новой вкладке');
+    } catch (error) {
+        console.error('Ошибка генерации ссылки:', error);
+        notifications.error('Ошибка', 'Не удалось создать ссылку на счет');
     }
+}
 
     toggleStatusDropdown(billId, element) {
     // Закрываем все открытые dropdown

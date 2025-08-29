@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Счет на оплату</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💳</text></svg>">
+    <link rel="stylesheet" href="bill.css">
+    
+</head>
+
+<body>
+    <div class="bill-container">
+        <div class="bill-card">
+            <div class="bill-header">
+                <h1>Счет на оплату</h1>
+                <div class="bill-logo">💳</div>
+            </div>
+
+            <div class="bill-content">
+                <div class="bill-amount" id="bill-amount">
+                    <span class="currency">$</span>
+                    <span class="amount">0.00</span>
+                </div>
+
+                <div class="bill-details">
+                    <div class="detail-item">
+                        <span class="label">Период:</span>
+                        <span class="value" id="bill-period">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Дата счета:</span>
+                        <span class="value" id="bill-date">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Клиент:</span>
+                        <span class="value" id="bill-client">-</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="label">Статус:</span>
+                        <span class="value status" id="bill-status">Ожидает оплаты</span>
+                    </div>
+                </div>
+                <div class="bill-payment" id="bill-payment" style="display: none;">
+                    <button class="payment-btn" id="payment-btn">
+                        ✓ Отметить как оплаченный
+                    </button>
+                </div>
+            </div>
+
+            <div class="bill-footer">
+                <p>Этот счет создан автоматически</p>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="bill.js"></script>
+</body>
+
+</html>

@@ -39,24 +39,44 @@ app.use(helmet({
 app.use(cors({
   origin: function (origin, callback) {
     const allowedOrigins = [
-      'http://localhost:8080',
+      'http://localhost:3000',     // основной фронтенд
+      'http://127.0.0.1:3000',     
+      'http://localhost:8080',     // альтернативные порты
       'http://127.0.0.1:8080',
-      'http://localhost:8000',    // ДОБАВЬ для тестирования
-      'http://127.0.0.1:8000',    // ДОБАВЬ для тестирования  
+      'http://localhost:8000',
+      'http://127.0.0.1:8000',
       'http://[::]:8080',
-      'http://[::]:8000',         // ДОБАВЬ для тестирования
+      'http://[::]:8000',
       process.env.FRONTEND_URL
     ].filter(Boolean);
 
-    // Разрешаем все ngrok домены
-    if (!origin || allowedOrigins.includes(origin) ||
-      (origin && origin.includes('.ngrok.io')) ||
-      (origin && origin.includes('.ngrok-free.app')) ||
-      origin.startsWith('file://')) {  // ДОБАВЬ эту строку
-      callback(null, true);
-    } else {
-      callback(new Error('Запрещено CORS политикой'));
+    // Публичные страницы счетов (без origin при прямом доступе к файлам)
+    if (!origin) {
+      return callback(null, true);
     }
+
+    // Проверяем разрешенные домены
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+
+    // Разрешаем ngrok для разработки
+    if (origin.includes('.ngrok.io') || origin.includes('.ngrok-free.app')) {
+      return callback(null, true);
+    }
+
+    // Разрешаем file:// протокол для локальных HTML файлов
+    if (origin.startsWith('file://')) {
+      return callback(null, true);
+    }
+
+    // В production добавь свой домен:
+    // if (origin === 'https://yourdomain.com') {
+    //   return callback(null, true);
+    // }
+
+    console.log('CORS заблокировал origin:', origin);
+    callback(new Error('Запрещено CORS политикой'));
   },
   credentials: true,
   optionsSuccessStatus: 200,
