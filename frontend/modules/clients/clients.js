@@ -90,52 +90,78 @@ class ClientsModule {
         }
     }
 
-    showModal() {
-        const modal = document.getElementById('client-modal');
-        modal?.classList.add('show');
-
-        // Сброс формы
-        const form = document.getElementById('client-form');
-        form?.reset();
-    }
+showModal() {
+    const modal = document.getElementById('client-modal');
+    const modalTitle = modal.querySelector('.modal-header h3');
+    const submitBtn = modal.querySelector('.btn-primary');
+    const form = document.getElementById('client-form');
+    
+    // Возвращаем заголовок и кнопку для создания
+    modalTitle.textContent = 'Добавить клиента';
+    submitBtn.textContent = 'Создать клиента';
+    
+    // Сброс формы и атрибутов
+    form.reset();
+    form.removeAttribute('data-client-id');
+    form.removeAttribute('data-mode');
+    
+    modal.classList.add('show');
+}
 
     hideModal() {
         const modal = document.getElementById('client-modal');
         modal?.classList.remove('show');
     }
 
-    async handleSubmit(e) {
-        e.preventDefault();
+async handleSubmit(e) {
+    e.preventDefault();
 
-        const formData = new FormData(e.target);
-        const clientData = {
-            name: formData.get('name')?.trim(),
-            email: formData.get('email')?.trim() || null,
-            phone: formData.get('phone')?.trim() || null,
-            description: formData.get('description')?.trim() || null
-        };
+    const form = e.target;
+    const formData = new FormData(form);
+    const clientData = {
+        name: formData.get('name')?.trim(),
+        email: formData.get('email')?.trim() || null,
+        phone: formData.get('phone')?.trim() || null,
+        description: formData.get('description')?.trim() || null
+    };
 
-        if (!clientData.name) {
-            notifications.error('Ошибка', 'Название клиента обязательно');
-            return;
-        }
+    if (!clientData.name) {
+        notifications.error('Ошибка', 'Название клиента обязательно');
+        return;
+    }
 
-        try {
+    const clientId = form.getAttribute('data-client-id');
+    const isEdit = form.getAttribute('data-mode') === 'edit';
+
+    try {
+        if (isEdit) {
+            // Обновление клиента
+            await api.request(`/clients/${clientId}`, {
+                method: 'PUT',
+                body: JSON.stringify(clientData)
+            });
+            
+            notifications.success('Успех', 'Клиент успешно обновлен');
+        } else {
+            // Создание нового клиента
             await api.request('/clients', {
                 method: 'POST',
                 body: JSON.stringify(clientData)
             });
-
-            await this.loadClients();
-            this.renderClients();
-            this.hideModal();
-
-            notifications.success('Клиент создан', 'Клиент успешно добавлен');
-        } catch (error) {
-            console.error('Error creating client:', error);
-            notifications.error('Ошибка', 'Не удалось создать клиента');
+            
+            notifications.success('Клиент создан', 'Новый клиент успешно добавлен');
         }
+
+        await this.loadClients();
+        this.renderClients();
+        this.hideModal();
+
+    } catch (error) {
+        console.error('Ошибка сохранения клиента:', error);
+        const action = isEdit ? 'обновить' : 'создать';
+        notifications.error('Ошибка', `Не удалось ${action} клиента`);
     }
+}
 
     filterClients(searchTerm) {
         const term = searchTerm.toLowerCase();
@@ -386,10 +412,41 @@ class ClientsModule {
         }
     }
 
-    editClient(clientId) {
-        console.log('Editing client ID:', clientId);
-        notifications.info('Редактирование', 'Функция редактирования в разработке');
+editClient(clientId) {
+    console.log('Editing client ID:', clientId);
+    
+    const client = this.clients.find(c => c.id === clientId);
+    if (!client) {
+        notifications.error('Ошибка', 'Клиент не найден');
+        return;
     }
+    
+    this.showEditModal(client);
+}
+
+
+showEditModal(client) {
+    const modal = document.getElementById('client-modal');
+    const modalTitle = modal.querySelector('.modal-header h3');
+    const submitBtn = modal.querySelector('.btn-primary');
+    const form = document.getElementById('client-form');
+    
+    // Меняем заголовок и кнопку
+    modalTitle.textContent = 'Редактировать клиента';
+    submitBtn.textContent = 'Сохранить изменения';
+    
+    // Заполняем форму данными клиента
+    form.querySelector('input[name="name"]').value = client.name || '';
+    form.querySelector('input[name="email"]').value = client.email || '';
+    form.querySelector('input[name="phone"]').value = client.phone || '';
+    form.querySelector('textarea[name="description"]').value = client.description || '';
+    
+    // Сохраняем ID для обновления
+    form.setAttribute('data-client-id', client.id);
+    form.setAttribute('data-mode', 'edit');
+    
+    modal.classList.add('show');
+}
 
     async deleteClient(clientId) {
         const confirmed = await confirmDelete('Вы уверены, что хотите удалить этого клиента?');

@@ -115,6 +115,41 @@ router.post('/:id/bills', authenticateToken, checkRole(['admin', 'manager']), as
   }
 });
 
+// Обновление клиента
+router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const clientId = req.params.id;
+    const { name, email, phone, description } = req.body;
+
+    if (!name || name.trim().length === 0) {
+      return res.status(400).json({ error: 'Название клиента обязательно' });
+    }
+
+    // Проверяем существует ли клиент
+    const checkResult = await db.query('SELECT id FROM clients WHERE id = $1', [clientId]);
+    
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Клиент не найден' });
+    }
+
+    const result = await db.query(
+      `UPDATE clients 
+       SET name = $1, email = $2, phone = $3, description = $4, updated_at = CURRENT_TIMESTAMP 
+       WHERE id = $5 
+       RETURNING *`,
+      [name.trim(), email || null, phone || null, description || null, clientId]
+    );
+
+    res.json({ 
+      message: 'Клиент успешно обновлен',
+      client: result.rows[0] 
+    });
+  } catch (error) {
+    console.error('Ошибка обновления клиента:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
 // Удаление клиента
 router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
@@ -193,13 +228,32 @@ router.get('/:clientId/bills/:billId/link', authenticateToken, checkRole(['admin
   try {
     const { clientId, billId } = req.params;
     
-    const token = crypto.randomBytes(32).toString('hex');
-    
-    // Сохраняем токен в базе
-    await db.query(
-      'UPDATE bills SET public_token = $1 WHERE id = $2 AND client_id = $3',
-      [token, billId, clientId]
+    // Сначала проверяем, есть ли уже токен у этого счета
+    const existingBill = await db.query(
+      'SELECT public_token FROM bills WHERE id = $1 AND client_id = $2',
+      [billId, clientId]
     );
+    
+    if (existingBill.rows.length === 0) {
+      return res.status(404).json({ error: 'Счет не найден' });
+    }
+    
+    let token = existingBill.rows[0].public_token;
+    
+    // Если токена нет - создаем новый
+    if (!token) {
+      token = crypto.randomBytes(32).toString('hex');
+      
+      // Сохраняем токен в базе
+      await db.query(
+        'UPDATE bills SET public_token = $1 WHERE id = $2 AND client_id = $3',
+        [token, billId, clientId]
+      );
+      
+      console.log(`Создан новый токен для счета ${billId}: ${token}`);
+    } else {
+      console.log(`Используем существующий токен для счета ${billId}: ${token}`);
+    }
     
     const publicUrl = `${req.protocol}://${req.get('host')}/modules/clients/bill/index.html?token=${token}`;
     res.json({ url: publicUrl });
@@ -289,6 +343,8 @@ router.put('/bills/public/:token/pay', async (req, res) => {
     });
   }
 });
+
+
 
 console.log('Payment route registered');
 

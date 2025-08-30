@@ -46,45 +46,51 @@ class SidebarComponent {
     }, 10);
   }
 
-  setupEvents() {
-    const menu = document.getElementById('main-menu');
+// ЗАМЕНИТЬ метод setupEvents в frontend/components/sidebar.js:
 
-    menu?.addEventListener('click', (e) => {
-      e.preventDefault();
-      const link = e.target.closest('.menu-item');
-      if (link) {
-        const module = link.dataset.module;
+setupEvents() {
+  const menu = document.getElementById('main-menu');
 
-        // УБРАТЬ ВСЮ СЕКЦИЮ АВТОЗАКРЫТИЯ:
-        // if (window.innerWidth <= 768) { ... }
+  menu?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const link = e.target.closest('.menu-item');
+    if (link) {
+      const module = link.dataset.module;
+      
+      console.log('=== SIDEBAR NAVIGATION ===');
+      console.log('Clicked module:', module);
+      console.log('Current hash:', window.location.hash);
+      console.log('Is card detail page:', window.location.hash.startsWith('#card/'));
 
-        // Принудительная очистка состояния карты при переходе в команды
-        if (module === 'teams') {
-          console.log('Forcing clear card state when clicking teams');
-          localStorage.removeItem('current_card_detail');
-          window.history.replaceState({ module: 'teams' }, '', '#teams');
-          if (window.moduleLoader && window.moduleLoader.loadedModules.has('teams')) {
-            window.moduleLoader.loadedModules.delete('teams');
-          }
-        }
-
-        if (module === 'cards' && window.location.hash.startsWith('#card/')) {
-          console.log('Forcing return to cards list from detail page');
-          localStorage.removeItem('current_card_detail');
-          window.history.replaceState({ module: 'cards' }, '', '#cards');
-          if (window.moduleLoader) {
-            window.moduleLoader.loadedModules.delete('cards');
-          }
-        }
-
-        this.setActiveModule(module);
-
-        if (this.onModuleChange) {
-          this.onModuleChange(module);
+      // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА состояния при переходе в любой модуль
+      if (window.location.hash.startsWith('#card/')) {
+        console.log('Clearing card detail state before navigation');
+        localStorage.removeItem('current_card_detail');
+        
+        // Очищаем все модули из кеша
+        if (window.moduleLoader) {
+          window.moduleLoader.loadedModules.clear();
+          console.log('Cleared module cache');
         }
       }
-    });
-  }
+
+      // Устанавливаем новый хеш
+      window.history.replaceState({ module: module }, '', `#${module}`);
+      console.log('New hash set:', window.location.hash);
+
+      // Устанавливаем активный модуль
+      this.setActiveModule(module);
+
+      // Вызываем колбэк для загрузки модуля
+      if (this.onModuleChange) {
+        console.log('Calling onModuleChange callback');
+        this.onModuleChange(module);
+      } else {
+        console.error('onModuleChange callback not set');
+      }
+    }
+  });
+}
 
   setActiveModule(moduleName) {
     console.log('Setting active module:', moduleName);

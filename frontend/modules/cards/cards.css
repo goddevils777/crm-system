@@ -871,3 +871,15 @@
 .tab-section.active {
     display: block;
 }
+
+[data-theme="dark"] .card-title {
+  color: white;
+}
+
+[data-theme="dark"] .card-currency-status {
+  color: white;
+}
+
+
+
+

@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../models/database');
 const { authenticateToken, checkRole } = require('../middleware/auth');
 const { getKyivDate, convertUtcToKyivDate } = require('../utils/timezone');
+const currencyService = require('../utils/currencyService');
 
 // Получение всех команд
 router.get('/', authenticateToken, async (req, res) => {
@@ -563,7 +564,6 @@ router.delete('/buyers/:buyerId/transfers/:transferId', authenticateToken, check
   }
 });
 
-
 // Получение статистики команды за период для формирования счета
 router.get('/:id/billing-stats', authenticateToken, async (req, res) => {
   try {
@@ -574,63 +574,106 @@ router.get('/:id/billing-stats', authenticateToken, async (req, res) => {
       return res.status(400).json({ error: 'Не указаны даты периода' });
     }
 
-    // Получаем баеров команды с их картами за период
-const buyersQuery = `
-  SELECT 
-    tb.id,
-    tb.name as buyer_name,
-    COUNT(DISTINCT c.id) as cards_count,
-    COALESCE(SUM(c.balance), 0) as total_balance,
-    COALESCE(SUM(c.total_spent_calculated), 0) as total_spent,
-    COALESCE(SUM(c.total_top_up), 0) as total_topup,
-    JSON_AGG(
-      CASE WHEN c.id IS NOT NULL THEN
-        JSON_BUILD_OBJECT(
-          'id', c.id,
-          'name', c.name,
-          'balance', c.balance,
-          'spent', c.total_spent_calculated,
-          'topup', c.total_top_up,
-          'status', c.status,
-          'currency', c.currency
-        )
-      END
-    ) FILTER (WHERE c.id IS NOT NULL) as cards
-  FROM team_buyers tb
-  LEFT JOIN cards c ON tb.id = c.buyer_id 
-    AND c.status != 'deleted'
-  WHERE tb.team_id = $1
-  GROUP BY tb.id, tb.name
-  ORDER BY tb.name
-`;
+    console.log('=== BILLING STATS DEBUG ===');
+    console.log('Period:', startDate, 'to', endDate);
+    console.log('Team ID:', teamId);
 
-   const result = await db.query(buyersQuery, [teamId]);
+    // ИСПРАВЛЕННЫЙ запрос - получаем только карты с операциями за период
+    const buyersQuery = `
+      SELECT 
+        tb.id as buyer_id,
+        tb.name as buyer_name,
+        COUNT(DISTINCT period_cards.card_id) as cards_count,
+        COALESCE(SUM(period_cards.balance), 0) as total_balance,
+        COALESCE(SUM(period_cards.spent_amount), 0) as total_spent,
+        COALESCE(SUM(period_cards.topup_amount), 0) as total_topup,
+        JSON_AGG(
+          JSON_BUILD_OBJECT(
+            'id', period_cards.card_id,
+            'name', period_cards.card_name,
+            'balance', period_cards.balance,
+            'spent', period_cards.spent_amount,
+            'topup', period_cards.topup_amount,
+            'status', period_cards.status,
+            'currency', period_cards.currency
+          )
+        ) as cards
+      FROM team_buyers tb
+      INNER JOIN (
+        SELECT 
+          c.id as card_id,
+          c.name as card_name,
+          c.buyer_id,
+          c.balance,
+          c.status,
+          c.currency,
+          COALESCE(t.spent_amount, 0) as spent_amount,
+          COALESCE(t.topup_amount, 0) as topup_amount
+        FROM cards c
+        INNER JOIN (
+          SELECT 
+            card_id,
+            SUM(CASE WHEN transaction_type = 'expense' AND is_cancelled = FALSE AND description NOT LIKE '%омиссия%' THEN ABS(amount) ELSE 0 END) as spent_amount,
+            SUM(CASE WHEN transaction_type = 'topup' AND is_cancelled = FALSE THEN amount ELSE 0 END) as topup_amount
+          FROM card_transactions 
+          WHERE transaction_date >= $2::date AND transaction_date <= $3::date
+          GROUP BY card_id
+          HAVING SUM(CASE WHEN transaction_type = 'expense' AND is_cancelled = FALSE AND description NOT LIKE '%омиссия%' THEN ABS(amount) ELSE 0 END) > 0
+              OR SUM(CASE WHEN transaction_type = 'topup' AND is_cancelled = FALSE THEN amount ELSE 0 END) > 0
+        ) t ON c.id = t.card_id
+        WHERE c.status != 'deleted'
+      ) period_cards ON tb.id = period_cards.buyer_id
+      WHERE tb.team_id = $1
+      GROUP BY tb.id, tb.name
+      HAVING COUNT(DISTINCT period_cards.card_id) > 0
+      ORDER BY tb.name
+    `;
 
-    // Подсчитываем общие цифры
+    const result = await db.query(buyersQuery, [teamId, startDate, endDate]);
+
+    console.log('=== SQL BILLING QUERY RESULT ===');
+    console.log('Query result:', result.rows.length, 'buyers');
+    result.rows.forEach((buyer, index) => {
+      console.log(`SQL Buyer ${index + 1}: ${buyer.buyer_name}`);
+      console.log(`- cards_count: ${buyer.cards_count}`);
+      console.log(`- total_spent: ${buyer.total_spent}`);
+      if (buyer.cards) {
+        buyer.cards.forEach(card => {
+          console.log(`  Card: ${card.name} spent: ${card.spent} ${card.currency}`);
+        });
+      }
+    });
+
+    // Подсчитываем общие цифры с актуальным курсом
+    const currencyService = require('../utils/currencyService');
+    const eurUsdRate = await currencyService.getEurToUsdRate();
+    
     let totalBuyers = 0;
     let totalCards = 0;
     let totalAmount = 0;
 
-result.rows.forEach(buyer => {
-  if (buyer.cards_count > 0) {
-    totalBuyers++;
-    totalCards += parseInt(buyer.cards_count);
-    
-    // Пересчитываем с учетом валют
-    const EUR_TO_USD_RATE = 1.03;
-    if (buyer.cards) {
-      buyer.cards.forEach(card => {
-        if (card && card.spent) {
-          if (card.currency === 'EUR') {
-            totalAmount += card.spent * EUR_TO_USD_RATE;
-          } else {
-            totalAmount += card.spent;
-          }
+    result.rows.forEach(buyer => {
+      const cardsCount = parseInt(buyer.cards_count);
+      if (cardsCount > 0) {
+        totalBuyers++;
+        totalCards += cardsCount;
+        
+        // Пересчитываем с учетом валют
+        if (buyer.cards) {
+          buyer.cards.forEach(card => {
+            if (card && card.spent) {
+              if (card.currency === 'EUR') {
+                totalAmount += card.spent * eurUsdRate;
+              } else {
+                totalAmount += card.spent;
+              }
+            }
+          });
         }
-      });
-    }
-  }
-});
+      }
+    });
+
+    console.log('Final totals:', { totalBuyers, totalCards, totalAmount, eurUsdRate });
 
     res.json({
       stats: {
@@ -640,7 +683,8 @@ result.rows.forEach(buyer => {
         currency: currency
       },
       buyers: result.rows.map(buyer => ({
-        ...buyer,
+        buyer_id: buyer.buyer_id,
+        buyer_name: buyer.buyer_name,
         cards_count: parseInt(buyer.cards_count),
         total_balance: parseFloat(buyer.total_balance),
         total_spent: parseFloat(buyer.total_spent),
@@ -661,7 +705,7 @@ router.get('/:id/bills', authenticateToken, async (req, res) => {
   try {
     const teamId = req.params.id;
     const { startDate, endDate } = req.query;
-    
+
     let query = `
       SELECT b.*, c.name as client_name 
       FROM bills b
@@ -669,19 +713,37 @@ router.get('/:id/bills', authenticateToken, async (req, res) => {
       WHERE b.team_id = $1
     `;
     const params = [teamId];
-    
+
     if (startDate && endDate) {
       query += ` AND b.period_from <= $2 AND b.period_to >= $3`;
       params.push(endDate, startDate);
     }
-    
+
     query += ` ORDER BY b.created_at DESC`;
-    
+
     const result = await db.query(query, params);
     res.json({ bills: result.rows });
   } catch (error) {
     console.error('Ошибка получения счетов команды:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
+router.get('/currency/eur-usd', authenticateToken, async (req, res) => {
+  try {
+    const rate = await currencyService.getEurToUsdRate();
+
+    res.json({
+      rate: rate,
+      timestamp: new Date().toISOString(),
+      source: rate === 1.03 ? 'fallback' : 'api'
+    });
+  } catch (error) {
+    console.error('Ошибка получения курса валют:', error);
+    res.status(500).json({
+      error: 'Внутренняя ошибка сервера',
+      rate: 1.03 // запасной курс
+    });
   }
 });
 

@@ -4,8 +4,8 @@ class HeaderComponent {
         this.currentUser = null;
     }
 
-    render() {
-        return `
+render() {
+    return `
       <header class="header">
         <div class="container">
           <div class="header-left">
@@ -17,19 +17,57 @@ class HeaderComponent {
             <h1 class="logo">CRM System</h1>
           </div>
           <nav class="nav">
+            <div class="theme-toggle" id="theme-toggle" title="Переключить тему">
+              <input type="checkbox" id="theme-checkbox" class="theme-checkbox">
+              <label for="theme-checkbox" class="theme-slider">
+                <span class="theme-icon sun">☀️</span>
+                <span class="theme-icon moon">🌙</span>
+              </label>
+            </div>
             <span id="user-info"></span>
             <button id="logout-btn" class="btn btn-secondary">Выйти</button>
           </nav>
         </div>
       </header>
     `;
+}
+
+mount(container) {
+    container.innerHTML = this.render();
+    this.setupEvents();
+    this.updateUserInfo();
+    
+    // Применяем сохраненную тему при загрузке
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    this.updateThemeButton(savedTheme);
+}
+
+
+    toggleTheme() {
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+
+        // Сохраняем выбор
+        localStorage.setItem('theme', newTheme);
+
+        // Применяем тему
+        document.documentElement.setAttribute('data-theme', newTheme);
+
+        // Обновляем кнопку
+        this.updateThemeButton(newTheme);
+
+        console.log(`Тема переключена на: ${newTheme}`);
     }
 
-    mount(container) {
-        container.innerHTML = this.render();
-        this.setupEvents();
-        this.updateUserInfo();
+    // ДОБАВИТЬ метод updateThemeButton:
+
+updateThemeButton(theme) {
+    const themeCheckbox = document.getElementById('theme-checkbox');
+    if (themeCheckbox) {
+        themeCheckbox.checked = theme === 'dark';
     }
+}
 
     setupEvents() {
         console.log('=== HEADER SETUP EVENTS ===');
@@ -199,6 +237,12 @@ class HeaderComponent {
             if (window.app) {
                 window.app.logout();
             }
+        });
+
+        // Тумблер переключения темы
+        const themeCheckbox = document.getElementById('theme-checkbox');
+        themeCheckbox?.addEventListener('change', () => {
+            this.toggleTheme();
         });
 
         window.addEventListener('mobileSidebarClosed', () => {

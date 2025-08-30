@@ -59,7 +59,6 @@ class CardEditModal {
                         <select name="currency" class="form-select">
                             <option value="USD" ${card.currency === 'USD' ? 'selected' : ''}>USD - Доллары США</option>
                             <option value="EUR" ${card.currency === 'EUR' ? 'selected' : ''}>EUR - Евро</option>
-                            <option value="UAH" ${card.currency === 'UAH' ? 'selected' : ''}>UAH - Гривна</option>
                         </select>
                     </div>
                     <div class="form-group">

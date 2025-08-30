@@ -518,3 +518,7 @@
         padding: 6px 10px;
     }
 }
+
+[data-theme="dark"] .team-title {
+  color: white;
+}

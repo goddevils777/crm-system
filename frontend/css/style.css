@@ -39,6 +39,129 @@
   --padding-lg: 24px;
 }
 
+/* ДОБАВИТЬ в начало frontend/css/style.css после :root */
+
+/* Темная тема */
+[data-theme="dark"] {
+  /* Основные цвета */
+--primary-color: #0ea5e9;
+--primary-hover: #38bdf8;
+--primary-active: #0369a1;
+  
+  /* Цвета фона */
+  --body-background: #0f0f0f;
+  --component-background: #1f1f1f;
+  --background-color: #141414;
+  --background-color-light: #262626;
+  
+  /* Цвета текста */
+  --text-primary: rgba(255, 255, 255, 0.88);
+  --text-secondary: rgba(255, 255, 255, 0.65);
+  --text-disabled: rgba(255, 255, 255, 0.25);
+  
+  /* Границы */
+  --border-color: #424242;
+  --border-color-split: #303030;
+  
+  /* Состояния */
+  --error-color: #ff4d4f;
+  --warning-color: #faad14;
+  --success-color: #52c41a;
+  --info-color: #1677ff;
+  
+  /* Тени */
+  --box-shadow-base: 0 6px 16px 0 rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12), 0 9px 28px 8px rgba(0, 0, 0, 0.05);
+  
+  /* Дополнительные цвета для темной темы */
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --active-bg: rgba(255, 255, 255, 0.1);
+  --menu-hover-bg: rgba(22, 104, 220, 0.15);
+  --menu-active-bg: var(--primary-color);
+  --menu-active-text: var(--component-background);
+}
+
+
+/* Тумблер переключения темы */
+.theme-toggle {
+  margin-right: 16px;
+}
+
+.theme-checkbox {
+  display: none;
+}
+
+.theme-slider {
+  display: flex;
+  align-items: center;
+  width: 60px;
+  height: 30px;
+  background: var(--background-color);
+  border: 2px solid var(--border-color);
+  border-radius: 20px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  padding: 2px;
+}
+
+.theme-slider:hover {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(22, 104, 220, 0.1);
+}
+
+.theme-icon {
+  font-size: 14px;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: all 0.3s ease;
+  z-index: 1;
+}
+
+.theme-icon.sun {
+  left: 6px;
+  opacity: 1;
+}
+
+.theme-icon.moon {
+  right: 6px;
+  opacity: 0.3;
+}
+
+.theme-slider::before {
+  content: '';
+  width: 24px;
+  height: 24px;
+  background: var(--component-background);
+  border: 1px solid var(--border-color-split);
+  border-radius: 50%;
+  position: absolute;
+  left: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Состояние для темной темы */
+.theme-checkbox:checked + .theme-slider {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.theme-checkbox:checked + .theme-slider::before {
+  left: 32px;
+  background: var(--component-background);
+}
+
+.theme-checkbox:checked + .theme-slider .sun {
+  opacity: 0.3;
+}
+
+.theme-checkbox:checked + .theme-slider .moon {
+  opacity: 1;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -254,6 +377,8 @@ body {
   top: 0;
   transition: transform 0.3s ease;
   z-index: 1000;
+    border-radius: 7px;
+  margin-top: 10px;
 }
 
 .sidebar.hide {
@@ -280,20 +405,40 @@ body {
   transition: all 0.3s;
   border-radius: 0;
   margin: 0 var(--padding-xs);
-  gap: 12px; /* Увеличили расстояние между иконкой и текстом */
-  min-height: 40px; /* Фиксированная высота для выравнивания */
+  gap: 12px;
+  min-height: 40px;
 }
 
 .menu a:hover {
-  background: #e6f7ff;
+  background: var(--menu-hover-bg, #e6f7ff);
   color: var(--primary-color);
 }
 
 .menu a.active {
-  background: var(--primary-color);
-  color: var(--component-background);
-  font-weight: 500;
+  background: var(--menu-active-bg, var(--primary-color));
+  color: var(--menu-active-text, var(--component-background));
 }
+
+.menu a.active:hover {
+  background: var(--primary-hover);
+  color: var(--component-background);
+}
+/* Дополнительные стили для темной темы */
+[data-theme="dark"] .menu a:hover {
+  background: rgba(22, 104, 220, 0.15);
+  color: var(--primary-hover);
+}
+
+[data-theme="dark"] .menu a.active {
+  background: var(--primary-color);
+  color: white;
+}
+
+[data-theme="dark"] .menu a.active:hover {
+  background: var(--primary-hover);
+  color: white;
+}
+
 
 .menu-icon {
   min-width: 18px; /* Фиксированная ширина для выравнивания */
@@ -336,7 +481,7 @@ body {
   height: 100%;
   overflow-y: auto;
   margin: var(--padding-xs);
-  margin-left: 0;
+  margin-left: 10px;
   border-radius: var(--border-radius-lg);
   border: 1px solid var(--border-color-split);
   grid-column: 2;
@@ -431,6 +576,7 @@ body {
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
+
 }
 
 .sidebar-overlay.show {

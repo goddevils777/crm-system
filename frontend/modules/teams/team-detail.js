@@ -4,7 +4,8 @@ class TeamDetailModule {
         this.team = null;
         this.buyers = [];
         this.currentView = 'grid';
-        this.currentCurrency = 'USD'; // ДОБАВИТЬ ЭТУ СТРОКУ
+        this.currentCurrency = 'USD';
+        this.currentEurUsdRate = 1.03; // ДОБАВИТЬ эту строку
         this.init();
     }
 
@@ -292,6 +293,7 @@ class TeamDetailModule {
             // Получаем текущую валюту
             const currencyFilter = document.getElementById('currency-filter');
             const currency = currencyFilter ? currencyFilter.value : 'USD';
+            await this.loadCurrencyRate();
 
             // Загружаем статистику для счета
             // Форматируем даты без учета временных зон
@@ -310,6 +312,24 @@ class TeamDetailModule {
             const response = await api.request(`/teams/${this.teamId}/billing-stats?startDate=${startDate}&endDate=${endDate}&currency=${currency}`);
 
             console.log('Billing stats response:', response);
+
+            console.log('=== DETAILED API RESPONSE DEBUG ===');
+            response.buyers.forEach((buyer, index) => {
+                console.log(`Баер ${index + 1}: ${buyer.buyer_name}`);
+                console.log(`- cards_count: ${buyer.cards_count}`);
+                console.log(`- cards array length: ${buyer.cards ? buyer.cards.length : 'null'}`);
+                console.log(`- cards array:`, buyer.cards);
+
+                if (buyer.cards) {
+                    buyer.cards.forEach((card, cardIndex) => {
+                        console.log(`  Карта ${cardIndex + 1}: ${card.name}`);
+                        console.log(`    - spent: ${card.spent}`);
+                        console.log(`    - currency: ${card.currency}`);
+                    });
+                }
+                console.log('---');
+            });
+
 
             this.currentBillData = response; // Сохраняем данные
 
@@ -340,7 +360,7 @@ class TeamDetailModule {
         <strong>Карт: </strong><span id="bill-cards-count">${stats.cards_count}</span>
     </div>
     <div class="bill-stat">
-        <strong>Текущий курс: </strong><span>EUR = 1.03 USD</span>
+        <strong>Текущий курс: </strong><span>EUR = ${this.currentEurUsdRate} USD${this.getCurrencySourceLabel()}</span>
     </div>
     <div class="bill-stat" id="bill-total-stat">
         <strong>К оплате:</strong><br>
@@ -384,6 +404,17 @@ class TeamDetailModule {
         document.getElementById('bill-details-block').scrollIntoView({ behavior: 'smooth' });
     }
 
+    getCurrencySourceLabel() {
+        if (this.currencySource === 'api') {
+            return ' (API)';
+        } else if (this.currencySource === 'fallback') {
+            return ' (резервный)';
+        } else if (this.currencySource === 'error') {
+            return ' (ошибка API)';
+        }
+        return '';
+    }
+
     async checkExistingBills(startDate, endDate) {
         try {
             // Загружаем все счета команды
@@ -412,30 +443,42 @@ class TeamDetailModule {
     }
 
 
+    // ЗАМЕНИТЬ начало метода renderBuyersDetails:
+
     renderBuyersDetails(buyers) {
         if (!buyers || buyers.length === 0) {
             return '<p>Нет данных по баерам за выбранный период</p>';
         }
 
-        return buyers.map(buyer => {
-            if (!buyer.cards || buyer.cards.length === 0) {
-                return `
-                <div class="buyer-detail-item">
-                    <div class="buyer-header">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <input type="checkbox" 
-                                   id="buyer-${buyer.id}" 
-                                   data-buyer="${buyer.id}"
-                                   checked
-                                   onchange="teamDetailModule.toggleBuyer(${buyer.id}, this.checked)"
-                                   style="width: 18px; height: 18px;">
-                            <strong>${buyer.buyer_name}</strong>
-                        </div>
-                        <span class="buyer-summary">Нет карт за период</span>
-                    </div>
-                </div>
-            `;
-            }
+        // ДОБАВИТЬ фильтрацию - показываем только баеров с картами
+const buyersWithCards = buyers.filter(buyer => {
+    const cardsCount = parseInt(buyer.cards_count) || 0;
+    const hasCardsArray = buyer.cards && buyer.cards.length > 0;
+    
+    // ДОБАВИТЬ проверку реальных операций
+    let hasOperations = false;
+    if (buyer.cards && buyer.cards.length > 0) {
+        hasOperations = buyer.cards.some(card => (card.spent || 0) > 0 || (card.topup || 0) > 0);
+    }
+    
+    console.log(`Фильтрация баера ${buyer.buyer_name}:`);
+    console.log(`- cards_count = ${cardsCount}`);
+    console.log(`- has cards array = ${hasCardsArray}`);
+    console.log(`- has operations = ${hasOperations}`);
+    
+    // Возвращаем только баеров с реальными операциями
+    return cardsCount > 0 && hasCardsArray && hasOperations;
+});
+
+        console.log(`Всего баеров: ${buyers.length}, с картами: ${buyersWithCards.length}`);
+
+        if (buyersWithCards.length === 0) {
+            return '<p>Нет операций за выбранный период</p>';
+        }
+
+        return buyersWithCards.map(buyer => {
+            // Убираем проверку !buyer.cards || buyer.cards.length === 0
+            // так как уже отфильтровали таких баеров
 
             // Группируем скрученные суммы по валютам
             const spentByCurrency = {};
@@ -448,8 +491,7 @@ class TeamDetailModule {
                 spentByCurrency[currency] += spent;
             });
 
-            // Формируем строку скручено с конвертацией EUR
-            const EUR_TO_USD_RATE = 1.03;
+            // Формируем строку скручено с конвертацией EUR - ИСПОЛЬЗУЕМ РЕАЛЬНЫЙ КУРС
             let spentString = '';
             let eurInUSD = 0;
 
@@ -458,7 +500,7 @@ class TeamDetailModule {
             }
 
             if (spentByCurrency['EUR']) {
-                eurInUSD = spentByCurrency['EUR'] * EUR_TO_USD_RATE;
+                eurInUSD = spentByCurrency['EUR'] * this.currentEurUsdRate; // ЗАМЕНИТЬ на реальный курс
                 const eurPart = `${spentByCurrency['EUR'].toFixed(2)} EUR(${eurInUSD.toFixed(2)} USD)`;
                 spentString += spentString ? ` + ${eurPart}` : eurPart;
             }
@@ -475,48 +517,49 @@ class TeamDetailModule {
             let buyerTotalUSD = (spentByCurrency['USD'] || 0) + eurInUSD;
 
             return `
-            <div class="buyer-detail-item">
-                <div class="buyer-header">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <input type="checkbox" 
-                               id="buyer-${buyer.id}" 
-                               data-buyer="${buyer.id}"
-                               checked
-                               onchange="teamDetailModule.toggleBuyer(${buyer.id}, this.checked)"
-                               style="width: 18px; height: 18px;">
-                        <strong>${buyer.buyer_name}</strong>
-                    </div>
-                    <span class="buyer-summary" id="buyer-summary-${buyer.id}">
-                        Карт: ${buyer.cards_count} | 
-                        Скручено: ${spentString} | 
-                        К оплате: ${buyerTotalUSD.toFixed(2)} USD
-                    </span>
+        <div class="buyer-detail-item">
+            <div class="buyer-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <input type="checkbox" 
+                           id="buyer-${buyer.buyer_id || buyer.id}" 
+                           data-buyer="${buyer.buyer_id || buyer.id}"
+                           checked
+                           onchange="teamDetailModule.toggleBuyer(${buyer.buyer_id || buyer.id}, this.checked)"
+                           style="width: 18px; height: 18px;">
+                    <strong>${buyer.buyer_name}</strong>
                 </div>
-                <div class="buyer-cards">
-                    ${buyer.cards.map(card => `
-                        <label class="card-checkbox-item">
-                            <input type="checkbox" 
-                                   name="selected-cards" 
-                                   value="${card.id}" 
-                                   data-buyer="${buyer.id}"
-                                   data-spent="${card.spent || 0}"
-                                   data-currency="${card.currency || 'USD'}"
-                                   checked
-                                   onchange="teamDetailModule.recalculateBillTotal()">
-                            <div class="card-info">
-                                <span class="card-name">${card.name}</span>
-                                <span class="card-stats">
-                                    Скручено: ${(card.spent || 0).toFixed(2)} ${card.currency || 'USD'} | 
-                                    Статус: ${this.getStatusText(card.status)}
-                                </span>
-                            </div>
-                        </label>
-                    `).join('')}
-                </div>
+                <span class="buyer-summary" id="buyer-summary-${buyer.buyer_id || buyer.id}">
+                    Карт: ${buyer.cards_count} | 
+                    Скручено: ${spentString} | 
+                    К оплате: ${buyerTotalUSD.toFixed(2)} USD
+                </span>
             </div>
-        `;
+            <div class="buyer-cards">
+                ${buyer.cards.map(card => `
+                    <label class="card-checkbox-item">
+                        <input type="checkbox" 
+                               name="selected-cards" 
+                               value="${card.id}" 
+                               data-buyer="${buyer.buyer_id || buyer.id}"
+                               data-spent="${card.spent || 0}"
+                               data-currency="${card.currency || 'USD'}"
+                               checked
+                               onchange="teamDetailModule.recalculateBillTotal()">
+                        <div class="card-info">
+                            <span class="card-name">${card.name}</span>
+                            <span class="card-stats">
+                                Скручено: ${(card.spent || 0).toFixed(2)} ${card.currency || 'USD'} | 
+                                Статус: ${this.getStatusText(card.status)}
+                            </span>
+                        </div>
+                    </label>
+                `).join('')}
+            </div>
+        </div>
+    `;
         }).join('');
     }
+
 
     async loadClientsForBill() {
         try {
@@ -638,7 +681,7 @@ class TeamDetailModule {
         const checkedCards = document.querySelectorAll('input[name="selected-cards"]:checked');
         let totalAmountUSD = 0;
         let totalCards = 0;
-        const EUR_TO_USD_RATE = 1.03;
+        const EUR_TO_USD_RATE = this.currentEurUsdRate;
         const activeBuyers = new Set();
 
         // Группируем по валютам для отладки
@@ -948,6 +991,46 @@ class TeamDetailModule {
             };
         }
     }
+
+    async loadCurrencyRate() {
+        try {
+            console.log('Загружаем актуальный курс EUR/USD...');
+
+            const response = await api.request('/teams/currency/eur-usd');
+            this.currentEurUsdRate = response.rate;
+            this.currencySource = response.source; // ДОБАВИТЬ сохранение источника
+
+            console.log(`Курс EUR/USD обновлен: ${this.currentEurUsdRate} (источник: ${response.source})`);
+
+            // Обновляем отображение курса если есть блок со счетом
+            this.updateCurrencyDisplay();
+
+        } catch (error) {
+            console.warn('Не удалось загрузить курс валют, используем запасной:', error);
+            this.currentEurUsdRate = 1.03;
+            this.currencySource = 'error'; // ДОБАВИТЬ отметку об ошибке
+            this.updateCurrencyDisplay();
+        }
+    }
+
+    updateCurrencyDisplay() {
+        const rateElement = document.querySelector('.bill-stat span');
+        if (rateElement && rateElement.textContent.includes('EUR =')) {
+            let displayText = `EUR = ${this.currentEurUsdRate} USD`;
+
+            // Добавляем источник данных
+            if (this.currencySource === 'api') {
+                displayText += ' (API)';
+            } else if (this.currencySource === 'fallback') {
+                displayText += ' (резервный)';
+            } else if (this.currencySource === 'error') {
+                displayText += ' (ошибка API)';
+            }
+
+            rateElement.textContent = displayText;
+        }
+    }
+
 
     renderBuyersTable() {
         const tbody = document.getElementById('buyers-table-body');
