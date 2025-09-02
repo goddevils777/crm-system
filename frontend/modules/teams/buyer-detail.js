@@ -124,21 +124,149 @@ class BuyerDetailModule {
         }
     }
 
-    fillBuyerInfo() {
-        if (!this.buyer) return;
+fillBuyerInfo() {
+  console.log('=== FILL BUYER INFO ===');
+  if (!this.buyer) {
+    console.log('No buyer data available');
+    return;
+  }
 
-        document.getElementById('buyer-name').textContent = this.buyer.username || 'Неизвестный баер';
+  console.log('Filling buyer info for:', this.buyer.username);
+  document.getElementById('buyer-name').textContent = this.buyer.username || 'Неизвестный баер';
 
-        const telegramElement = document.getElementById('buyer-telegram');
-        const telegramLink = document.getElementById('buyer-telegram-link');
+  const telegramElement = document.getElementById('buyer-telegram');
+  const telegramLink = document.getElementById('buyer-telegram-link');
 
-        if (this.buyer.telegram) {
-            telegramElement.textContent = this.buyer.telegram;
-            telegramLink.style.display = 'flex';
-        } else {
-            telegramLink.style.display = 'none';
-        }
+  if (this.buyer.telegram) {
+    telegramElement.textContent = this.buyer.telegram;
+    telegramLink.style.display = 'flex';
+  } else {
+    telegramLink.style.display = 'none';
+  }
+
+  // НОВОЕ: Добавляем кнопку копирования доступов если есть учетные данные
+  console.log('Calling addCopyAccessButton()');
+  this.addCopyAccessButton();
+}
+addCopyAccessButton() {
+  console.log('=== ADD COPY ACCESS BUTTON ===');
+  console.log('Buyer data:', this.buyer);
+  
+  // Проверяем есть ли уже кнопка
+  const existingButton = document.getElementById('copy-access-btn');
+  if (existingButton) {
+    console.log('Copy access button already exists:', existingButton);
+    return;
+  }
+
+  // Ищем блок с действиями баера
+  const actionsBlock = document.querySelector('.buyer-actions');
+  console.log('Actions block found:', !!actionsBlock);
+  console.log('Actions block element:', actionsBlock);
+  console.log('Actions block innerHTML before:', actionsBlock?.innerHTML);
+  console.log('Buyer user_id:', this.buyer.user_id);
+  
+  if (actionsBlock && this.buyer.user_id) {
+    console.log('Creating copy access button');
+    
+    // Создаем кнопку копирования доступов
+    const copyButton = document.createElement('button');
+    copyButton.id = 'copy-access-btn';
+    copyButton.className = 'btn btn-primary';
+    copyButton.innerHTML = '📋';
+    copyButton.style.fontSize = '14px';
+    copyButton.style.display = 'inline-flex'; // ПРИНУДИТЕЛЬНО
+    copyButton.style.visibility = 'visible'; // ПРИНУДИТЕЛЬНО
+    
+    console.log('Button element created:', copyButton);
+    
+    // Обработчик клика
+    copyButton.addEventListener('click', () => this.copyAccessCredentials());
+    
+    actionsBlock.appendChild(copyButton);
+    
+    console.log('Button appended to actions block');
+    console.log('Actions block innerHTML after:', actionsBlock.innerHTML);
+    
+    // ДОПОЛНИТЕЛЬНАЯ ПРОВЕРКА: ищем кнопку в DOM
+    setTimeout(() => {
+      const checkButton = document.getElementById('copy-access-btn');
+      console.log('Button check after 100ms:', !!checkButton);
+      console.log('Button styles:', checkButton ? window.getComputedStyle(checkButton) : 'not found');
+      console.log('Button parent:', checkButton ? checkButton.parentElement : 'no parent');
+    }, 100);
+    
+  } else {
+    console.log('Failed to create button:', {
+      actionsBlock: !!actionsBlock,
+      hasUserId: !!this.buyer.user_id
+    });
+  }
+}
+async copyAccessCredentials() {
+  try {
+    // Запрашиваем данные доступа с сервера
+    const response = await api.request(`/teams/buyers/${this.buyerId}/credentials`);
+    
+    const accessText = `🔐 Доступы для баера: ${this.buyer.username}
+    
+📧 Логин: ${response.login}
+🔑 Пароль: ${response.password}
+🌐 Адрес: ${window.location.origin}
+👥 Команда: ${response.team_name}
+
+⚠️ Данные доступа конфиденциальны!`;
+
+    // Пытаемся скопировать через современный API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(accessText);
+    } 
+    // Fallback для старых браузеров
+    else {
+      this.fallbackCopyToClipboard(accessText);
     }
+    
+    // Показываем уведомление
+    notifications.success('Скопировано!', 'Данные доступа скопированы в буфер обмена');
+    
+    // Временно меняем текст кнопки
+    const button = document.getElementById('copy-access-btn');
+    const originalText = button.innerHTML;
+    button.innerHTML = '✅ Скопировано';
+    button.disabled = true;
+    
+    setTimeout(() => {
+      button.innerHTML = originalText;
+      button.disabled = false;
+    }, 2000);
+    
+  } catch (error) {
+    console.error('Ошибка копирования доступов:', error);
+    notifications.error('Ошибка', 'Не удалось получить данные доступа');
+  }
+}
+
+// Fallback функция для копирования в старых браузерах
+fallbackCopyToClipboard(text) {
+  const textArea = document.createElement('textarea');
+  textArea.value = text;
+  textArea.style.position = 'fixed';
+  textArea.style.left = '-999999px';
+  textArea.style.top = '-999999px';
+  document.body.appendChild(textArea);
+  textArea.focus();
+  textArea.select();
+  
+  try {
+    document.execCommand('copy');
+    console.log('Fallback: текст скопирован через execCommand');
+  } catch (err) {
+    console.error('Fallback: ошибка копирования', err);
+    throw new Error('Копирование не поддерживается в этом браузере');
+  } finally {
+    document.body.removeChild(textArea);
+  }
+}
 
     updateStatsDisplay() {
         const stats = this.filteredStats || this.buyer;

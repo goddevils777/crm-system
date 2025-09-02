@@ -103,4 +103,37 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Получение информации о баере для текущего пользователя
+router.get('/buyer-info', authenticateToken, async (req, res) => {
+  try {
+    // Проверяем что пользователь - баер
+    if (req.user.role !== 'buyer') {
+      return res.status(403).json({ error: 'Доступ только для баеров' });
+    }
+
+    // Ищем запись баера по user_id
+    const result = await db.query(
+      'SELECT id, name, telegram, team_id FROM team_buyers WHERE user_id = $1',
+      [req.user.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Информация о баере не найдена' });
+    }
+
+    const buyer = result.rows[0];
+
+    res.json({
+      buyer_id: buyer.id,
+      buyer_name: buyer.name,
+      telegram: buyer.telegram,
+      team_id: buyer.team_id
+    });
+
+  } catch (error) {
+    console.error('Ошибка получения информации о баере:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
+  }
+});
+
 module.exports = router;

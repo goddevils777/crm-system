@@ -15,10 +15,37 @@ if (typeof CardDetailModule === 'undefined') {
 
             await this.loadCard();
             this.fillCardInfo();
+
+            // НОВОЕ: Скрываем вкладки для баеров
+            this.setupTabsForRole();
+
             this.setupEventListeners();
 
             // Сохраняем экземпляр для доступа из onclick
             window.cardDetailModule = this;
+        }
+
+
+        // НОВАЯ ФУНКЦИЯ: Настройка вкладок в зависимости от роли пользователя
+        setupTabsForRole() {
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+
+            // Для баеров скрываем все вкладки - только чтение
+            if (userData.role === 'buyer') {
+                const tabsContainer = document.querySelector('.card-tabs');
+                if (tabsContainer) {
+                    tabsContainer.style.display = 'none';
+                }
+
+                // Скрываем все tab-content кроме основной информации
+                const tabContents = document.querySelectorAll('.tab-content');
+                tabContents.forEach(content => {
+                    content.style.display = 'none';
+                });
+
+                // Оставляем видимой только основную информацию (без вкладок)
+                console.log('Tabs hidden for buyer role');
+            }
         }
 
         loadStyles() {
@@ -42,35 +69,57 @@ if (typeof CardDetailModule === 'undefined') {
             }
         }
 
-        fillCardInfo() {
-            if (!this.card) return;
+fillCardInfo() {
+  if (!this.card) return;
+  
+  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+  const isBuyer = userData.role === 'buyer';
 
-            // Заголовок и статус
-            document.getElementById('card-title').textContent = this.card.name;
-            // ДОБАВЬ ЭТУ СТРОКУ:
-            document.title = `${this.card.name} - Карты - CRM System`;
-            const statusBadge = document.getElementById('card-status');
-            const statusText = document.getElementById('status-text');
-            if (statusText) {
-                statusText.textContent = this.getStatusText(this.card.status);
-            } else {
-                statusBadge.textContent = this.getStatusText(this.card.status);
-            }
-            statusBadge.className = `card-status-badge clickable-status ${this.card.status}`;
+  // Заголовок и статус
+  document.getElementById('card-title').textContent = this.card.name;
+  document.title = `${this.card.name} - Карты - CRM System`;
+  
+  const statusBadge = document.getElementById('card-status');
+  const statusText = document.getElementById('status-text');
+  
+  if (statusText) {
+    statusText.textContent = this.getStatusText(this.card.status);
+  } else {
+    statusBadge.textContent = this.getStatusText(this.card.status);
+  }
+  
+  // ИЗМЕНЕНИЕ: Для баеров убираем кликабельность статуса
+  if (isBuyer) {
+    statusBadge.className = `card-status-badge ${this.card.status}`; // Убираем clickable-status
+    statusBadge.onclick = null; // Убираем обработчик клика
+    // Убираем стрелку если есть
+    const arrow = statusBadge.querySelector('.status-arrow');
+    if (arrow) {
+      arrow.style.display = 'none';
+    }
+  } else {
+    statusBadge.className = `card-status-badge clickable-status ${this.card.status}`;
+    statusBadge.onclick = (event) => this.showStatusDropdown(event);
+  }
 
-            // Основная информация
-            this.fillBasicInfo();
+  // Основная информация
+  this.fillBasicInfo();
 
-            // Финансовая сводка
-            this.fillFinanceSummary();
+  // Финансовая сводка
+  this.fillFinanceSummary();
 
-            // Заполняем форму ежедневного обновления
-            document.getElementById('current-balance').value = this.card.balance || 0;
+  // ИЗМЕНЕНИЕ: Формы только для не-баеров
+  if (!isBuyer) {
+    // Заполняем форму ежедневного обновления
+    const currentBalanceField = document.getElementById('current-balance');
+    if (currentBalanceField) {
+      currentBalanceField.value = this.card.balance || 0;
+    }
 
-            // ДОБАВЬ: Заполняем форму лимитов
-            this.fillLimitsForm();
-        }
-
+    // Заполняем форму лимитов
+    this.fillLimitsForm();
+  }
+}
 
         fillLimitsForm() {
             const topupLimitField = document.getElementById('topup-limit');
@@ -106,13 +155,15 @@ if (typeof CardDetailModule === 'undefined') {
         }
 
         fillBasicInfo() {
-            const basicInfo = document.getElementById('basic-info');
-            const createdDate = this.card.created_at ? new Date(this.card.created_at).toLocaleDateString() : '—';
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const isBuyer = userData.role === 'buyer';
 
-            // Сначала добавляем кнопку в заголовок секции
+            const basicInfo = document.getElementById('basic-info');
+
+            // Добавляем кнопку в заголовок секции только для не-баеров
             const infoCard = basicInfo.closest('.info-card');
             const header = infoCard.querySelector('h3');
-            if (header && !header.querySelector('.edit-info-btn')) {
+            if (header && !header.querySelector('.edit-info-btn') && !isBuyer) {
                 header.style.display = 'flex';
                 header.style.justifyContent = 'space-between';
                 header.style.alignItems = 'center';
@@ -126,45 +177,82 @@ if (typeof CardDetailModule === 'undefined') {
                 header.appendChild(editBtn);
             }
 
-            // Заполняем содержимое с новыми полями
-            basicInfo.innerHTML = `
-        ${this.card.card_number ? `<div class="info-item"><strong>Номер карты:</strong> ${this.card.card_number}</div>` : ''}
-        ${this.card.expiry_date ? `<div class="info-item"><strong>Дата завершения:</strong> ${this.card.expiry_date}</div>` : ''}
-        ${this.card.cvv_code ? `
-        <div class="info-item">
-            <strong>CVV:</strong> 
-            <span class="cvv-container">
-                <span id="cvv-hidden" class="cvv-hidden">***</span>
-                <span id="cvv-visible" class="cvv-visible" style="display: none;">${this.card.cvv_code}</span>
-                <button class="cvv-toggle-btn" onclick="window.cardDetailModule?.toggleCVV()" title="Показать CVV">
-                    👁️
-                </button>
-            </span>
-        </div>` : ''}
-        ${this.card.iban ? `<div class="info-item"><strong>IBAN:</strong> ${this.card.iban}</div>` : ''}
-        <div class="info-item"><strong>ПІБ:</strong> ${this.card.full_name || '—'}</div>
-        <div class="info-item"><strong>Телефон:</strong> ${this.card.phone || '—'}</div>
-        <div class="info-item"><strong>Email:</strong> ${this.card.email || '—'}</div>
-        <div class="info-item"><strong>Валюта:</strong> ${this.card.currency}</div>
-        <div class="info-item"><strong>Команда:</strong> ${this.card.team_name || '—'}</div>
-        <div class="info-item"><strong>Баер:</strong> ${this.card.buyer_name || '—'}</div>
-${this.card.buyer_assigned_date && this.card.buyer_name ? `<div class="info-item"><strong>Дата назначения баеру:</strong> ${new Date(this.card.buyer_assigned_date).toLocaleString('ru-RU', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit'
-            })}</div>` : ''}
-        <div class="info-item"><strong>Подрядчик:</strong> ${this.card.contractor_name || '—'}</div>
-        <div class="info-item"><strong>Дата запуска:</strong> ${this.card.launch_date ? new Date(this.card.launch_date).toLocaleDateString() : '—'}</div>
-        <div class="info-item"><strong>Дата создания:</strong> ${new Date(this.card.created_at).toLocaleString('ru-RU', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-            })}</div>
+            // РАЗНОЕ СОДЕРЖИМОЕ для баеров и админов/менеджеров
+            if (isBuyer) {
+                // Для баеров - только основные данные
+                basicInfo.innerHTML = `
+      ${this.card.card_number ? `<div class="info-item"><strong>Номер карты:</strong> ${this.card.card_number}</div>` : ''}
+      ${this.card.expiry_date ? `<div class="info-item"><strong>Дата завершения:</strong> ${this.card.expiry_date}</div>` : ''}
+      ${this.card.cvv_code ? `
+      <div class="info-item">
+          <strong>CVV:</strong> 
+          <span class="cvv-container">
+              <span id="cvv-hidden" class="cvv-hidden">***</span>
+              <span id="cvv-visible" class="cvv-visible" style="display: none;">${this.card.cvv_code}</span>
+              <button class="cvv-toggle-btn" onclick="window.cardDetailModule?.toggleCVV()" title="Показать CVV">
+                  👁️
+              </button>
+          </span>
+      </div>` : ''}
+      <div class="info-item"><strong>Валюта:</strong> ${this.card.currency}</div>
+      <div class="info-item"><strong>Команда:</strong> ${this.card.team_name || '—'}</div>
+      ${this.card.buyer_assigned_date && this.card.buyer_name ? `<div class="info-item"><strong>Дата назначения баеру:</strong> ${new Date(this.card.buyer_assigned_date).toLocaleString('ru-RU', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}</div>` : ''}
+      <div class="info-item"><strong>Дата запуска:</strong> ${this.card.launch_date ? new Date(this.card.launch_date).toLocaleDateString() : '—'}</div>
+      <div class="info-item"><strong>Дата создания:</strong> ${new Date(this.card.created_at).toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}</div>
     `;
+            } else {
+                // Для админов/менеджеров - полная информация
+                basicInfo.innerHTML = `
+      ${this.card.card_number ? `<div class="info-item"><strong>Номер карты:</strong> ${this.card.card_number}</div>` : ''}
+      ${this.card.expiry_date ? `<div class="info-item"><strong>Дата завершения:</strong> ${this.card.expiry_date}</div>` : ''}
+      ${this.card.cvv_code ? `
+      <div class="info-item">
+          <strong>CVV:</strong> 
+          <span class="cvv-container">
+              <span id="cvv-hidden" class="cvv-hidden">***</span>
+              <span id="cvv-visible" class="cvv-visible" style="display: none;">${this.card.cvv_code}</span>
+              <button class="cvv-toggle-btn" onclick="window.cardDetailModule?.toggleCVV()" title="Показать CVV">
+                  👁️
+              </button>
+          </span>
+      </div>` : ''}
+      ${this.card.iban ? `<div class="info-item"><strong>IBAN:</strong> ${this.card.iban}</div>` : ''}
+      <div class="info-item"><strong>ПІБ:</strong> ${this.card.full_name || '—'}</div>
+      <div class="info-item"><strong>Телефон:</strong> ${this.card.phone || '—'}</div>
+      <div class="info-item"><strong>Email:</strong> ${this.card.email || '—'}</div>
+      <div class="info-item"><strong>Валюта:</strong> ${this.card.currency}</div>
+      <div class="info-item"><strong>Команда:</strong> ${this.card.team_name || '—'}</div>
+      <div class="info-item"><strong>Баер:</strong> ${this.card.buyer_name || '—'}</div>
+      ${this.card.buyer_assigned_date && this.card.buyer_name ? `<div class="info-item"><strong>Дата назначения баеру:</strong> ${new Date(this.card.buyer_assigned_date).toLocaleString('ru-RU', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}</div>` : ''}
+      <div class="info-item"><strong>Подрядчик:</strong> ${this.card.contractor_name || '—'}</div>
+      <div class="info-item"><strong>Дата запуска:</strong> ${this.card.launch_date ? new Date(this.card.launch_date).toLocaleDateString() : '—'}</div>
+      <div class="info-item"><strong>Дата создания:</strong> ${new Date(this.card.created_at).toLocaleString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                })}</div>
+    `;
+            }
         }
 
         // Добавить новый метод для переключения CVV
@@ -272,7 +360,7 @@ ${this.card.buyer_assigned_date && this.card.buyer_name ? `<div class="info-item
             </button>
         </div>
 
-        ${timeInfo.days >= 2 ? `
+        ${timeInfo.days >= 3 ? `
         <div class="finance-item warning" style="grid-column: 1 / -1; margin-top: 8px;">
             <div class="finance-label">⚠️ Без операций</div>
             <div class="finance-value">${timeInfo.text}</div>
@@ -285,52 +373,71 @@ ${this.card.buyer_assigned_date && this.card.buyer_name ? `<div class="info-item
 
 
         setupEventListeners() {
-            // Кнопка "Назад"
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const isBuyer = userData.role === 'buyer';
+
+            // Кнопка "Назад" - доступна всем
             document.getElementById('back-to-cards').addEventListener('click', () => {
                 this.goBackToCards();
             });
 
-            // Вкладки
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
-            });
+            // Остальные обработчики только для не-баеров
+            if (!isBuyer) {
+                // Вкладки
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.addEventListener('click', () => this.switchTab(btn.dataset.tab));
+                });
 
-            // Форма ежедневного обновления
-            document.getElementById('daily-update-form').addEventListener('submit', (e) => {
-                this.handleDailyUpdate(e);
-            });
+                // Форма ежедневного обновления
+                const dailyForm = document.getElementById('daily-update-form');
+                if (dailyForm) {
+                    dailyForm.addEventListener('submit', (e) => {
+                        this.handleDailyUpdate(e);
+                    });
+                }
 
-            // ДОБАВЬ: Проверка лимита при вводе пополнения
-            const topupField = document.getElementById('topup-amount');
-            if (topupField) {
-                topupField.addEventListener('input', () => {
-                    this.checkTopupLimit();
+                // Проверка лимита при вводе пополнения
+                const topupField = document.getElementById('topup-amount');
+                if (topupField) {
+                    topupField.addEventListener('input', () => {
+                        this.checkTopupLimit();
+                    });
+                }
+
+                // Валидация текущего остатка
+                const currentBalanceField = document.getElementById('current-balance');
+                if (currentBalanceField) {
+                    currentBalanceField.addEventListener('input', (e) => {
+                        this.validateCurrentBalance(e.target);
+                    });
+                }
+
+                // Кнопка обновления истории
+                const refreshBtn = document.getElementById('refresh-history-btn');
+                if (refreshBtn) {
+                    refreshBtn.addEventListener('click', () => {
+                        this.loadTransactionHistory();
+                    });
+                }
+
+                // Форма лимитов
+                const limitsForm = document.getElementById('limits-form');
+                if (limitsForm) {
+                    limitsForm.addEventListener('submit', (e) => {
+                        this.handleLimitsUpdate(e);
+                    });
+                }
+
+                // Кнопки отмены операций в истории
+                document.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('cancel-operation-btn')) {
+                        const operationId = e.target.dataset.operationId;
+                        this.cancelOperation(operationId);
+                    }
                 });
             }
 
-            // Валидация текущего остатка
-            const currentBalanceField = document.getElementById('current-balance');
-            if (currentBalanceField) {
-                currentBalanceField.addEventListener('input', (e) => {
-                    this.validateCurrentBalance(e.target);
-                });
-            }
-
-            // Кнопка обновления истории
-            const refreshBtn = document.getElementById('refresh-history-btn');
-            if (refreshBtn) {
-                refreshBtn.addEventListener('click', () => {
-                    this.loadTransactionHistory();
-                });
-            }
-
-            // Форма лимитов
-            const limitsForm = document.getElementById('limits-form');
-            if (limitsForm) {
-                limitsForm.addEventListener('submit', (e) => {
-                    this.handleLimitsUpdate(e);
-                });
-            }
+            console.log(`Event listeners setup for role: ${userData.role}`);
         }
 
         checkTopupLimit() {

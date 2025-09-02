@@ -693,3 +693,12 @@
     border-color: var(--error-color);
     color: white;
 }
+
+
+
+.buyer-detail-container .buyer-actions {
+    display: flex;
+    gap: 12px;
+    opacity: 1; /* ИСПРАВЛЕНО: было 0, стало 1 */
+    transition: opacity 0.2s ease;
+}

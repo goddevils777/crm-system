@@ -5,15 +5,40 @@ class SidebarComponent {
     this.onModuleChange = null; // Callback для смены модуля
   }
 
-  render() {
-    const menuItems = [
+  getMenuItems() {
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    const userRole = userData.role || 'buyer';
+
+    // НОВОЕ: Для баеров показываем только карты
+    if (userRole === 'buyer') {
+      return [
+        { id: 'cards', title: 'Карты', icon: '💳' }
+      ];
+    }
+
+    // Для остальных ролей полное меню
+    const allMenuItems = [
       { id: 'cards', title: 'Карты', icon: '💳' },
       { id: 'expenses', title: 'Расходы', icon: '💰' },
       { id: 'teams', title: 'Команды', icon: '👥' },
-      { id: 'clients', title: 'Клиенты', icon: '📌' }, // ДОБАВИТЬ ЭТУ СТРОКУ
+      { id: 'clients', title: 'Клиенты', icon: '📌' },
       { id: 'income', title: 'Доходы', icon: '📈' },
       { id: 'analytics', title: 'Аналитика', icon: '📊' }
     ];
+
+    // Фильтруем меню по ролям
+    if (userRole === 'manager') {
+      return allMenuItems.filter(item => 
+        ['cards', 'expenses', 'teams'].includes(item.id)
+      );
+    }
+
+    // Админы видят все
+    return allMenuItems;
+  }
+
+  render() {
+    const menuItems = this.getMenuItems();
 
     const menuHtml = menuItems.map(item => `
      <li>
@@ -46,51 +71,49 @@ class SidebarComponent {
     }, 10);
   }
 
-// ЗАМЕНИТЬ метод setupEvents в frontend/components/sidebar.js:
+  setupEvents() {
+    const menu = document.getElementById('main-menu');
 
-setupEvents() {
-  const menu = document.getElementById('main-menu');
-
-  menu?.addEventListener('click', (e) => {
-    e.preventDefault();
-    const link = e.target.closest('.menu-item');
-    if (link) {
-      const module = link.dataset.module;
-      
-      console.log('=== SIDEBAR NAVIGATION ===');
-      console.log('Clicked module:', module);
-      console.log('Current hash:', window.location.hash);
-      console.log('Is card detail page:', window.location.hash.startsWith('#card/'));
-
-      // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА состояния при переходе в любой модуль
-      if (window.location.hash.startsWith('#card/')) {
-        console.log('Clearing card detail state before navigation');
-        localStorage.removeItem('current_card_detail');
+    menu?.addEventListener('click', (e) => {
+      e.preventDefault();
+      const link = e.target.closest('.menu-item');
+      if (link) {
+        const module = link.dataset.module;
         
-        // Очищаем все модули из кеша
-        if (window.moduleLoader) {
-          window.moduleLoader.loadedModules.clear();
-          console.log('Cleared module cache');
+        console.log('=== SIDEBAR NAVIGATION ===');
+        console.log('Clicked module:', module);
+        console.log('Current hash:', window.location.hash);
+        console.log('Is card detail page:', window.location.hash.startsWith('#card/'));
+
+        // ПРИНУДИТЕЛЬНАЯ ОЧИСТКА состояния при переходе в любой модуль
+        if (window.location.hash.startsWith('#card/')) {
+          console.log('Clearing card detail state before navigation');
+          localStorage.removeItem('current_card_detail');
+          
+          // Очищаем все модули из кеша
+          if (window.moduleLoader) {
+            window.moduleLoader.loadedModules.clear();
+            console.log('Cleared module cache');
+          }
+        }
+
+        // Устанавливаем новый хеш
+        window.history.replaceState({ module: module }, '', `#${module}`);
+        console.log('New hash set:', window.location.hash);
+
+        // Устанавливаем активный модуль
+        this.setActiveModule(module);
+
+        // Вызываем колбэк для загрузки модуля
+        if (this.onModuleChange) {
+          console.log('Calling onModuleChange callback');
+          this.onModuleChange(module);
+        } else {
+          console.error('onModuleChange callback not set');
         }
       }
-
-      // Устанавливаем новый хеш
-      window.history.replaceState({ module: module }, '', `#${module}`);
-      console.log('New hash set:', window.location.hash);
-
-      // Устанавливаем активный модуль
-      this.setActiveModule(module);
-
-      // Вызываем колбэк для загрузки модуля
-      if (this.onModuleChange) {
-        console.log('Calling onModuleChange callback');
-        this.onModuleChange(module);
-      } else {
-        console.error('onModuleChange callback not set');
-      }
-    }
-  });
-}
+    });
+  }
 
   setActiveModule(moduleName) {
     console.log('Setting active module:', moduleName);

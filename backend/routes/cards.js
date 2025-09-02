@@ -149,8 +149,29 @@ router.get('/', authenticateToken, async (req, res) => {
 
     const result = await db.query(query, params);
 
+
+    // НОВОЕ: Автоматически обновляем статусы карт
+    const cardsToUpdate = [];
+    const updatedCards = result.rows.map(card => {
+      const newStatus = checkCardActivity(card);
+      if (newStatus !== card.status) {
+        cardsToUpdate.push({ id: card.id, status: newStatus });
+        return { ...card, status: newStatus };
+      }
+      return card;
+    });
+
+    // Обновляем статусы в базе данных если есть изменения
+    if (cardsToUpdate.length > 0) {
+      const updatePromises = cardsToUpdate.map(({ id, status }) =>
+        db.query('UPDATE cards SET status = $1, updated_at = CURRENT_TIMESTAMP WHERE id = $2', [status, id])
+      );
+      await Promise.all(updatePromises);
+      console.log(`Автоматически обновлено статусов: ${cardsToUpdate.length}`);
+    }
+
     // Обновляем комиссию для каждой карты
-    const cardsWithCalculatedCommission = result.rows.map(card => ({
+    const cardsWithCalculatedCommission = updatedCards.map(card => ({
       ...card,
       commission_paid: card.calculated_commission
     }));
@@ -312,24 +333,25 @@ router.delete('/:id', authenticateToken, checkRole(['admin', 'manager']), async 
   }
 });
 
-
-// Получение карт с пересчетом за период
+// Получение карт за период с фильтрами
 router.get('/period', authenticateToken, async (req, res) => {
   try {
-    const { from, to } = req.query;
+    const { from, to, status, team_ids, include_no_team } = req.query;
 
     if (!from || !to) {
-      return res.status(400).json({ error: 'Необходимо указать даты from и to' });
+      return res.status(400).json({ error: 'Даты обязательны' });
     }
-
-    console.log('Getting cards for period:', from, 'to', to);
 
     let query = `
       SELECT 
         c.*,
+        t.name as team_name,
+        tb.name as buyer_name,
         COALESCE(period_stats.spent_in_period, 0) as spent_in_period,
         COALESCE(period_stats.topup_in_period, 0) as topup_in_period
       FROM cards c
+      LEFT JOIN teams t ON c.team_id = t.id
+      LEFT JOIN team_buyers tb ON c.buyer_id = tb.id
       LEFT JOIN (
         SELECT 
           card_id,
@@ -339,10 +361,10 @@ router.get('/period', authenticateToken, async (req, res) => {
         WHERE transaction_date >= $1 AND transaction_date <= $2
         GROUP BY card_id
       ) period_stats ON c.id = period_stats.card_id
-        WHERE c.status != $3 AND (
-          (period_stats.card_id IS NOT NULL) OR 
-          (DATE(c.created_at) >= $1 AND DATE(c.created_at) <= $2)
-        )
+      WHERE c.status != $3 AND (
+        (period_stats.card_id IS NOT NULL) OR 
+        (DATE(c.created_at) >= $1 AND DATE(c.created_at) <= $2)
+      )
     `;
 
     let params = [from, to, 'deleted'];
@@ -350,11 +372,38 @@ router.get('/period', authenticateToken, async (req, res) => {
 
     // Фильтрация по команде для менеджеров
     if (req.user.role === 'manager' || req.user.role === 'buyer') {
-      if (!req.user.team_id || typeof req.user.team_id !== 'number') {
-        return res.status(403).json({ error: 'Некорректный ID команды' });
-      }
       query += ` AND c.team_id = $${paramIndex}`;
       params.push(req.user.team_id);
+      paramIndex++;
+    }
+
+    // НОВОЕ: Фильтр по статусу
+    if (status) {
+      query += ` AND c.status = $${paramIndex}`;
+      params.push(status);
+      paramIndex++;
+    }
+
+    // НОВОЕ: Фильтр по командам для админов
+    if (team_ids || include_no_team === 'true') {
+      let teamConditions = [];
+
+      if (team_ids) {
+        const teamIdsArray = team_ids.split(',').map(id => parseInt(id)).filter(id => !isNaN(id));
+        if (teamIdsArray.length > 0) {
+          teamConditions.push(`c.team_id IN (${teamIdsArray.map((_, i) => `$${paramIndex + i}`).join(',')})`);
+          params.push(...teamIdsArray);
+          paramIndex += teamIdsArray.length;
+        }
+      }
+
+      if (include_no_team === 'true') {
+        teamConditions.push('c.team_id IS NULL');
+      }
+
+      if (teamConditions.length > 0) {
+        query += ` AND (${teamConditions.join(' OR ')})`;
+      }
     }
 
     query += ' ORDER BY c.created_at DESC';
@@ -364,8 +413,8 @@ router.get('/period', authenticateToken, async (req, res) => {
     // Пересчитываем данные для каждой карты
     const cardsWithPeriodData = result.rows.map(card => ({
       ...card,
-      total_spent_calculated: parseFloat(card.spent_in_period) || 0, // траты за период
-      total_top_up: parseFloat(card.topup_in_period) || 0 // ЗАМЕНЯЕМ общие пополнения на пополнения за период
+      total_spent_calculated: parseFloat(card.spent_in_period) || 0,
+      total_top_up: parseFloat(card.topup_in_period) || 0
     }));
 
     // Считаем общую сводку по валютам
@@ -375,7 +424,6 @@ router.get('/period', authenticateToken, async (req, res) => {
       const currency = card.currency || 'USD';
       const hasOperations = (parseFloat(card.spent_in_period) || 0) > 0 || (parseFloat(card.topup_in_period) || 0) > 0;
 
-      // Создаем запись для валюты если её нет
       if (!summaryByCurrency[currency]) {
         summaryByCurrency[currency] = {
           total_spent: 0,
@@ -384,21 +432,11 @@ router.get('/period', authenticateToken, async (req, res) => {
         };
       }
 
-      // Добавляем траты и пополнения
       summaryByCurrency[currency].total_spent += parseFloat(card.spent_in_period) || 0;
       summaryByCurrency[currency].total_topup += parseFloat(card.topup_in_period) || 0;
 
-      // Считаем карту только если у неё есть операции за период
       if (hasOperations) {
-        summaryByCurrency[currency].cards_count += 1;
-      }
-    });
-
-    // Убираем валюты без операций
-    Object.keys(summaryByCurrency).forEach(currency => {
-      const data = summaryByCurrency[currency];
-      if (data.total_spent === 0 && data.total_topup === 0 && data.cards_count === 0) {
-        delete summaryByCurrency[currency];
+        summaryByCurrency[currency].cards_count++;
       }
     });
 
@@ -409,6 +447,7 @@ router.get('/period', authenticateToken, async (req, res) => {
       period_to: to,
       total_cards: cardsWithPeriodData.length
     });
+
   } catch (error) {
     console.error('Ошибка получения карт за период:', error);
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
@@ -796,13 +835,13 @@ router.post('/transactions/:transactionId/cancel', authenticateToken, checkRole(
 router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateCardData, async (req, res) => {
   try {
     const cardId = req.params.id;
-    
+
     console.log('=== UPDATE CARD REQUEST ===');
     console.log('Card ID:', cardId);
     console.log('Request body:', req.body);
     console.log('Buyer ID from request:', req.body.buyer_id);
     console.log('Team ID from request:', req.body.team_id);
-    
+
     const {
       name, currency, team_id, buyer_id, full_name, bank_password,
       card_password, phone, email, email_password, birth_date,
@@ -845,7 +884,7 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateC
         topup: card.total_top_up || 0,
         currency: currency || card.currency || 'USD'
       });
-      
+
       try {
         await db.query(`
           INSERT INTO card_transfers (
@@ -874,14 +913,14 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), validateC
     if (buyer_id && team_id) {
       console.log('Checking buyer validity...');
       const buyerCheck = await db.query(
-        'SELECT team_id FROM team_buyers WHERE id = $1', 
+        'SELECT team_id FROM team_buyers WHERE id = $1',
         [buyer_id]
       );
-      
+
       if (buyerCheck.rows.length === 0) {
         return res.status(400).json({ error: 'Указанный баер не найден' });
       }
-      
+
       if (buyerCheck.rows[0].team_id != team_id) {
         return res.status(400).json({ error: 'Баер должен принадлежать выбранной команде' });
       }

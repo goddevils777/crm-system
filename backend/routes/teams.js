@@ -149,12 +149,11 @@ router.put('/:id', authenticateToken, checkRole(['admin', 'manager']), async (re
   }
 });
 
-
-
 // Удаление команды (только админ)
 router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) => {
   try {
     const teamId = req.params.id;
+    console.log(`=== DELETING TEAM ${teamId} ===`);
 
     // Проверяем существование команды
     const checkResult = await db.query('SELECT id, name FROM teams WHERE id = $1', [teamId]);
@@ -164,18 +163,45 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     }
 
     const team = checkResult.rows[0];
+    console.log(`Team found: ${team.name}`);
+
+    // ДИАГНОСТИКА: Детальная проверка баеров
+    console.log('=== BUYERS DIAGNOSTIC ===');
+
+    // Все записи баеров для этой команды
+    const allBuyersResult = await db.query('SELECT * FROM team_buyers WHERE team_id = $1', [teamId]);
+    console.log('All buyers in team:', allBuyersResult.rows);
+
+    // Баеры с user_id
+    const activeBuyersResult = await db.query('SELECT * FROM team_buyers WHERE team_id = $1 AND user_id IS NOT NULL', [teamId]);
+    console.log('Active buyers (with user_id):', activeBuyersResult.rows);
+
+    // Баеры без user_id
+    const deadBuyersResult = await db.query('SELECT * FROM team_buyers WHERE team_id = $1 AND user_id IS NULL', [teamId]);
+    console.log('Dead buyers (without user_id):', deadBuyersResult.rows);
+
+    // Оригинальная проверка (которая сейчас блокирует удаление)
+    const buyersCountResult = await db.query('SELECT COUNT(*) as count FROM team_buyers WHERE team_id = $1', [teamId]);
+    const buyersCount = parseInt(buyersCountResult.rows[0].count);
+    console.log('Total buyers count from original query:', buyersCount);
 
     // Проверяем есть ли связанные карты
     const cardsResult = await db.query('SELECT COUNT(*) as count FROM cards WHERE team_id = $1 AND status != $2', [teamId, 'deleted']);
     const cardsCount = parseInt(cardsResult.rows[0].count);
+    console.log('Active cards count:', cardsCount);
 
     if (cardsCount > 0) {
       return res.status(400).json({ error: `Нельзя удалить команду "${team.name}". У неё есть ${cardsCount} активных карт.` });
     }
 
     // Проверяем есть ли связанные пользователи  
-    const usersResult = await db.query('SELECT id, username, role FROM users WHERE team_id = $1', [teamId]);
+    const usersResult = await db.query(`
+  SELECT id, username, role FROM users 
+  WHERE team_id = $1 
+  AND (role != 'buyer' OR EXISTS (SELECT 1 FROM team_buyers tb WHERE tb.user_id = users.id))
+`, [teamId]);
     const usersCount = usersResult.rows.length;
+    console.log('Users in team:', usersResult.rows);
 
     if (usersCount > 0) {
       const usersList = usersResult.rows.map(u => `${u.username} (${u.role})`).join(', ');
@@ -185,14 +211,14 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     }
 
     // Проверяем есть ли баеры в команде
-    const buyersResult = await db.query('SELECT COUNT(*) as count FROM team_buyers WHERE team_id = $1', [teamId]);
-    const buyersCount = parseInt(buyersResult.rows[0].count);
-
     if (buyersCount > 0) {
+      console.log('BLOCKING: Found buyers, cannot delete team');
       return res.status(400).json({
         error: `Нельзя удалить команду "${team.name}". В ней есть ${buyersCount} баеров. Сначала удалите всех баеров.`
       });
     }
+
+    console.log('All checks passed, proceeding with deletion...');
 
     // Очищаем ссылки на команду у всех deleted карт
     await db.query('UPDATE cards SET team_id = NULL WHERE team_id = $1 AND status = $2', [teamId, 'deleted']);
@@ -200,9 +226,7 @@ router.delete('/:id', authenticateToken, checkRole(['admin']), async (req, res) 
     // Удаляем команду
     await db.query('DELETE FROM teams WHERE id = $1', [teamId]);
 
-    // Удаляем команду
-    await db.query('DELETE FROM teams WHERE id = $1', [teamId]);
-
+    console.log(`Team ${team.name} deleted successfully`);
     res.json({ message: `Команда "${team.name}" успешно удалена` });
   } catch (error) {
     console.error('Ошибка удаления команды:', error);
@@ -216,7 +240,7 @@ router.get('/:id/buyers', authenticateToken, async (req, res) => {
   try {
     const teamId = req.params.id;
 
-    const query = `
+const query = `
   SELECT 
     tb.id,
     tb.name as username,
@@ -224,7 +248,9 @@ router.get('/:id/buyers', authenticateToken, async (req, res) => {
     tb.is_registered,
     tb.invitation_token,
     tb.created_at,
+    tb.user_id,  -- ДОБАВЛЯЕМ ЭТО ПОЛЕ!
     u.email,
+    u.username as user_login,  -- Логин пользователя
     COALESCE(buyer_stats.cards_count, 0) as cards_count,
     COALESCE(buyer_stats.total_balance, 0) as total_balance,
     COALESCE(buyer_stats.total_spent, 0) as total_spent,
@@ -289,7 +315,6 @@ router.get('/:id/buyers', authenticateToken, async (req, res) => {
     res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
-
 // Создание баера в команде (только админ и менеджер)  
 router.post('/:id/buyers', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
@@ -302,25 +327,49 @@ router.post('/:id/buyers', authenticateToken, checkRole(['admin', 'manager']), a
     }
 
     // Проверяем существование команды
-    const teamCheck = await db.query('SELECT id FROM teams WHERE id = $1', [teamId]);
+    const teamCheck = await db.query('SELECT id, name FROM teams WHERE id = $1', [teamId]);
     if (teamCheck.rows.length === 0) {
       return res.status(404).json({ error: 'Команда не найдена' });
     }
 
-    // Генерируем токен приглашения
-    const crypto = require('crypto');
-    const invitationToken = crypto.randomBytes(32).toString('hex');
+    const team = teamCheck.rows[0];
 
-    // Создаем запись баера (пока без user_id)
-    const result = await db.query(
-      'INSERT INTO team_buyers (name, telegram, team_id, invitation_token) VALUES ($1, $2, $3, $4) RETURNING *',
-      [username.trim(), telegram.trim(), teamId, invitationToken]
+    // ИСПРАВЛЕНИЕ: Генерируем логин без префикса "buyer_"
+    const crypto = require('crypto');
+    const randomSuffix = crypto.randomBytes(3).toString('hex');
+    const login = `${username.toLowerCase().replace(/\s+/g, '_')}_${randomSuffix}`;
+    const password = crypto.randomBytes(8).toString('hex');
+
+    // Хешируем пароль
+    const bcrypt = require('bcryptjs');
+    const saltRounds = parseInt(process.env.BCRYPT_ROUNDS) || 12;
+    const passwordHash = await bcrypt.hash(password, saltRounds);
+
+    // ИСПРАВЛЕНИЕ: Создаем пользователя с сохранением plain_password
+    const userResult = await db.query(
+      'INSERT INTO users (username, email, password_hash, plain_password, role, team_id) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+      [login, `${login}@buyer.local`, passwordHash, password, 'buyer', teamId]
+    );
+
+    const userId = userResult.rows[0].id;
+
+    // Создаем запись баера с привязкой к пользователю
+    const buyerResult = await db.query(
+      'INSERT INTO team_buyers (name, telegram, team_id, user_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [username.trim(), telegram.trim(), teamId, userId]
     );
 
     res.status(201).json({
       message: 'Баер создан успешно',
-      buyer: result.rows[0],
-      invitationLink: `${process.env.FRONTEND_URL}/invite/${invitationToken}`
+      buyer: {
+        ...buyerResult.rows[0],
+        user_id: userId
+      },
+      access_credentials: {
+        login: login,
+        password: password,
+        team_name: team.name
+      }
     });
 
   } catch (error) {
@@ -329,15 +378,14 @@ router.post('/:id/buyers', authenticateToken, checkRole(['admin', 'manager']), a
   }
 });
 
-
-// И ЗАМЕНИ роут удаления на:
+// Удаление баера
 router.delete('/buyers/:buyerId', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
     const buyerId = req.params.buyerId;
 
-    // Проверяем что баер существует
+    // Проверяем что баер существует и получаем user_id
     const buyerCheck = await db.query(
-      'SELECT id, name FROM team_buyers WHERE id = $1',
+      'SELECT id, name, user_id FROM team_buyers WHERE id = $1',
       [buyerId]
     );
 
@@ -345,13 +393,37 @@ router.delete('/buyers/:buyerId', authenticateToken, checkRole(['admin', 'manage
       return res.status(404).json({ error: 'Баер не найден' });
     }
 
-    // Удаляем баера
-    await db.query('DELETE FROM team_buyers WHERE id = $1', [buyerId]);
+    const buyer = buyerCheck.rows[0];
 
-    res.json({
-      message: 'Баер успешно удален',
-      deletedBuyer: buyerCheck.rows[0]
-    });
+    // НАЧИНАЕМ ТРАНЗАКЦИЮ для атомарного удаления
+    await db.query('BEGIN');
+
+    try {
+      // 1. Снимаем назначение со всех карт баера
+      await db.query('UPDATE cards SET buyer_id = NULL WHERE buyer_id = $1', [buyerId]);
+
+      // 2. Удаляем баера из team_buyers
+      await db.query('DELETE FROM team_buyers WHERE id = $1', [buyerId]);
+
+      // 3. НОВОЕ: Удаляем связанного пользователя если есть
+      if (buyer.user_id) {
+        await db.query('DELETE FROM users WHERE id = $1', [buyer.user_id]);
+        console.log(`Удален пользователь ID: ${buyer.user_id} для баера: ${buyer.name}`);
+      }
+
+      // Подтверждаем транзакцию
+      await db.query('COMMIT');
+
+      res.json({
+        message: 'Баер успешно удален',
+        deletedBuyer: buyer
+      });
+
+    } catch (error) {
+      // Откатываем транзакцию при ошибке
+      await db.query('ROLLBACK');
+      throw error;
+    }
 
   } catch (error) {
     console.error('Ошибка удаления баера:', error);
@@ -647,7 +719,7 @@ router.get('/:id/billing-stats', authenticateToken, async (req, res) => {
     // Подсчитываем общие цифры с актуальным курсом
     const currencyService = require('../utils/currencyService');
     const eurUsdRate = await currencyService.getEurToUsdRate();
-    
+
     let totalBuyers = 0;
     let totalCards = 0;
     let totalAmount = 0;
@@ -657,7 +729,7 @@ router.get('/:id/billing-stats', authenticateToken, async (req, res) => {
       if (cardsCount > 0) {
         totalBuyers++;
         totalCards += cardsCount;
-        
+
         // Пересчитываем с учетом валют
         if (buyer.cards) {
           buyer.cards.forEach(card => {
@@ -744,6 +816,45 @@ router.get('/currency/eur-usd', authenticateToken, async (req, res) => {
       error: 'Внутренняя ошибка сервера',
       rate: 1.03 // запасной курс
     });
+  }
+});
+router.get('/buyers/:buyerId/credentials', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
+  try {
+    const buyerId = req.params.buyerId;
+
+    const query = `
+      SELECT 
+        tb.name as buyer_name,
+        tb.telegram,
+        t.name as team_name,
+        u.username as login,
+        u.plain_password as password,
+        u.created_at
+      FROM team_buyers tb
+      JOIN users u ON tb.user_id = u.id
+      JOIN teams t ON tb.team_id = t.id
+      WHERE tb.id = $1
+    `;
+
+    const result = await db.query(query, [buyerId]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Баер не найден или не имеет учетной записи' });
+    }
+
+    const buyerData = result.rows[0];
+
+    res.json({
+      login: buyerData.login,
+      password: buyerData.password,
+      team_name: buyerData.team_name,
+      buyer_name: buyerData.buyer_name,
+      created_at: buyerData.created_at
+    });
+
+  } catch (error) {
+    console.error('Ошибка получения учетных данных:', error);
+    res.status(500).json({ error: 'Внутренняя ошибка сервера' });
   }
 });
 

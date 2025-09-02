@@ -12,15 +12,15 @@ class KeyboardShortcuts {
     handleKeydown(e) {
         // Проверяем что не находимся в поле ввода
         const isInputActive = this.isInputFieldActive(e.target);
-        
+
         if (isInputActive) return;
-        
+
         // Проверяем модальные окна - если открыто, игнорируем шорткаты
         const isModalOpen = document.querySelector('.modal.show, .modal-overlay.show');
         if (isModalOpen) return;
 
         const activeModule = localStorage.getItem('active_module');
-        
+
         switch (e.code) {
             case 'Space':
                 this.handleSpaceKey(e, activeModule);
@@ -38,14 +38,20 @@ class KeyboardShortcuts {
 
     isInputFieldActive(target) {
         const inputTags = ['INPUT', 'TEXTAREA', 'SELECT'];
-        return inputTags.includes(target.tagName) || 
-               target.isContentEditable || 
-               target.closest('[contenteditable="true"]');
+        return inputTags.includes(target.tagName) ||
+            target.isContentEditable ||
+            target.closest('[contenteditable="true"]');
     }
 
     handleSpaceKey(e, activeModule) {
+
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+        if (userData.role === 'buyer') {
+            console.log('Shortcuts disabled for buyer role');
+            return; // Выходим без выполнения действия
+        }
         e.preventDefault();
-        
+
         switch (activeModule) {
             case 'cards':
                 if (window.cardsModule && typeof window.cardsModule.showAddModal === 'function') {
@@ -65,8 +71,9 @@ class KeyboardShortcuts {
     }
 
     handleNewItem(e, activeModule) {
+
         e.preventDefault();
-        
+
         // Ctrl+N / Cmd+N - создать новый элемент
         switch (activeModule) {
             case 'cards':
@@ -114,15 +121,15 @@ class KeyboardShortcuts {
             transition: all 0.3s ease;
             pointer-events: none;
         `;
-        
+
         document.body.appendChild(feedback);
-        
+
         // Показываем с анимацией
         setTimeout(() => {
             feedback.style.opacity = '1';
             feedback.style.transform = 'translateY(0)';
         }, 10);
-        
+
         // Скрываем через 2 секунды
         setTimeout(() => {
             feedback.style.opacity = '0';
