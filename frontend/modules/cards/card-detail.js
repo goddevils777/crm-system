@@ -69,57 +69,57 @@ if (typeof CardDetailModule === 'undefined') {
             }
         }
 
-fillCardInfo() {
-  if (!this.card) return;
-  
-  const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-  const isBuyer = userData.role === 'buyer';
+        fillCardInfo() {
+            if (!this.card) return;
 
-  // Заголовок и статус
-  document.getElementById('card-title').textContent = this.card.name;
-  document.title = `${this.card.name} - Карты - CRM System`;
-  
-  const statusBadge = document.getElementById('card-status');
-  const statusText = document.getElementById('status-text');
-  
-  if (statusText) {
-    statusText.textContent = this.getStatusText(this.card.status);
-  } else {
-    statusBadge.textContent = this.getStatusText(this.card.status);
-  }
-  
-  // ИЗМЕНЕНИЕ: Для баеров убираем кликабельность статуса
-  if (isBuyer) {
-    statusBadge.className = `card-status-badge ${this.card.status}`; // Убираем clickable-status
-    statusBadge.onclick = null; // Убираем обработчик клика
-    // Убираем стрелку если есть
-    const arrow = statusBadge.querySelector('.status-arrow');
-    if (arrow) {
-      arrow.style.display = 'none';
-    }
-  } else {
-    statusBadge.className = `card-status-badge clickable-status ${this.card.status}`;
-    statusBadge.onclick = (event) => this.showStatusDropdown(event);
-  }
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            const isBuyer = userData.role === 'buyer';
 
-  // Основная информация
-  this.fillBasicInfo();
+            // Заголовок и статус
+            document.getElementById('card-title').textContent = this.card.name;
+            document.title = `${this.card.name} - Карты - CRM System`;
 
-  // Финансовая сводка
-  this.fillFinanceSummary();
+            const statusBadge = document.getElementById('card-status');
+            const statusText = document.getElementById('status-text');
 
-  // ИЗМЕНЕНИЕ: Формы только для не-баеров
-  if (!isBuyer) {
-    // Заполняем форму ежедневного обновления
-    const currentBalanceField = document.getElementById('current-balance');
-    if (currentBalanceField) {
-      currentBalanceField.value = this.card.balance || 0;
-    }
+            if (statusText) {
+                statusText.textContent = this.getStatusText(this.card.status);
+            } else {
+                statusBadge.textContent = this.getStatusText(this.card.status);
+            }
 
-    // Заполняем форму лимитов
-    this.fillLimitsForm();
-  }
-}
+            // ИЗМЕНЕНИЕ: Для баеров убираем кликабельность статуса
+            if (isBuyer) {
+                statusBadge.className = `card-status-badge ${this.card.status}`; // Убираем clickable-status
+                statusBadge.onclick = null; // Убираем обработчик клика
+                // Убираем стрелку если есть
+                const arrow = statusBadge.querySelector('.status-arrow');
+                if (arrow) {
+                    arrow.style.display = 'none';
+                }
+            } else {
+                statusBadge.className = `card-status-badge clickable-status ${this.card.status}`;
+                statusBadge.onclick = (event) => this.showStatusDropdown(event);
+            }
+
+            // Основная информация
+            this.fillBasicInfo();
+
+            // Финансовая сводка
+            this.fillFinanceSummary();
+
+            // ИЗМЕНЕНИЕ: Формы только для не-баеров
+            if (!isBuyer) {
+                // Заполняем форму ежедневного обновления
+                const currentBalanceField = document.getElementById('current-balance');
+                if (currentBalanceField) {
+                    currentBalanceField.value = this.card.balance || 0;
+                }
+
+                // Заполняем форму лимитов
+                this.fillLimitsForm();
+            }
+        }
 
         fillLimitsForm() {
             const topupLimitField = document.getElementById('topup-limit');

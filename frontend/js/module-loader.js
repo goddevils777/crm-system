@@ -34,7 +34,12 @@ class ModuleLoader {
     }
 
     async reinitModule(moduleName) {
-        console.log('Reinitializing module:', moduleName);
+        console.log('=== REINIT MODULE START:', moduleName, '===');
+        console.log('Checking window objects:');
+        console.log('- window.ExpensesModule:', typeof window.ExpensesModule);
+        console.log('- window.expensesModule:', typeof window.expensesModule);
+        console.log('- window.CardsModule:', typeof window.CardsModule);
+        console.log('- window.cardsModule:', typeof window.cardsModule);
 
         const contentArea = document.getElementById('content-area');
         if (!contentArea) {
@@ -46,7 +51,9 @@ class ModuleLoader {
 
         // Получаем сохраненный HTML
         const moduleAssets = this.moduleAssets.get(moduleName);
+        console.log('Module assets found:', !!moduleAssets);
         if (moduleAssets && moduleAssets.html) {
+            console.log('HTML length:', moduleAssets.html.length);
             contentArea.innerHTML = moduleAssets.html;
         } else {
             // Если HTML потерялся, перезагружаем модуль полностью
@@ -72,10 +79,11 @@ class ModuleLoader {
                 console.log('Creating new CardsModule instance...');
                 moduleInstance = new window.CardsModule();
                 window.cardsModule = moduleInstance;
-            } else if (moduleName === 'expenses' && window.ExpensesModule) {
-                console.log('Creating new ExpensesModule instance...');
-                moduleInstance = new window.ExpensesModule();
-                window.expensesModule = moduleInstance;
+            } else if (moduleName === 'expenses' && window.expensesModule) {
+                console.log('Reusing existing ExpensesModule instance...');
+                moduleInstance = window.expensesModule;
+                // Переинициализируем существующий экземпляр
+                moduleInstance.init();
             } else if (moduleName === 'teams' && window.TeamsModule) {
                 console.log('Creating new TeamsModule instance...');
                 moduleInstance = new window.TeamsModule();

@@ -105,6 +105,8 @@ const cardRoutes = require('./routes/cards');
 const expenseRoutes = require('./routes/expenses');
 const teamRoutes = require('./routes/teams');
 const clientsRoutes = require('./routes/clients');
+const employeesRoutes = require('./routes/employees');
+const contractorsRoutes = require('./routes/contractors');
 
 
 app.use(express.static(path.join(__dirname, '../frontend')));
@@ -116,6 +118,8 @@ app.use('/api/cards', cardRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/teams', teamRoutes);
 app.use('/api/clients', clientsRoutes);
+app.use('/api/employees', employeesRoutes);
+app.use('/api/contractors', contractorsRoutes);
 
 // Тестовый роут
 app.get('/api/test', (req, res) => {

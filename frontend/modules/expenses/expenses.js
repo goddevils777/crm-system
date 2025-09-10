@@ -5,14 +5,17 @@ class ExpensesModule {
         this.filteredExpenses = [];
         this.init();
     }
-
-    async init() {
-        this.loadStyles();
-        this.setupEventListeners();
-        await this.loadExpenses();
-        this.renderExpenses();
-        this.updateSummary();
-    }
+async init() {
+    this.loadStyles();
+    
+    // Минимальная задержка только для DOM
+    await new Promise(resolve => setTimeout(resolve, 150));
+    
+    this.setupEventListeners();
+    await this.loadExpenses();
+    this.renderExpenses();
+    this.updateSummary();
+}
 
     loadStyles() {
         const expensesCss = document.createElement('link');
@@ -27,24 +30,36 @@ class ExpensesModule {
         }
     }
 
-    setupEventListeners() {
-        // Кнопка добавления расхода
-        const addBtn = document.getElementById('add-expense-btn');
-        addBtn?.addEventListener('click', () => this.showAddModal());
-
-        // Поиск и фильтры
-        const searchInput = document.getElementById('search-expenses');
-        searchInput?.addEventListener('input', () => this.filterExpenses());
-
-        const categoryFilter = document.getElementById('category-filter');
-        categoryFilter?.addEventListener('change', () => this.filterExpenses());
-
-        const sortSelect = document.getElementById('sort-expenses');
-        sortSelect?.addEventListener('change', (e) => {
-            this.sortExpenses(e.target.value);
-            this.renderExpenses();
+setupEventListeners() {
+    console.log('=== SETTING UP EXPENSES EVENT LISTENERS ===');
+    
+    // Кнопка добавления расхода
+    const addBtn = document.getElementById('add-expense-btn');
+    console.log('Add button found:', addBtn);
+    
+    if (addBtn) {
+        addBtn.addEventListener('click', () => {
+            console.log('ADD EXPENSE BUTTON CLICKED!');
+            this.showAddModal();
         });
+        console.log('Event listener attached to add button');
+    } else {
+        console.error('Add expense button not found!');
     }
+
+    // Поиск и фильтры
+    const searchInput = document.getElementById('search-expenses');
+    searchInput?.addEventListener('input', () => this.filterExpenses());
+
+    const categoryFilter = document.getElementById('category-filter');
+    categoryFilter?.addEventListener('change', () => this.filterExpenses());
+
+    const sortSelect = document.getElementById('sort-expenses');
+    sortSelect?.addEventListener('change', (e) => {
+        this.sortExpenses(e.target.value);
+        this.renderExpenses();
+    });
+}
 
     async loadExpenses() {
         try {
@@ -129,7 +144,7 @@ class ExpensesModule {
       <tr data-expense-id="${expense.id}">
         <td><span class="expense-category">${categoryNames[expense.category] || expense.category}</span></td>
         <td>${expense.name}</td>
-        <td><strong>${expense.amount} ${expense.currency}</strong></td>
+        <td><strong>${expense.amount} ${expense.currency}${expense.amount_usd ? ` ($${parseFloat(expense.amount_usd).toFixed(2)})` : ''}</strong></td>
         <td>${new Date(expense.expense_date).toLocaleDateString()}</td>
         <td>${expense.description || '—'}</td>
         <td>
@@ -146,30 +161,71 @@ class ExpensesModule {
     `;
     }
 
-    updateSummary() {
-        const total = this.filteredExpenses.reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+updateSummary() {
+    // Считаем в USD (используем amount_usd если есть, иначе конвертируем)
+    const totalUSD = this.filteredExpenses.reduce((sum, expense) => {
+        if (expense.amount_usd) {
+            return sum + parseFloat(expense.amount_usd);
+        } else {
+            // Простая конвертация для старых записей
+            const amount = parseFloat(expense.amount);
+            if (expense.currency === 'UAH') {
+                return sum + (amount * 0.024); // примерный курс
+            } else if (expense.currency === 'EUR') {
+                return sum + (amount * 1.08);
+            } else {
+                return sum + amount; // USD
+            }
+        }
+    }, 0);
 
-        const now = new Date();
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
+    const now = new Date();
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
 
-        const weekExpenses = this.filteredExpenses
-            .filter(expense => new Date(expense.expense_date) >= weekAgo)
-            .reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+    const weekUSD = this.filteredExpenses
+        .filter(expense => new Date(expense.expense_date) >= weekAgo)
+        .reduce((sum, expense) => {
+            if (expense.amount_usd) {
+                return sum + parseFloat(expense.amount_usd);
+            } else {
+                const amount = parseFloat(expense.amount);
+                if (expense.currency === 'UAH') {
+                    return sum + (amount * 0.024);
+                } else if (expense.currency === 'EUR') {
+                    return sum + (amount * 1.08);
+                } else {
+                    return sum + amount;
+                }
+            }
+        }, 0);
 
-        const monthExpenses = this.filteredExpenses
-            .filter(expense => new Date(expense.expense_date) >= monthAgo)
-            .reduce((sum, expense) => sum + parseFloat(expense.amount), 0);
+    const monthUSD = this.filteredExpenses
+        .filter(expense => new Date(expense.expense_date) >= monthAgo)
+        .reduce((sum, expense) => {
+            if (expense.amount_usd) {
+                return sum + parseFloat(expense.amount_usd);
+            } else {
+                const amount = parseFloat(expense.amount);
+                if (expense.currency === 'UAH') {
+                    return sum + (amount * 0.024);
+                } else if (expense.currency === 'EUR') {
+                    return sum + (amount * 1.08);
+                } else {
+                    return sum + amount;
+                }
+            }
+        }, 0);
 
-        document.getElementById('total-expenses').textContent = `${total.toFixed(2)} UAH`;
-        document.getElementById('month-expenses').textContent = `${monthExpenses.toFixed(2)} UAH`;
-        document.getElementById('week-expenses').textContent = `${weekExpenses.toFixed(2)} UAH`;
-    }
+    document.getElementById('total-expenses').textContent = `$${totalUSD.toFixed(2)}`;
+    document.getElementById('month-expenses').textContent = `$${monthUSD.toFixed(2)}`;
+    document.getElementById('week-expenses').textContent = `$${weekUSD.toFixed(2)}`;
+}
 
-    showAddModal() {
-        // Пока заглушка
-        alert('Модальное окно добавления расхода в разработке');
-    }
+
+showAddModal() {
+    window.expenseModal.open();
+}
 
     editExpense(expenseId) {
         alert(`Редактирование расхода ${expenseId} в разработке`);
@@ -209,9 +265,6 @@ if (typeof window.expensesModule === 'undefined') {
     window.expensesModule = new ExpensesModule();
 } else {
     // Переинициализация существующего модуля
-    window.expensesModule.loadExpenses().then(() => {
-        window.expensesModule.renderExpenses();
-        window.expensesModule.updateSummary();
-    });
+    console.log('Reinitializing expenses module...');
+    window.expensesModule.init();
 }
-

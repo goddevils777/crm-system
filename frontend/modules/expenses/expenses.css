@@ -11,6 +11,25 @@
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
+
+.module-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 20px 24px;
+    background: var(--component-background);
+    border-radius: 12px;
+    border: 1px solid var(--border-color-split);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .expenses-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -150,15 +169,15 @@
     .expenses-filters {
         grid-template-columns: 1fr;
     }
-    
+
     .expenses-summary {
         grid-template-columns: 1fr;
     }
-    
+
     .expenses-table-container {
         overflow-x: auto;
     }
-    
+
     .expenses-table {
         min-width: 600px;
     }

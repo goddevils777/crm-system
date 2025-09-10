@@ -23,18 +23,23 @@ router.get('/', authenticateToken, async (req, res) => {
 });
 
 // Создание нового расхода
+// Создание нового расхода
 router.post('/', authenticateToken, checkRole(['admin', 'manager']), async (req, res) => {
   try {
-    const { category, name, amount, currency = 'UAH', description, expense_date } = req.body;
+    const { category, name, amount, currency = 'USD', description, expense_date, employee_id, contractor_id } = req.body;
 
     if (!category || !name || !amount) {
       return res.status(400).json({ error: 'Категория, название и сумма обязательны' });
     }
 
+    // Конвертируем в USD через API курсов
+    const currencyService = require('../utils/currency');
+    const { amountUSD, exchangeRate } = await currencyService.convertToUSD(parseFloat(amount), currency);
+
     const result = await db.query(
-      `INSERT INTO expenses (category, name, amount, currency, description, team_id, user_id, expense_date) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [category, name, parseFloat(amount), currency, description, req.user.team_id, req.user.id, expense_date || new Date()]
+      `INSERT INTO expenses (category, name, amount, currency, amount_usd, exchange_rate, description, team_id, user_id, expense_date, employee_id, contractor_id) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) RETURNING *`,
+      [category, name, parseFloat(amount), currency, amountUSD, exchangeRate, description, req.user.team_id, req.user.id, expense_date || new Date(), employee_id || null, contractor_id || null]
     );
 
     res.status(201).json({

@@ -1,0 +1,299 @@
+/* Стили модального окна расходов - специфичные классы */
+#expense-modal-overlay.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    opacity: 1;
+    visibility: visible;
+}
+
+#expense-modal-overlay .modal-container {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 1700px;
+    width: 95%;
+    max-height: 130vh;
+    overflow: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+#expense-modal-overlay .form-section {
+    margin-bottom: 24px;
+}
+
+#expense-modal-overlay .section-label {
+    display: block;
+    font-weight: 600;
+    font-size: 16px;
+    color: #333;
+    margin-bottom: 16px;
+}
+
+#expense-modal-overlay .category-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+#expense-modal-overlay .category-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 12px;
+    border: 2px solid #e8e8e8;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+}
+
+#expense-modal-overlay .category-card:hover {
+    border-color: #d1d1d1;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+#expense-modal-overlay .category-card.active {
+    border-color: #1890ff;
+    background: rgba(24, 144, 255, 0.05);
+    box-shadow: 0 2px 8px rgba(24, 144, 255, 0.15);
+}
+
+#expense-modal-overlay .category-icon {
+    font-size: 24px;
+    margin-bottom: 8px;
+    color: #666;
+    transition: color 0.2s;
+}
+
+#expense-modal-overlay .category-card.active .category-icon {
+    color: #1890ff;
+}
+
+#expense-modal-overlay .category-name {
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    color: #666;
+    line-height: 1.2;
+    transition: color 0.2s;
+}
+
+#expense-modal-overlay .category-card.active .category-name {
+    color: #1890ff;
+}
+
+#expense-modal-overlay .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+}
+
+#expense-modal-overlay .modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+#expense-modal-overlay .modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#expense-modal-overlay .modal-form {
+    padding: 20px;
+}
+
+#expense-modal-overlay .form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+#expense-modal-overlay .form-group {
+    flex: 1;
+}
+
+#expense-modal-overlay .form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 500;
+    color: #333;
+}
+
+#expense-modal-overlay .modal-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid #eee;
+}
+
+#expense-modal-overlay .btn-small {
+    padding: 6px 12px;
+    font-size: 13px;
+}
+
+#expense-modal-overlay .form-input,
+#expense-modal-overlay .form-select,
+#expense-modal-overlay .form-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d9d9d9;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+#expense-modal-overlay .form-input:focus,
+#expense-modal-overlay .form-select:focus,
+#expense-modal-overlay .form-textarea:focus {
+    outline: none;
+    border-color: #1890ff;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+#expense-modal-overlay .form-textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+#expense-modal-overlay .btn {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+#expense-modal-overlay .btn-primary {
+    background: #1890ff;
+    color: white;
+}
+
+#expense-modal-overlay .btn-primary:hover {
+    background: #096dd9;
+}
+
+#expense-modal-overlay .btn-secondary {
+    background: #f5f5f5;
+    color: #333;
+    border: 1px solid #d9d9d9;
+}
+
+#expense-modal-overlay .btn-secondary:hover {
+    background: #e6f7ff;
+    border-color: #1890ff;
+}
+
+#expense-modal-overlay .chips-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    min-height: 40px;
+    padding: 8px;
+    border: 1px solid #f0f0f0;
+    border-radius: 6px;
+    background: #fafafa;
+}
+
+#expense-modal-overlay .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: #e6f7ff;
+    border: 1px solid #91d5ff;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+#expense-modal-overlay .chip:hover {
+    background: #bae7ff;
+    border-color: #69c0ff;
+}
+
+#expense-modal-overlay .chip.selected {
+    background: #1890ff;
+    border-color: #1890ff;
+    color: white;
+}
+
+#expense-modal-overlay .chip-text {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+#expense-modal-overlay .add-form {
+    background: #f9f9f9;
+    padding: 16px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+
+#expense-modal-overlay .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    background: #e6f7ff;
+    border: 1px solid #91d5ff;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    position: relative;
+}
+
+#expense-modal-overlay .chip:hover .chip-delete {
+    opacity: 1;
+    visibility: visible;
+}
+
+#expense-modal-overlay .chip-delete {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 16px;
+    height: 16px;
+    background: #ff4d4f;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.2s;
+    cursor: pointer;
+    z-index: 1;
+}
+
+#expense-modal-overlay .chip-delete:hover {
+    background: #cf1322;
+    transform: scale(1.1);
+}
